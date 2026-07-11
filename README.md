@@ -76,20 +76,36 @@ You can run the full interactive workspace, layout designer, G-code generator, a
    ```
 3. Enter your **OctoPrint API URL** and **API Key** in the connection panel to jog, calibrate, and print directly from the browser!
 
-## 🔬 Real-world Handwriting Comparison Experiment
+## 🔬 Interactive Quiz: Can you spot the Machine?
 
-Here is a side-by-side comparison of machine-synthesized plotter handwriting versus a real human handwriting sample on ruled paper:
+Look at the handwritten notebook page below. Several paragraphs are plotted by a 3D printer running our handwriting synthesis engine, and one paragraph was physically written by a human. 
 
-<img src="handwriting_comparison.svg" width="100%" alt="Plotter vs Human Handwriting Comparison" />
+Can you identify which section is the real human handwriting?
+
+<img src="comparison_sheet.jpg" width="100%" alt="Handwriting Comparison Quiz Sheet" />
+
+<details>
+<summary><b>🔍 Click here to reveal the answer!</b></summary>
+
+### 🎯 The Reveal: Machine vs. Human
+
+Here is the animated breakdown showing the machine-plotted handwriting (cyan) vs. the human reference (red):
+
+<img src="handwriting_comparison.svg" width="100%" alt="Plotter vs Human Handwriting Comparison Revealed" />
+
+* **🤖 Plotter Synthesis Output (Cyan)**: The top paragraphs (Questions, Spacers, Chairs, etc.) are written by a 3D printer running this plugin.
+* **✍️ Human Reference (Red)**: The final paragraph under "Dowels" was physically written by the user themselves as a baseline comparison.
 
 ### Behind the Scenes: The Engineering
 
-To mimic the user's actual hand style (in the red highlighted section) so closely that it blends seamlessly with the plotter's outputs (in the cyan section), several layers of handwriting synthesis are combined:
+To mimic the user's actual hand style so closely that it blends seamlessly with the plotter's outputs, several layers of handwriting synthesis are combined:
 
 1. **Jitter & Path Tremor Simulation**: High-frequency micro-variations (simulating muscle tremors) are procedural-noised onto the pen travel vectors, removing mathematical perfection from the strokes.
 2. **Dynamic Slant and Baseline Drift**: Gradual baseline wave calculations and slight character rotation jitter emulate human fatigue and organic misalignment over a multi-paragraph page.
 3. **Procedural Alternates Engine**: Dynamically shifts glyph variants on adjacent letters (e.g. comparing the double 'o' in "spacers" and "blocks") to avoid mechanical uniformity.
 4. **Centerline Skeleton Mode**: Transforms hollow font outlines into single-line ink strokes that match a ballpoint or gel pen.
+
+</details>
 
 ---
 
