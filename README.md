@@ -80,6 +80,8 @@ You can run the full interactive workspace, layout designer, G-code generator, a
 
 ## 🧭 Step-by-Step Calibration & Printing Guide
 
+![Beginner's Step-by-Step Setup Guide](beginner_guide_infographic.jpg)
+
 Follow these steps for alignment on standard notebook ruled paper:
 
 ### Step 1: Secure and Align
