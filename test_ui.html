@@ -464,7 +464,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     </div>
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">OctoPrint API Key</label>
-                        <input type="password" id="octoprintApiKey" value="PQI0RUmLBZEgb_24cSQ3pqZ9NdQtl4jds2E10l_NZX0" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-slate-200 font-mono" placeholder="Paste API Key here..." />
+                        <input type="password" id="octoprintApiKey" value="" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-slate-200 font-mono" placeholder="Paste API Key here..." />
                     </div>
                     
                     <div class="flex gap-2">
@@ -3797,8 +3797,8 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         if (storedApiKey) {
             octoprintApiKeyInput.value = storedApiKey;
         } else {
-            octoprintApiKeyInput.value = "PQI0RUmLBZEgb_24cSQ3pqZ9NdQtl4jds2E10l_NZX0";
-            safeSetItem('octoprint_apikey', "PQI0RUmLBZEgb_24cSQ3pqZ9NdQtl4jds2E10l_NZX0");
+            octoprintApiKeyInput.value = "";
+            safeSetItem('octoprint_apikey', "");
         }
         
         // Save values on input change
