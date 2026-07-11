@@ -1232,7 +1232,33 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
         function loadDefaultFinlayFont() {
             const stored = localStorage.getItem('plotter_drawn_font');
-            if (stored) return; // User already has custom font drawing, do not overwrite
+            let isReallyEmpty = true;
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored);
+                    for (let c in parsed) {
+                        if (parsed[c]) {
+                            for (let v of parsed[c]) {
+                                if (v && v.length > 0) {
+                                    isReallyEmpty = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!isReallyEmpty) break;
+                    }
+                } catch(e) {
+                    isReallyEmpty = true;
+                }
+            }
+            
+            if (!isReallyEmpty) {
+                // If they have existing custom drawn letters, default to 'drawn' mode on startup
+                setTimeout(() => {
+                    if (typeof setFontMode === 'function') setFontMode('drawn');
+                }, 100);
+                return;
+            }
             
             fetch('finlay_handwriting.json')
                 .then(res => {
@@ -1253,7 +1279,12 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     rebuildVariantSelectors();
                     updateCharGridHighlights();
                     drawDesignerGrid();
-                    triggerPreviewUpdate();
+                    if (typeof setFontMode === 'function') {
+                        setFontMode('drawn');
+                    } else {
+                        activeFontMode = 'drawn';
+                        triggerPreviewUpdate();
+                    }
                     showToast("Pre-loaded 'Finlay Handwriting' font successfully!", "success");
                 })
                 .catch(err => {
