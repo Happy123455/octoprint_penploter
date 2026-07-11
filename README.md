@@ -89,7 +89,7 @@ Can you identify which section is the real human handwriting?
 
 ### 🎯 The Reveal: Machine vs. Human
 
-Here is the animated breakdown showing the machine-plotted handwriting (cyan) vs. the human reference (red):
+Here is the breakdown showing the machine-plotted handwriting (cyan) vs. the human reference (red):
 
 <img src="handwriting_comparison.svg" width="100%" alt="Plotter vs Human Handwriting Comparison Revealed" />
 
