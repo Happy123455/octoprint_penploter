@@ -41,6 +41,9 @@ graph TD
 * **Canvas Tweaks**: Easily click and drag reference points on the canvas to visually fine-tune calibration coordinates.
 
 ### 3. 🌀 Humanization Jitter Engine
+
+![Human Handwriting Simulation Infographic](humanization_infographic.jpg)
+
 * **Procedural Alternates**: Randomly alternates glyph variants to ensure double letters (like 'oo' or 'll') look distinct.
 * **Fluid Handwriting Jitters**: Simulates organic human hand tremor, letter slant jitter, baseline waviness/drift, and custom drag hooks when lifting/lowering the pen.
 

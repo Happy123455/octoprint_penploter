@@ -1230,6 +1230,38 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
         loadDrawnFontFromLocalStorage();
 
+        function loadDefaultFinlayFont() {
+            const stored = localStorage.getItem('plotter_drawn_font');
+            if (stored) return; // User already has custom font drawing, do not overwrite
+            
+            fetch('finlay_handwriting.json')
+                .then(res => {
+                    if (res.ok) return res.json();
+                    throw new Error("HTTP " + res.status);
+                })
+                .then(data => {
+                    for (let c in data) {
+                        if (c.length === 1 && !allowedChars.includes(c)) {
+                            symbolsList += c;
+                            allowedChars = uppercaseList + lowercaseList + symbolsList;
+                        }
+                    }
+                    createCharacterGrid(charGridSymbols, symbolsList);
+                    
+                    DrawnFont = data;
+                    saveDrawnFontToLocalStorage();
+                    rebuildVariantSelectors();
+                    updateCharGridHighlights();
+                    drawDesignerGrid();
+                    triggerPreviewUpdate();
+                    showToast("Pre-loaded 'Finlay Handwriting' font successfully!", "success");
+                })
+                .catch(err => {
+                    console.warn("Could not auto-load Finlay font:", err);
+                });
+        }
+        loadDefaultFinlayFont();
+
         let activeDesignerChar = 'A';
         let activeVariant = 0;
         let renderedCharactersOnSheet = [];
