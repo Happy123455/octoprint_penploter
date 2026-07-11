@@ -76,6 +76,21 @@ You can run the full interactive workspace, layout designer, G-code generator, a
    ```
 3. Enter your **OctoPrint API URL** and **API Key** in the connection panel to jog, calibrate, and print directly from the browser!
 
+## 🔬 Real-world Handwriting Comparison Experiment
+
+Here is a side-by-side comparison of machine-synthesized plotter handwriting versus a real human handwriting sample on ruled paper:
+
+<img src="handwriting_comparison.svg" width="100%" alt="Plotter vs Human Handwriting Comparison" />
+
+### Behind the Scenes: The Engineering
+
+To mimic the user's actual hand style (in the red highlighted section) so closely that it blends seamlessly with the plotter's outputs (in the cyan section), several layers of handwriting synthesis are combined:
+
+1. **Jitter & Path Tremor Simulation**: High-frequency micro-variations (simulating muscle tremors) are procedural-noised onto the pen travel vectors, removing mathematical perfection from the strokes.
+2. **Dynamic Slant and Baseline Drift**: Gradual baseline wave calculations and slight character rotation jitter emulate human fatigue and organic misalignment over a multi-paragraph page.
+3. **Procedural Alternates Engine**: Dynamically shifts glyph variants on adjacent letters (e.g. comparing the double 'o' in "spacers" and "blocks") to avoid mechanical uniformity.
+4. **Centerline Skeleton Mode**: Transforms hollow font outlines into single-line ink strokes that match a ballpoint or gel pen.
+
 ---
 
 ## 🧭 Step-by-Step Calibration & Printing Guide

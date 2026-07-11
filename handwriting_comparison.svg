@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 768 1024" width="100%" height="100%">
+  <defs>
+    <style>
+      @keyframes pulse-red {
+        0% { stroke-opacity: 0.4; stroke-width: 2.5; }
+        50% { stroke-opacity: 1.0; stroke-width: 4.5; }
+        100% { stroke-opacity: 0.4; stroke-width: 2.5; }
+      }
+      @keyframes pulse-cyan {
+        0% { stroke-opacity: 0.4; stroke-width: 2.5; }
+        50% { stroke-opacity: 1.0; stroke-width: 4.5; }
+        100% { stroke-opacity: 0.4; stroke-width: 2.5; }
+      }
+      .highlight-human {
+        stroke: #ef4444;
+        fill: none;
+        stroke-dasharray: 8 6;
+        animation: pulse-red 2.5s infinite ease-in-out;
+      }
+      .highlight-plotter {
+        stroke: #06b6d4;
+        fill: none;
+        stroke-dasharray: 8 6;
+        animation: pulse-cyan 2.5s infinite ease-in-out;
+      }
+      .label-text {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-weight: 800;
+        font-size: 14px;
+        letter-spacing: 0.5px;
+      }
+      .label-human {
+        fill: #ef4444;
+      }
+      .label-plotter {
+        fill: #06b6d4;
+      }
+      .badge-bg {
+        fill: #0f172a;
+        fill-opacity: 0.85;
+        stroke-width: 1;
+      }
+    </style>
+  </defs>
+
+  <!-- Background Image -->
+  <image href="comparison_sheet.jpg" x="0" y="0" width="768" height="1024" />
+
+  <!-- Highlight Box: Plotter Output -->
+  <rect class="highlight-plotter" x="90" y="110" width="600" height="630" rx="15" />
+  <!-- Label: Plotter Output -->
+  <g transform="translate(105, 132)">
+    <rect class="badge-bg" x="-10" y="-18" width="235" height="26" rx="5" stroke="#06b6d4" />
+    <text class="label-text label-plotter" x="0" y="0">🤖 PLOTTER SYNTHESIS OUTPUT</text>
+  </g>
+
+  <!-- Highlight Box: Human Reference -->
+  <rect class="highlight-human" x="90" y="750" width="600" height="215" rx="15" />
+  <!-- Label: Human Reference -->
+  <g transform="translate(105, 772)">
+    <rect class="badge-bg" x="-10" y="-18" width="295" height="26" rx="5" stroke="#ef4444" />
+    <text class="label-text label-human" x="0" y="0">✍️ HUMAN REFERENCE (MY HANDWRITING)</text>
+  </g>
+</svg>
