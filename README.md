@@ -12,7 +12,9 @@ Equipped with a **3/4-Point Rigid Transformation calibration engine**, a **cente
 
 ## 🗺️ System Architecture & Data Flow
 
-Below is the visual infographic outlining the complete compiler data pipeline, from raw text inputs to physical coordinates extrusion:
+Below is the visual infographic outlining the complete compiler data pipeline and the 3D printer calibration alignment mechanism:
+
+![Plotter Calibration Infographic](plotter_infographic.jpg)
 
 ```mermaid
 graph TD
