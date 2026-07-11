@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+OctoPrint_PlotterHandwriting.egg-info/PKG-INFO
+OctoPrint_PlotterHandwriting.egg-info/SOURCES.txt
+OctoPrint_PlotterHandwriting.egg-info/dependency_links.txt
+OctoPrint_PlotterHandwriting.egg-info/entry_points.txt
+OctoPrint_PlotterHandwriting.egg-info/requires.txt
+OctoPrint_PlotterHandwriting.egg-info/top_level.txt
+octoprint_plotterhandwriting/__init__.py
+octoprint_plotterhandwriting/static/css/plotterhandwriting.css
+octoprint_plotterhandwriting/static/fonts/Myfont-Regular.otf
+octoprint_plotterhandwriting/static/images/default_page.jpg
+octoprint_plotterhandwriting/static/js/hershey_fonts.js
+octoprint_plotterhandwriting/static/js/plotterhandwriting.js
+octoprint_plotterhandwriting/templates/plotterhandwriting_tab.jinja2

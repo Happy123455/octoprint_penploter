@@ -1,0 +1,28 @@
+Metadata-Version: 2.4
+Name: OctoPrint-PlotterHandwriting
+Version: 0.1.0
+Summary: A plugin for OctoPrint to generate organic, human-looking handwriting G-code for pen plotters.
+License: MIT
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+Requires-Dist: OctoPrint>=1.8.0
+
+# OctoPrint-PlotterHandwriting
+
+An OctoPrint plugin to generate organic, human-looking handwriting G-code for pen plotters, drawing machines, and 3D printers with pen mounts.
+
+## Features
+
+- Procedural handwriting humanization (baseline drift, size/spacing jitter, slanting variations, hand tremors, and pen drag hooks).
+- Multi-font support (Cursive, Script Complex, Script Simplex, Futura Print).
+- Live browser-based paper simulation and preview.
+- Customizable G-code commands for travel and drawing (compatible with Z-axis, servos, and lasers).
+- Direct upload to OctoPrint local folder.
+
+## Installation
+
+Install via the OctoPrint Plugin Manager or manually:
+
+```bash
+pip install .
+```

@@ -1,0 +1,613 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/opentype.js/1.3.4/opentype.min.js"></script>
+<div class="plotter-handwriting-wrapper" id="tab_plugin_plotterhandwriting">
+    <!-- Header -->
+    <div class="plotter-header">
+        <div>
+            <h3><i class="fa fa-pencil"></i> Pen Plotter Handwriting</h3>
+            <p>Convert digital text into realistic, organic handwriting paths and G-code.</p>
+        </div>
+        <div>
+            <div class="status-badge" data-bind="class: statusClass">
+                <!-- ko if: isWorking -->
+                <span class="spinner"></span>
+                <!-- /ko -->
+                <span data-bind="text: statusText">Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Split -->
+    <div class="plotter-content-split">
+        
+        <!-- Left Side: Controls & Editor -->
+        <div class="plotter-panel">
+            <div class="panel-title">
+                <i class="fa fa-edit"></i> Writing Settings
+            </div>
+
+            <!-- Text Area Editor -->
+            <div class="plotter-text-editor">
+                <label for="plotterText">Text to Plot:</label>
+                <textarea id="plotterText" class="plotter-textarea" 
+                          data-bind="value: text, valueUpdate: 'input'" 
+                          placeholder="Type what you want to write here..."></textarea>
+            </div>
+
+            <!-- Layout and Font Section -->
+            <div class="plotter-row">
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Font Style</span>
+                    </label>
+                    <select class="plotter-select" data-bind="value: selectedFont">
+                        <option value="cursive">Cursive (Elegant)</option>
+                        <option value="scriptc">Script Complex (Ornate)</option>
+                        <option value="scripts">Script Simplex (Quick)</option>
+                        <option value="futural">Futura Print (Clean print)</option>
+                        <option value="timesi">Times Italic (Formal)</option>
+                        <!-- ko if: hasCustomFont -->
+                        <option value="custom">Custom: <!-- ko text: customFontName --><!-- /ko --></option>
+                        <!-- /ko -->
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label class="control-label-row">
+                        <span>Paper Guide Lines</span>
+                    </label>
+                    <select class="plotter-select" data-bind="value: paperType">
+                        <option value="plain">Plain Paper</option>
+                        <option value="ruled">Ruled Notebook</option>
+                        <option value="grid">Grid Graph Paper</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Settings Accordions -->
+            <div class="accordion-container">
+                
+                <!-- ko if: isStandalone -->
+                <!-- Section 0: Standalone OctoPrint Connection -->
+                <div class="settings-section">
+                    <div class="settings-header" onclick="$(this).next().slideToggle(200);">
+                        <span>OctoPrint Connection</span>
+                        <i class="fa fa-chevron-down"></i>
+                    </div>
+                    <div class="settings-content">
+                        <div class="control-group">
+                            <label class="control-label-row">OctoPrint Host URL</label>
+                            <input type="text" class="plotter-input" data-bind="value: octoprintUrl" placeholder="http://localhost:5000">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">OctoPrint API Key</label>
+                            <input type="password" class="plotter-input" data-bind="value: octoprintApiKey" placeholder="Enter API Key">
+                            <small style="display: block; margin-top: 6px; font-size: 0.75rem; color: #94a3b8; line-height: 1.2;">
+                                <strong>CORS Note</strong>: If upload fails, enable <strong>CORS</strong> in OctoPrint (*Settings -> API -> Allow CORS*), or use a browser extension like <em>Allow CORS</em>.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <!-- /ko -->
+
+                <!-- Section 0.5: Settings Profiles -->
+                <div class="settings-section">
+                    <div class="settings-header" onclick="$(this).next().slideToggle(200);">
+                        <span>Settings Profiles</span>
+                        <i class="fa fa-chevron-down"></i>
+                    </div>
+                    <div class="settings-content">
+                        <!-- Profile Loader -->
+                        <div class="control-group">
+                            <label class="control-label-row">Select Profile</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select class="plotter-select" style="flex: 1; min-width: 0;" data-bind="options: savedProfiles, optionsText: 'name', optionsValue: 'name', value: selectedProfile, optionsCaption: 'Select a profile...'"></select>
+                                <button class="btn btn-danger" style="padding: 4px 10px; margin-bottom: 0;" data-bind="click: deleteProfile, enable: selectedProfile"><i class="fa fa-trash"></i></button>
+                            </div>
+                        </div>
+                        
+                        <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 12px 0;">
+                        
+                        <!-- Create Profile -->
+                        <div class="control-group">
+                            <label class="control-label-row">Save Current Settings</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" class="plotter-input" style="flex: 1; min-width: 0; margin-bottom: 0;" data-bind="value: newProfileName" placeholder="Profile Name...">
+                                <button class="btn btn-plotter-primary" style="padding: 4px 12px; margin-bottom: 0;" data-bind="click: saveProfile, enable: newProfileName().trim()"><i class="fa fa-save"></i> Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 1: Font Sizing & Spacing -->
+                <div class="settings-section">
+                    <div class="settings-header" onclick="$(this).next().slideToggle(200);">
+                        <span>Font Size & Layout</span>
+                        <i class="fa fa-chevron-down"></i>
+                    </div>
+                    <div class="settings-content">
+                        <div class="control-group">
+                            <label class="control-label-row">Font Size (mm)</label>
+                            <div class="slider-with-number">
+                                <input type="range" class="slider-input" min="3" max="30" step="0.1" data-bind="value: fontSize, valueUpdate: 'input'">
+                                <input type="number" class="number-input" min="3" max="30" step="0.1" data-bind="value: fontSize">
+                                <span class="unit-span">mm</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">Line Spacing (mm)</label>
+                            <div class="slider-with-number">
+                                <input type="range" class="slider-input" min="5" max="50" step="0.1" data-bind="value: lineSpacing, valueUpdate: 'input'">
+                                <input type="number" class="number-input" min="5" max="50" step="0.1" data-bind="value: lineSpacing">
+                                <span class="unit-span">mm</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">Pen Line Thickness (mm)</label>
+                            <div class="slider-with-number">
+                                <input type="range" class="slider-input" min="0.05" max="3.0" step="0.05" data-bind="value: penThickness, valueUpdate: 'input'">
+                                <input type="number" class="number-input" min="0.05" max="3.0" step="0.05" data-bind="value: penThickness">
+                                <span class="unit-span">mm</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">Calibration Span (Lines)</label>
+                            <select class="plotter-select" data-bind="value: calibrationSpan" style="margin-top: 4px;">
+                                <option value="1">1 Line (Default)</option>
+                                <option value="2">2 Lines</option>
+                                <option value="3">3 Lines</option>
+                                <option value="5">5 Lines (High Accuracy)</option>
+                                <option value="10">10 Lines (Very High Accuracy)</option>
+                                <option value="15">15 Lines</option>
+                                <option value="20">20 Lines</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">Base Slant (Tilt)</label>
+                            <div class="slider-with-number">
+                                <input type="range" class="slider-input" min="-30" max="30" step="0.5" data-bind="value: baseSlantDeg, valueUpdate: 'input'">
+                                <input type="number" class="number-input" min="-30" max="30" step="0.5" data-bind="value: baseSlantDeg">
+                                <span class="unit-span">°</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">Left Margin (mm)</label>
+                            <div class="slider-with-number">
+                                <input type="range" class="slider-input" min="0" max="150" step="0.1" data-bind="value: marginX, valueUpdate: 'input'">
+                                <input type="number" class="number-input" min="0" max="150" step="0.1" data-bind="value: marginX">
+                                <span class="unit-span">mm</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">Right Margin (mm)</label>
+                            <div class="slider-with-number">
+                                <input type="range" class="slider-input" min="0" max="150" step="0.1" data-bind="value: marginRight, valueUpdate: 'input'">
+                                <input type="number" class="number-input" min="0" max="150" step="0.1" data-bind="value: marginRight">
+                                <span class="unit-span">mm</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">Start Line (Top Margin) (mm)</label>
+                            <div class="slider-with-number">
+                                <input type="range" class="slider-input" min="0" max="250" step="0.1" data-bind="value: marginY, valueUpdate: 'input'">
+                                <input type="number" class="number-input" min="0" max="250" step="0.1" data-bind="value: marginY">
+                                <span class="unit-span">mm</span>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">Upload Custom Font (.ttf / .otf):</label>
+                            <input type="file" id="fontFileInput" accept=".ttf,.otf" data-bind="event: { change: onFontFileSelected }">
+                            <!-- ko if: hasCustomFont -->
+                            <div style="margin-top: 6px; display: flex; align-items: center; justify-content: space-between;">
+                                <span style="font-size: 0.8rem; color: #10b981; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 170px;">
+                                    <i class="fa fa-file-code-o"></i> <span data-bind="text: customFontName"></span>
+                                </span>
+                                <button class="btn btn-mini btn-plotter-secondary" data-bind="click: clearCustomFont">
+                                    <i class="fa fa-trash"></i> Remove
+                            </div>
+                            <!-- /ko -->
+                        </div>
+                        <!-- ko if: hasCustomFont -->
+                        <div class="control-group" style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px;">
+                            <label class="control-label-row" style="margin-bottom: 0;">
+                                <span>Skeleton Mode (Centerline)</span>
+                            </label>
+                            <input type="checkbox" data-bind="checked: skeletonMode" style="margin: 0;">
+                        </div>
+                        <!-- /ko -->
+                    </div>
+                </div>
+
+                <!-- Section 2: Humanizer Imperfections -->
+                <div class="settings-section">
+                    <div class="settings-header" onclick="$(this).next().slideToggle(200);">
+                        <span>Human Imperfections</span>
+                        <i class="fa fa-chevron-down"></i>
+                    </div>
+                    <div class="settings-content">
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Glyph Morphing (Infinite variants)</span>
+                                <span class="control-val"><span data-bind="text: morphIntensity">30</span>%</span>
+                            </label>
+                            <input type="range" class="slider-input" min="0" max="100" step="5" data-bind="value: morphIntensity">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Baseline Drift</span>
+                                <span class="control-val"><span data-bind="text: driftIntensity">25</span>%</span>
+                            </label>
+                            <input type="range" class="slider-input" min="0" max="100" step="5" data-bind="value: driftIntensity">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Hand Tremor (Shake)</span>
+                                <span class="control-val"><span data-bind="text: tremorIntensity">15</span>%</span>
+                            </label>
+                            <input type="range" class="slider-input" min="0" max="100" step="5" data-bind="value: tremorIntensity">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Size Jitter</span>
+                                <span class="control-val"><span data-bind="text: sizeJitter">10</span>%</span>
+                            </label>
+                            <input type="range" class="slider-input" min="0" max="50" step="5" data-bind="value: sizeJitter">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Spacing Jitter</span>
+                                <span class="control-val"><span data-bind="text: spacingJitter">15</span>%</span>
+                            </label>
+                            <input type="range" class="slider-input" min="0" max="50" step="5" data-bind="value: spacingJitter">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Slant Jitter</span>
+                                <span class="control-val"><span data-bind="text: slantJitter">15</span>%</span>
+                            </label>
+                            <input type="range" class="slider-input" min="0" max="50" step="5" data-bind="value: slantJitter">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Stroke Hooking</span>
+                                <span class="control-val"><span data-bind="text: hookIntensity">20</span>%</span>
+                            </label>
+                            <input type="range" class="slider-input" min="0" max="100" step="5" data-bind="value: hookIntensity">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Background Calibration Photo -->
+                <div class="settings-section">
+                    <div class="settings-header" onclick="$(this).next().slideToggle(200);">
+                        <span>Background Calibration Image</span>
+                        <i class="fa fa-chevron-down"></i>
+                    </div>
+                    <div class="settings-content" style="display: none;">
+                        <div class="control-group">
+                            <label class="control-label-row">Upload Physical Page Photo:</label>
+                            <input type="file" id="bgFileInput" accept="image/*" data-bind="event: { change: onBgFileSelected }">
+                            <!-- ko if: bgImageSrc -->
+                            <button class="btn btn-mini btn-plotter-secondary" style="margin-top: 6px;" data-bind="click: clearBgImage">
+                                <i class="fa fa-trash"></i> Remove Photo
+                            </button>
+                            <!-- /ko -->
+                        </div>
+                        <!-- ko if: bgImageSrc -->
+                        <div class="control-group">
+                            <label class="control-label-row">Show Background Image</label>
+                            <input type="checkbox" data-bind="checked: showBg">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Opacity</span>
+                                <span class="control-val"><span data-bind="text: Math.round(bgOpacity()*100)">50</span>%</span>
+                            </label>
+                            <input type="range" class="slider-input" min="0.05" max="1.0" step="0.05" data-bind="value: bgOpacity">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Scale Width (mm)</span>
+                                <span class="control-val"><span data-bind="text: bgWidth">200</span> mm</span>
+                            </label>
+                            <input type="range" class="slider-input" min="50" max="400" step="1" data-bind="value: bgWidth">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Scale Height (mm)</span>
+                                <span class="control-val"><span data-bind="text: bgHeight">200</span> mm</span>
+                            </label>
+                            <input type="range" class="slider-input" min="50" max="400" step="1" data-bind="value: bgHeight">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Offset X</span>
+                                <span class="control-val"><span data-bind="text: bgX">0</span> mm</span>
+                            </label>
+                            <input type="range" class="slider-input" min="-100" max="100" step="0.5" data-bind="value: bgX">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Offset Y</span>
+                                <span class="control-val"><span data-bind="text: bgY">0</span> mm</span>
+                            </label>
+                            <input type="range" class="slider-input" min="-100" max="100" step="0.5" data-bind="value: bgY">
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">
+                                <span>Rotation</span>
+                                <span class="control-val"><span data-bind="text: bgRotation">0</span>°</span>
+                            </label>
+                            <input type="range" class="slider-input" min="-180" max="180" step="0.5" data-bind="value: bgRotation">
+                        </div>
+                        <!-- /ko -->
+                    </div>
+                </div>
+
+                <!-- Section 4: Bed Size & Alignment Snapping -->
+                <div class="settings-section">
+                    <div class="settings-header" onclick="$(this).next().slideToggle(200);">
+                        <span>Bed Settings & Snap Alignment</span>
+                        <i class="fa fa-chevron-down"></i>
+                    </div>
+                    <div class="settings-content" style="display: none;">
+                        <div class="plotter-row">
+                            <div class="control-group">
+                                <label class="control-label-row">Bed Width (mm)</label>
+                                <div class="plotter-input-readonly" style="padding: 6px; font-weight: bold; color: #64748b; background: #f1f5f9; border-radius: 4px; border: 1px solid #cbd5e1;">220 mm (Kobra Neo Std)</div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label-row">Bed Height (mm)</label>
+                                <div class="plotter-input-readonly" style="padding: 6px; font-weight: bold; color: #64748b; background: #f1f5f9; border-radius: 4px; border: 1px solid #cbd5e1;">220 mm (Kobra Neo Std)</div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">Page Snap Position on Bed</label>
+                            <select class="plotter-select" data-bind="value: pageAlignment">
+                                <option value="top-left">Top-Left Corner Snapping (Anycubic Kobra Neo default)</option>
+                                <option value="bottom-left">Bottom-Left Corner Snapping</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">Show Bed Boundaries in Preview</label>
+                            <input type="checkbox" data-bind="checked: snapToBedGrid">
+                        </div>
+
+                        <!-- Physical Bed Placement Help Card -->
+                        <div class="bed-help-card" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 6px; padding: 10px; margin-top: 10px; font-size: 0.8rem; line-height: 1.35;">
+                            <strong style="color: #047857; display: block; margin-bottom: 4px;"><i class="fa fa-info-circle"></i> Anycubic Kobra Neo Placement Guide</strong>
+                            <ol style="margin: 0; padding-left: 15px; color: #065f46; font-size: 0.78rem;">
+                                <li>Place A4 paper in <strong>portrait</strong> orientation on the print bed.</li>
+                                <li>Align the <strong>top-left corner</strong> of your paper exactly with the <strong>back-left corner</strong> of the bed plate (X=0, Y=220).</li>
+                                <li>The left edge of the paper should sit flush along the left edge of the bed.</li>
+                                <li>Since the paper is 297mm tall and bed is 220mm tall, the bottom 77mm of your page will hang off the front of the bed. Secure the paper in place with clips or low-tack tape.</li>
+                            </ol>
+                            <span style="display: block; margin-top: 6px; font-weight: bold; color: #047857; font-size: 0.75rem;"><i class="fa fa-warning"></i> Crucial: Only G-code coordinates within the green dashed area in preview will be drawn!</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Plotter & Z-Axis Settings -->
+                <div class="settings-section">
+                    <div class="settings-header" onclick="$(this).next().slideToggle(200);">
+                        <span>Plotter Commands & Feeds</span>
+                        <i class="fa fa-chevron-down"></i>
+                    </div>
+                    <div class="settings-content" style="display: none;">
+                        <div class="plotter-row">
+                            <div class="control-group">
+                                <label class="control-label-row">Pen UP Cmd</label>
+                                <input type="text" class="plotter-input" data-bind="value: penUpCommand">
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label-row">Pen DOWN Cmd</label>
+                                <input type="text" class="plotter-input" data-bind="value: penDownCommand">
+                            </div>
+                        </div>
+                        <div class="plotter-row">
+                            <div class="control-group">
+                                <label class="control-label-row">Draw Feedrate (F)</label>
+                                <input type="number" class="plotter-input" data-bind="value: feedrateDraw">
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label-row">Travel Feedrate (F)</label>
+                                <input type="number" class="plotter-input" data-bind="value: feedrateTravel">
+                            </div>
+                        </div>
+                        <div class="plotter-row">
+                            <div class="control-group">
+                                <label class="control-label-row">Paper Width (mm)</label>
+                                <div class="plotter-input-readonly" style="padding: 6px; font-weight: bold; color: #64748b; background: #f1f5f9; border-radius: 4px; border: 1px solid #cbd5e1;">210 mm (A4 Standard)</div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label-row">Paper Height (mm)</label>
+                                <div class="plotter-input-readonly" style="padding: 6px; font-weight: bold; color: #64748b; background: #f1f5f9; border-radius: 4px; border: 1px solid #cbd5e1;">297 mm (A4 Standard)</div>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="control-label-row">Start G-Code</label>
+                            <textarea class="plotter-textarea" style="min-height: 60px; font-family: monospace; font-size: 0.8rem;" 
+                                      data-bind="value: startGcode"></textarea>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label-row">End G-Code</label>
+                            <textarea class="plotter-textarea" style="min-height: 60px; font-family: monospace; font-size: 0.8rem;" 
+                                      data-bind="value: endGcode"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Right Side: Live Canvas Preview & Execution -->
+        <div class="plotter-panel" style="position: sticky; top: 15px; align-self: flex-start;">
+            <div class="panel-title">
+                <i class="fa fa-eye"></i> Live Hand-Written Preview
+            </div>
+
+            <!-- Preview Pane -->
+            <div class="preview-pane">
+                <div class="preview-controls">
+                    <span style="font-size: 0.85rem; color: #94a3b8;"><i class="fa fa-file-text-o"></i> Virtual Sheet (<span data-bind="text: paperWidth">200</span> x <span data-bind="text: paperHeight">200</span> mm)</span>
+                    <div class="btn-group">
+                        <button class="btn btn-mini btn-plotter-secondary" data-bind="click: zoomOut"><i class="fa fa-search-minus"></i></button>
+                        <button class="btn btn-mini btn-plotter-secondary" data-bind="click: zoomReset"><i class="fa fa-refresh"></i></button>
+                        <button class="btn btn-mini btn-plotter-secondary" data-bind="click: zoomIn"><i class="fa fa-search-plus"></i></button>
+                    </div>
+                </div>
+
+                <!-- Paper Sheet Container -->
+                <div class="paper-sheet-container">
+                    <div class="paper-sheet" 
+                         data-bind="class: paperClass, style: { width: paperWidthPx, height: paperHeightPx, transform: zoomTransform }">
+                        
+                        <!-- Drawing Paths inside SVG -->
+                        <svg class="paper-svg" data-bind="attr: { viewBox: viewBoxString }">
+                            
+                            <!-- Calibrated Background Image -->
+                            <!-- ko if: bgImageSrc() && showBg() -->
+                            <image data-bind="attr: { href: bgImageSrc, width: bgWidth, height: bgHeight, opacity: bgOpacity, transform: bgTransform }" />
+                            <!-- /ko -->
+
+                            <!-- Ruled Guide Lines (Rendered dynamically as SVG) -->
+                            <!-- ko if: paperType() === 'ruled' -->
+                            <g stroke="rgba(59, 130, 246, 0.15)" stroke-width="0.4">
+                                <!-- ko foreach: ruledLines -->
+                                <line x1="0" data-bind="attr: { y1: y, y2: y, x2: $parent.paperWidth }" />
+                                <!-- /ko -->
+                            </g>
+                            <!-- Red notebook margin line -->
+                            <line data-bind="attr: { x1: marginX, y1: 0, x2: marginX, y2: paperHeight }" 
+                                  stroke="rgba(239, 68, 68, 0.35)" stroke-width="0.6"></line>
+                            <!-- Right margin guide line -->
+                            <line data-bind="attr: { x1: rightMarginX, y1: 0, x2: rightMarginX, y2: paperHeight }" 
+                                  stroke="rgba(59, 130, 246, 0.25)" stroke-width="0.5" stroke-dasharray="2,2"></line>
+                            <!-- /ko -->
+
+                            <!-- Grid Guide Lines -->
+                            <!-- ko if: paperType() === 'grid' -->
+                            <g stroke="rgba(59, 130, 246, 0.1)" stroke-width="0.3">
+                                <!-- ko foreach: gridLinesH -->
+                                <line x1="0" data-bind="attr: { y1: y, y2: y, x2: $parent.paperWidth }" />
+                                <!-- /ko -->
+                                <!-- ko foreach: gridLinesV -->
+                                <line y1="0" data-bind="attr: { x1: x, x2: x, y2: $parent.paperHeight }" />
+                                <!-- /ko -->
+                            </g>
+                            <!-- /ko -->
+
+                            <!-- Detected Page Lines visual guides -->
+                            <!-- ko if: useDetectedLines() && detectedLines().length > 0 -->
+                            <g stroke="rgba(220, 38, 38, 0.45)" stroke-width="0.3" stroke-dasharray="2,1">
+                                <!-- ko foreach: detectedLines -->
+                                <line x1="0" data-bind="attr: { y1: $data, y2: $data, x2: $parent.paperWidth }" />
+                                <!-- /ko -->
+                            </g>
+                            <!-- /ko -->
+
+                            <!-- Draggable Manual Guidelines (Interactive Mode) -->
+                            <!-- ko if: lineDetectionMode() === 'manual' -->
+                            <!-- Line 1 -->
+                            <g>
+                                <line x1="0" data-bind="attr: { y1: manualLine1Y, y2: manualLine1Y, x2: paperWidth }" 
+                                      stroke="#3b82f6" stroke-width="0.6" stroke-dasharray="3,2"></line>
+                                <circle data-bind="attr: { cy: manualLine1Y, cx: 12 }" r="3.5" 
+                                        fill="#3b82f6" stroke="#ffffff" stroke-width="0.8" style="cursor: ns-resize;"
+                                        data-bind="event: { mousedown: startDragLine1, touchstart: startDragLine1 }"></circle>
+                                <text data-bind="attr: { y: parseFloat(manualLine1Y()) - 2, x: 17 }" 
+                                      fill="#3b82f6" font-size="3.5" font-family="sans-serif" font-weight="bold">LINE 1 (Anchor)</text>
+                            </g>
+                            <!-- Line 2 -->
+                            <g>
+                                <line x1="0" data-bind="attr: { y1: manualLine2Y, y2: manualLine2Y, x2: paperWidth }" 
+                                      stroke="#f59e0b" stroke-width="0.6" stroke-dasharray="3,2"></line>
+                                <circle data-bind="attr: { cy: manualLine2Y, cx: 12 }" r="3.5" 
+                                        fill="#f59e0b" stroke="#ffffff" stroke-width="0.8" style="cursor: ns-resize;"
+                                        data-bind="event: { mousedown: startDragLine2, touchstart: startDragLine2 }"></circle>
+                                <text data-bind="attr: { y: parseFloat(manualLine2Y()) - 2, x: 17 }" 
+                                      fill="#f59e0b" font-size="3.5" font-family="sans-serif" font-weight="bold">LINE 2 (Spacing)</text>
+                            </g>
+                            <!-- /ko -->
+
+                            <!-- Printable Bed boundary grid -->
+                            <!-- ko if: snapToBedGrid -->
+                            <g>
+                                <rect data-bind="attr: { x: bedBoundsX, y: bedBoundsY, width: bedWidth, height: bedHeight }" 
+                                      fill="rgba(16, 185, 129, 0.05)" stroke="#10b981" stroke-width="0.5" stroke-dasharray="3,3" />
+                                <text data-bind="attr: { x: parseFloat(bedBoundsX()) + 2, y: parseFloat(bedBoundsY()) + 4 }" 
+                                      fill="#10b981" font-size="3" font-family="sans-serif" font-weight="bold">PRINT BED BOUNDARY (220x220)</text>
+                            </g>
+                            <!-- /ko -->
+
+                            <!-- Render all text strokes dynamically -->
+                            <!-- ko foreach: renderedStrokes -->
+                            <path data-bind="attr: { d: pathData, 'stroke-width': penThickness }" fill="none" stroke="#1d4ed8" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <!-- /ko -->
+
+                            <!-- Draggable Grid Alignment Handles -->
+                            <!-- ko if: paperType() === 'ruled' -->
+                            <g>
+                                <!-- Draggable Line Targets (thick transparent lines that capture mouse events) -->
+                                <!-- 1. Margin vertical line -->
+                                <line class="draggable-margin-line" data-bind="attr: { x1: marginX, y1: 0, x2: marginX, y2: paperHeight }" 
+                                      stroke="red" stroke-opacity="0.0001" stroke-width="14" pointer-events="stroke" style="cursor: ew-resize;"></line>
+                                      
+                                <!-- 2. Right margin vertical line -->
+                                <line class="draggable-right-margin-line" data-bind="attr: { x1: rightMarginX, y1: 0, x2: rightMarginX, y2: paperHeight }" 
+                                      stroke="blue" stroke-opacity="0.0001" stroke-width="14" pointer-events="stroke" style="cursor: ew-resize;"></line>
+                                      
+                                <!-- 3. Anchor horizontal line (Line 1) -->
+                                <line class="draggable-anchor-line" data-bind="attr: { y1: marginY, y2: marginY, x2: paperWidth }" 
+                                      x1="0" stroke="blue" stroke-opacity="0.0001" stroke-width="14" pointer-events="stroke" style="cursor: ns-resize;"></line>
+                                      
+                                <!-- 4. Spacing horizontal line (Line 2 / span line) -->
+                                <line class="draggable-spacing-line" data-bind="attr: { y1: gridHandle2Y, y2: gridHandle2Y, x2: paperWidth }" 
+                                      x1="0" stroke="orange" stroke-opacity="0.0001" stroke-width="14" pointer-events="stroke" style="cursor: ns-resize;"></line>
+
+                                <!-- Handle 1: Anchor point (X = marginX, Y = marginY) -->
+                                <circle class="grid-handle-anchor" data-bind="attr: { cx: marginX, cy: marginY }" r="4.5" stroke="#ffffff" stroke-width="0.8" pointer-events="all" style="cursor: move;"></circle>
+                                
+                                <!-- Handle 2: Spacing point (X = marginX, Y = gridHandle2Y) -->
+                                <circle class="grid-handle-spacing" data-bind="attr: { cx: marginX, cy: gridHandle2Y }" r="4.5" stroke="#ffffff" stroke-width="0.8" pointer-events="all" style="cursor: ns-resize;"></circle>
+                            </g>
+                            <!-- /ko -->
+                        </svg>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- G-Code Filename -->
+            <div class="control-group">
+                <label class="control-label-row">G-Code Filename:</label>
+                <input type="text" class="plotter-input" data-bind="value: filename" placeholder="handwriting.gcode">
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="btn-group-row">
+                <button class="btn-plotter-secondary" data-bind="click: generateAndSaveLocally, disable: text().trim() === ''">
+                    <i class="fa fa-download"></i> Download G-Code
+                </button>
+                <button class="btn-plotter-primary" data-bind="click: uploadToOctoPrint, disable: text().trim() === ''">
+                    <i class="fa fa-upload"></i> Send to Printer
+                </button>
+            </div>
+            
+            <div class="btn-group-row" style="margin-top: 0;">
+                <button class="btn-plotter-primary" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);" 
+                        data-bind="click: uploadAndPrint, disable: text().trim() === ''">
+                    <i class="fa fa-play"></i> Send & Print Now!
+                </button>
+            </div>
+
+            <!-- Stats -->
+            <div class="plotter-stats">
+                <span>Strokes: <span data-bind="text: totalStrokes">0</span></span>
+                <span>Length: <span data-bind="text: totalLength">0</span> mm</span>
+                <span>File Size: <span data-bind="text: totalSize">0</span> bytes</span>
+            </div>
+        </div>
+
+    </div>
+</div>
