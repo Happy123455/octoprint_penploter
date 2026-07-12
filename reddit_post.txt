@@ -1,0 +1,56 @@
+SUBREDDIT RECOMMENDATIONS:
+r/3Dprinting, r/octoprint, r/maker, r/DIY, r/Handwriting
+
+--------------------------------------------------------------------------------
+
+TITLE OPTIONS (Choose one):
+1) Can you spot the machine? I did a side-by-side handwriting comparison quiz on my 3D printer.
+2) Interactive Quiz: Can you identify which handwriting is mine vs. my 3D printer?
+3) I compared my 3D printer's plotted handwriting side-by-side with my own hand. Can you guess which one is human?
+
+--------------------------------------------------------------------------------
+
+POST BODY:
+
+Hey r/3Dprinting,
+
+I’ve been working on a project to turn standard 3D printers/pen plotters into ultra-realistic handwriting machines. After a lot of calibration tuning and tweaking, I did an experiment comparing the machine's output side-by-side with my own physical handwriting on ruled paper.
+
+I wanted to make this a quick interactive quiz for you guys!
+
+Here is the handwritten sheet:
+https://github.com/Happy123455/octoprint_penploter/raw/main/comparison_sheet.jpg
+
+Several paragraphs on this sheet are plotted by a 3D printer running my handwriting synthesis engine, and one paragraph was physically written by me with a gel pen. 
+
+Can you guess which paragraph is the real human handwriting? Take a close look, make your guess, and click the spoiler below to reveal the answer!
+
+***
+
+### 🎯 THE REVEAL:
+
+>!**The human reference is the very last paragraph under the "Dowels" section!** All the other paragraphs above it (Questions, Spacers, Chairs) were fully plotted by the 3D printer.!<
+
+Here is the animated outline layout overlay showing the machine plotting path vs the human reference:
+https://github.com/Happy123455/octoprint_penploter/raw/main/handwriting_comparison.svg
+
+***
+
+### How it Works (The Engineering behind the scenes):
+
+Plotting text usually looks mechanical and fake because machines draw letters with mathematical perfection. To break that "robotic" look and make it feel human, I built a web workbench and OctoPrint plugin with these core features:
+
+1. 🌀 Jitter & Path Tremor Engine: High-frequency micro-variations (simulating actual muscle tremors) are procedural-noised onto the pen travel vectors so the lines look slightly imperfect.
+2. 🌊 Dynamic Slant & Baseline Drift: The software simulates human fatigue by adding gradual wave drift to the line baselines and introducing random letter-slant rotations.
+3. 🔀 Procedural Alternates: If you write duplicate letters (like the double 'o' in "spacers" and "blocks"), the engine swaps between different pre-drawn glyph variants so they never look identical.
+4. 📐 3/4-Point Rigid Calibration: Notebook paper is never taped perfectly straight on the bed. You shift-click the corners of your paper in the workspace, and the software automatically calculates sheet rotation (theta) and maps/skews coordinates to align perfectly with the paper's ruling.
+5. 🩻 Centerline Font Skeletonizer: Converts standard hollow TTF/OTF closed-loop vector paths into thin, clean single-line strokes matching a ballpoint pen.
+6. 🐢 G-code Slow Start & Live Babystepping: Automatically tags and runs the first few words at 10% feedrate to prevent initial carriage jitter, and opens a real-time tuning panel to babystep Y/Z offsets relative to paper lines mid-print.
+
+### Try it yourself (It's 100% Free & Open-Source):
+You don't need to install anything to test it; the workspace runs completely in the browser:
+
+* Live Interactive Web Workspace: https://happy123455.github.io/octoprint_penploter/
+* GitHub Repository (MIT Licensed): https://github.com/Happy123455/octoprint_penploter
+
+I'd love to hear if you guessed it right and your feedback on the handwriting synthesis!

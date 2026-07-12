@@ -1,0 +1,44 @@
+TITLE:
+How I modified my 3D printer to write letters on lined notebook paper (Step-by-step calibration & alignment build)
+
+--------------------------------------------------------------------------------
+
+POST BODY:
+
+Hi r/DIY,
+
+I wanted to share a project I've been working on: transforming a standard 3D printer into a pen plotter that can write on standard notebook lined paper. The hardest part wasn't mounting the pen, but getting the printer to align perfectly with the hand-ruled lines on paper that is taped down at a slight angle.
+
+Here is the finished project in action:
+https://github.com/Happy123455/octoprint_penploter/raw/main/comparison_sheet.jpg
+
+I did a comparison test where the top paragraphs are printed by the machine, and the last paragraph ("Dowels...") is my actual handwriting. (Spoiler: >!The bottom paragraph is the human reference!<).
+
+Here is how I set this up step-by-step:
+
+### Step 1: The Pen Mount (Hardware)
+I 3D printed a simple pen holder attachment that mounts directly to the printer's X-carriage (next to the print head/hotend). 
+- Material: PLA.
+- I added a small spring tensioner to the mount so the pen has about 2-3mm of vertical compliance. This is important because 3D printer beds are not perfectly flat, and the spring prevents the pen tip from snapping or tearing the paper.
+
+### Step 2: Bed Prep & Tape Alignment
+I taped a standard notebook lined sheet onto the printbed using painter's tape. The paper doesn't have to be perfectly straight (our coordinate transform math handles skew correction).
+
+### Step 3: Software & Calibration Setup
+To get the printer to trace directly on the ruled lines, I built a coordinate calibration system. Instead of manual code editing, it uses 4 reference points:
+1. P1 (Top-Left): You jog the pen carriage to the intersection of the paper's top margin and left vertical line and click to lock.
+2. P2 (Top-Right): Jog to the top-right corner along the same line and lock. This calculates the skew angle (theta) of the paper.
+3. P3 (Bottom-Left): Jog 20 lines down on the left margin and lock. This determines the exact spacing between the blue lines.
+4. P4 (Bottom-Right): Jog 20 lines down on the right margin and lock. This verifies the parallelogram layout and checks for paper distortion.
+
+The coordinate engine uses these 4 points to construct a rigid transformation matrix, rotating and scaling the print file to match the paper orientation.
+
+### Step 4: The Path Engine & Humanization
+To make the text look like real handwriting rather than a computer font:
+- I used a centerline stroke font database (hershey vector format) instead of bubble outlines.
+- Added random slanting jitter and micro-tremors to the travel path to simulate natural hand shake.
+- Added baseline drift to mimic how writing gently floats up and down on ruled lines.
+- Programmed a 10% feedrate slow-start on the first 3 words to prevent carriage speed jitter when the pen first hits the paper.
+
+### Summary
+It was a really fun weekend build! All the files and the browser-based calibration tool are open-source and MIT licensed for anyone wanting to build their own. Let me know if you have any questions about the coordinate transformation math or mounting hardware!

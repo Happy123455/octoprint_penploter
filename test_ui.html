@@ -107,6 +107,28 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     </button>
                 </div>
 
+                <!-- Notes File Uploader & Block Manager -->
+                <div class="mt-4 border-t border-slate-800/80 pt-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-300 flex items-center gap-1">
+                            📄 Notes Uploader &amp; Block Layout
+                        </span>
+                        <button id="btnResetBlocks" class="text-[10px] text-red-400 hover:text-red-300 font-semibold transition">Reset Blocks</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="file" id="notesFileInput" accept=".txt,.md" class="hidden" />
+                        <button id="btnUploadNotes" class="flex-1 py-1.5 px-3 rounded bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition flex items-center justify-center gap-1.5">
+                            📁 Choose Notes File
+                        </button>
+                        <button id="btnParseNotes" class="py-1.5 px-3 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow transition">
+                            Parse &amp; Layout
+                        </button>
+                    </div>
+                    <div id="blocksListContainer" class="max-h-36 overflow-y-auto space-y-1.5 pr-1 mt-2 border border-slate-850 p-2 rounded bg-slate-950/20">
+                        <!-- Dynamically populated blocks -->
+                    </div>
+                </div>
+
                 <!-- Gemini API Editor Integration -->
                 <div class="mt-4 bg-indigo-950/15 border border-indigo-900/35 rounded-xl p-4 space-y-3.5">
                     <div class="flex items-center justify-between">
@@ -1301,6 +1323,234 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
         loadDefaultFinlayFont();
 
+        // --- MATH STROKE SYMBOLS ---
+        const MathStrokeSymbols = {
+            'gamma': [
+                [[2, 1], [3, 2], [4, 4], [4, 8], [3, 10], [2, 10], [1, 9], [2, 7], [5, 4], [7, 2], [8, 1]]
+            ],
+            'theta': [
+                [[3, 2], [2, 4], [2, 7], [3, 9], [5, 10], [7, 9], [8, 7], [8, 4], [7, 2], [5, 1], [3, 2]],
+                [[2, 5.5], [8, 5.5]]
+            ],
+            'sigma': [
+                [[8, 1], [2, 1], [5, 5], [3, 7], [2, 9], [3, 10], [7, 10], [8, 9]]
+            ],
+            'alpha': [
+                [[8, 2], [6, 4], [4, 7], [3, 9], [4, 10], [6, 10], [7, 8], [7, 5], [6, 3], [4, 2], [2, 2], [1, 3], [2, 5], [4, 7], [8, 9]]
+            ],
+            'beta': [
+                [[2, 10], [2, 2]],
+                [[2, 2], [5, 2], [6, 3.5], [5, 5], [2, 5]],
+                [[2, 5], [6, 5], [7, 7], [6, 9], [2, 9]]
+            ],
+            'lambda': [
+                [[8, 10], [5, 5], [2, 1]],
+                [[5, 5], [8, 1]]
+            ],
+            'pi': [
+                [[2, 2], [8, 2]],
+                [[3, 2], [3, 10]],
+                [[7, 2], [7, 10]]
+            ],
+            'phi': [
+                [[3, 3], [2, 5], [2, 7], [3, 9], [5, 9], [7, 9], [8, 7], [8, 5], [7, 3], [5, 3], [3, 3]],
+                [[5, 1], [5, 10]]
+            ],
+            'omega': [
+                [[2, 4], [3, 7], [4, 9], [5, 7], [6, 9], [7, 7], [8, 4]]
+            ],
+            'mu': [
+                [[2, 10], [2, 3], [4, 3], [4, 8], [5, 10]],
+                [[4, 8], [6, 8], [6, 3]]
+            ],
+            'delta': [
+                [[5, 4], [3, 5], [2, 7], [3, 9], [5, 9], [7, 9], [8, 7], [7, 5], [5, 4]],
+                [[5, 4], [7, 2], [8, 1], [7, 0], [5, 1], [4, 3]]
+            ]
+        };
+
+        // --- MODULAR BLOCKS STATE MANAGEMENT ---
+        let workspaceBlocks = [];
+        let selectedBlockId = null;
+        
+        let activeDragBlockId = null;
+        let activeResizeBlockId = null;
+        let blockDragStartX = 0;
+        let blockDragStartY = 0;
+        let blockInitialX = 0;
+        let blockInitialY = 0;
+        let blockInitialWidth = 100;
+        
+        function saveBlocksToLocalStorage() {
+            try {
+                localStorage.setItem('plotter_workspace_blocks', JSON.stringify(workspaceBlocks));
+            } catch(e) {}
+        }
+        
+        function loadBlocksFromLocalStorage() {
+            try {
+                const stored = localStorage.getItem('plotter_workspace_blocks');
+                if (stored) {
+                    workspaceBlocks = JSON.parse(stored);
+                } else {
+                    resetBlocksToDefault();
+                }
+            } catch(e) {
+                resetBlocksToDefault();
+            }
+        }
+        
+        function resetBlocksToDefault() {
+            const txt = document.getElementById('textInput').value;
+            workspaceBlocks = [
+                {
+                    id: 'block_default',
+                    type: 'text',
+                    content: txt,
+                    x: 25.0,
+                    y: 25.0,
+                    width: 160.0,
+                    height: 80.0
+                }
+            ];
+            selectedBlockId = 'block_default';
+            saveBlocksToLocalStorage();
+        }
+
+        function parseNotesToBlocks(rawText) {
+            const sections = rawText.split(/\n\n+/);
+            const parsedBlocks = [];
+            let currentY = 25.0;
+            const leftMargin = parseFloat(document.getElementById('leftMargin').value) || 25.0;
+            const rightMargin = parseFloat(document.getElementById('rightMargin').value) || 15.0;
+            const blockWidth = 210.0 - leftMargin - rightMargin;
+
+            sections.forEach((section, index) => {
+                const trimmed = section.trim();
+                if (!trimmed) return;
+                if (trimmed === '---') return;
+
+                if (trimmed.startsWith('|')) {
+                    const lines = trimmed.split('\n');
+                    const rows = [];
+                    lines.forEach(line => {
+                        const cellTrimmed = line.trim();
+                        if (cellTrimmed.startsWith('|') && cellTrimmed.endsWith('|')) {
+                            if (/^\|[\s|:\-]*\|$/.test(cellTrimmed)) {
+                                return; 
+                            }
+                            const cells = cellTrimmed.split('|').slice(1, -1).map(c => c.trim());
+                            rows.push(cells);
+                        }
+                    });
+                    if (rows.length > 0) {
+                        parsedBlocks.push({
+                            id: 'block_' + Date.now() + '_' + index,
+                            type: 'table',
+                            content: rows,
+                            x: leftMargin,
+                            y: currentY,
+                            width: blockWidth,
+                            height: rows.length * 10.0 + 8.0 
+                        });
+                        currentY += rows.length * 10.0 + 15.0;
+                    }
+                } else {
+                    parsedBlocks.push({
+                        id: 'block_' + Date.now() + '_' + index,
+                        type: 'text',
+                        content: trimmed,
+                        x: leftMargin,
+                        y: currentY,
+                        width: blockWidth,
+                        height: 25.0 
+                    });
+                    currentY += 35.0;
+                }
+            });
+            return parsedBlocks;
+        }
+
+        // Render UI manager list
+        const blocksListContainer = document.getElementById('blocksListContainer');
+        function updateBlocksListUI() {
+            blocksListContainer.innerHTML = '';
+            if (workspaceBlocks.length === 0) {
+                blocksListContainer.innerHTML = '<div class="text-[10px] text-slate-600 italic">No blocks on canvas. Import notes to start!</div>';
+                return;
+            }
+            
+            workspaceBlocks.forEach((block, idx) => {
+                const isSelected = block.id === selectedBlockId;
+                const item = document.createElement('div');
+                item.className = `flex flex-col gap-1 p-2 rounded border text-xs transition cursor-pointer ${
+                    isSelected ? 'border-indigo-500 bg-indigo-950/20' : 'border-slate-800 bg-slate-950/40 hover:bg-slate-900/60'
+                }`;
+                
+                item.addEventListener('click', () => {
+                    selectedBlockId = block.id;
+                    updateBlocksListUI();
+                    triggerPreviewUpdate();
+                });
+                
+                // Block Header info
+                const header = document.createElement('div');
+                header.className = 'flex justify-between items-center';
+                
+                const badge = document.createElement('span');
+                badge.className = `text-[9px] px-1 py-0.5 rounded font-bold uppercase ${
+                    block.type === 'table' ? 'bg-cyan-900/40 text-cyan-400' : 'bg-indigo-900/40 text-indigo-400'
+                }`;
+                badge.textContent = `${block.type} Block`;
+                
+                const controls = document.createElement('div');
+                controls.className = 'flex items-center gap-1.5';
+                
+                const coordsLabel = document.createElement('span');
+                coordsLabel.className = 'text-[9px] text-slate-500 font-mono';
+                coordsLabel.textContent = `X:${block.x.toFixed(0)} Y:${block.y.toFixed(0)} W:${block.width.toFixed(0)}`;
+                
+                const btnDelete = document.createElement('button');
+                btnDelete.className = 'text-[10px] text-red-500 hover:text-red-400 font-bold';
+                btnDelete.textContent = '✕';
+                btnDelete.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    workspaceBlocks.splice(idx, 1);
+                    if (selectedBlockId === block.id) selectedBlockId = workspaceBlocks[0]?.id || null;
+                    saveBlocksToLocalStorage();
+                    updateBlocksListUI();
+                    triggerPreviewUpdate();
+                });
+                
+                controls.appendChild(coordsLabel);
+                controls.appendChild(btnDelete);
+                header.appendChild(badge);
+                header.appendChild(controls);
+                item.appendChild(header);
+                
+                // Block content preview
+                if (block.type === 'text') {
+                    const textPreview = document.createElement('textarea');
+                    textPreview.className = 'w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500 font-sans resize-none mt-1';
+                    textPreview.rows = 2;
+                    textPreview.value = block.content;
+                    textPreview.addEventListener('input', (e) => {
+                        block.content = e.target.value;
+                        saveBlocksToLocalStorage();
+                        triggerPreviewUpdate();
+                    });
+                    item.appendChild(textPreview);
+                } else if (block.type === 'table') {
+                    const tablePreview = document.createElement('div');
+                    tablePreview.className = 'text-[10px] text-slate-400 mt-1 italic overflow-hidden text-ellipsis whitespace-nowrap';
+                    tablePreview.textContent = `Table: ${block.content[0]?.join(' | ')}...`;
+                    item.appendChild(tablePreview);
+                }
+                
+                blocksListContainer.appendChild(item);
+            });
+        }
+
         let activeDesignerChar = 'A';
         let activeVariant = 0;
         let renderedCharactersOnSheet = [];
@@ -2275,505 +2525,482 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         // Computes all hand-drawn jitters and outputs coordinates arrays mapped to sheet millimeters
         function computeHandwritingLayout(settings) {
             renderedCharactersOnSheet = [];
-            
-            // Normalize tabs to 4 spaces to preserve copy-paste layouts perfectly
-            const normalizedText = settings.text.replace(/\t/g, '    ');
-            const lines = normalizedText.split('\n');
-            const paths = []; // Structure: Array of strokes. Stroke is Array of points {x, y} in mm
-            
-            // Random jitter seed index to keep layout calculations relatively stable between redraws
+            const paths = []; 
             let jitterIndex = 0;
             function pseudoRandom() {
                 const x = Math.sin(jitterIndex++) * 10000;
                 return x - Math.floor(x);
             }
             
-            // Helper to get estimated token width
-            function getTokenWidth(token, currentHeight) {
+            function getCharWidthLocal(cInput, localHeight) {
+                const isMath = (typeof cInput === 'object' && cInput.type === 'math');
+                const char = isMath ? cInput.name : cInput;
+                if (isMath) return localHeight * 0.7;
+                return getCharWidth(char, localHeight, settings);
+            }
+
+            function getTokenWidthLocal(token, currentHeight) {
                 let w = 0;
-                for (let i = 0; i < token.length; i++) {
-                    w += getCharWidth(token[i], currentHeight, settings);
-                    if (i < token.length - 1) {
-                        w += settings.charSpacing;
+                let idx = 0;
+                while (idx < token.length) {
+                    let char = token[idx];
+                    if (char === '$') { idx++; continue; }
+                    if (char === '_' || char === '^') {
+                        idx++;
+                        if (idx < token.length) {
+                            if (token[idx] === '{') {
+                                idx++;
+                                while (idx < token.length && token[idx] !== '}') {
+                                    w += getCharWidthLocal(token[idx], currentHeight * 0.55) + settings.charSpacing * 0.55;
+                                    idx++;
+                                }
+                                if (idx < token.length && token[idx] === '}') idx++;
+                            } else {
+                                w += getCharWidthLocal(token[idx], currentHeight * 0.55) + settings.charSpacing * 0.55;
+                                idx++;
+                            }
+                        }
+                        continue;
                     }
+                    if (char === '\\') {
+                        idx++;
+                        let sym = "";
+                        while (idx < token.length && /[a-zA-Z0-9]/.test(token[idx])) {
+                            sym += token[idx];
+                            idx++;
+                        }
+                        w += getCharWidthLocal({ type: 'math', name: sym }, currentHeight) + settings.charSpacing;
+                        continue;
+                    }
+                    w += getCharWidthLocal(char, currentHeight) + settings.charSpacing;
+                    idx++;
                 }
                 return w;
             }
 
-            // Indian standard lined paper bounding area limits
-            const paperWidth = 210; // A4
-            const rightMarginX = 210 - settings.rightMargin;
+            // We loop over all active workspace blocks sorted from top to bottom
+            const sortedBlocks = [...workspaceBlocks].sort((a, b) => a.y - b.y);
             
-            let currentLineY = settings.topLineOffset;
-            let wordCounter = 0;
-            
-            // Check if a line is a table row
-            function isTableRow(text) {
-                return /^\s*\|.*\|\s*$/.test(text);
-            }
-
-            function drawHanddrawnLine(x1, y1, x2, y2) {
-                const lineStrokes = [];
-                const dx = x2 - x1;
-                const dy = y2 - y1;
-                const distance = Math.sqrt(dx*dx + dy*dy);
-                const stepMM = 2.0;
-                const stepsCount = Math.max(1, Math.floor(distance / stepMM));
-                
-                for (let s = 0; s <= stepsCount; s++) {
-                    const t = s / stepsCount;
-                    let targetX = x1 + dx * t;
-                    let targetY = y1 + dy * t;
-                    if (settings.wobble > 0) {
-                        targetX += (pseudoRandom() - 0.5) * settings.wobble;
-                        targetY += (pseudoRandom() - 0.5) * settings.wobble;
-                    }
-                    lineStrokes.push({ x: targetX, y: targetY });
-                }
-                paths.push(lineStrokes);
-            }
-
-            let lineIdx = 0;
-            while (lineIdx < lines.length) {
-                let lineText = lines[lineIdx];
-                
-                if (isTableRow(lineText)) {
-                    // Contiguous table rows collector
-                    const tableRows = [];
-                    while (lineIdx < lines.length && isTableRow(lines[lineIdx])) {
-                        tableRows.push(lines[lineIdx]);
-                        lineIdx++;
-                    }
+            sortedBlocks.forEach(block => {
+                if (block.type === 'text') {
+                    const normalizedText = block.content.replace(/\t/g, '    ');
+                    const lines = normalizedText.split('\n');
+                    const rightMarginX = block.x + block.width;
+                    let currentLineY = block.y + settings.charHeight;
+                    let wordCounter = 0;
                     
-                    // Parse rows into content cells, skipping horizontal dividers
-                    const contentRows = [];
-                    tableRows.forEach(row => {
-                        const cells = row.split('|').map(c => c.trim()).slice(1, -1);
-                        const isDivider = cells.every(c => /^[:\s\-]+$/.test(c));
-                        if (!isDivider && cells.length > 0) {
-                            contentRows.push(cells);
-                        }
-                    });
-                    
-                    if (contentRows.length > 0) {
-                        const colCount = Math.max(...contentRows.map(r => r.length));
-                        const totalTableWidth = rightMarginX - settings.leftMargin;
+                    for (let lineText of lines) {
+                        const lineDriftAmt = (pseudoRandom() - 0.5) * settings.drift * 2.0;
+                        const bulletMatch = lineText.match(/^\s*(?:[•*\-+]|\d+\.)\s+/);
+                        let bulletIndent = 0;
+                        let currentX = block.x;
+                        let wrapMarginX = block.x;
                         
-                        // Calculate max text length per column to assign proportional widths
-                        const colMaxTextLen = Array(colCount).fill(0);
-                        contentRows.forEach(row => {
-                            row.forEach((cell, idx) => {
-                                if (idx < colCount) {
-                                    colMaxTextLen[idx] = Math.max(colMaxTextLen[idx], cell.length);
-                                }
-                            });
-                        });
-                        const totalTextLen = colMaxTextLen.reduce((a, b) => a + b, 0) || 1;
-                        const colWidths = colMaxTextLen.map(len => {
-                            const propWidth = (len / totalTextLen) * totalTableWidth;
-                            return Math.max(25.0, propWidth); // minimum column width 25mm
-                        });
-                        const sumWidths = colWidths.reduce((a, b) => a + b, 0);
-                        const scale = totalTableWidth / sumWidths;
-                        const finalColWidths = colWidths.map(w => w * scale);
-                        
-                        const tableTopY = currentLineY - (settings.lineSpacing * 0.5);
-                        let rowStartBaseline = currentLineY;
-                        const rowHeights = [];
-                        
-                        // Render cells
-                        contentRows.forEach((row, rIdx) => {
-                            const cellLinesPerCol = [];
-                            for (let cIdx = 0; cIdx < colCount; cIdx++) {
-                                const text = row[cIdx] || "";
-                                // Word wrap inside cell
-                                const tokens = text.match(/\S+|\s+/g) || [];
-                                const cellLines = [];
-                                let currentLine = "";
-                                let currentLineWidth = 0;
-                                const maxCellWidth = finalColWidths[cIdx] - 4; // 2mm padding on each side
-                                
-                                for (let token of tokens) {
-                                    if (/^\s+$/.test(token)) {
-                                        const spaceW = settings.wordSpacing * token.length;
-                                        if (currentLineWidth + spaceW > maxCellWidth && currentLine !== "") {
-                                            cellLines.push(currentLine);
-                                            currentLine = "";
-                                            currentLineWidth = 0;
-                                        } else {
-                                            currentLine += token;
-                                            currentLineWidth += spaceW;
-                                        }
-                                        continue;
-                                    }
-                                    const wordW = getTokenWidth(token, settings.charHeight);
-                                    if (currentLineWidth + wordW > maxCellWidth) {
-                                        if (currentLine !== "") {
-                                            cellLines.push(currentLine);
-                                        }
-                                        currentLine = token;
-                                        currentLineWidth = wordW;
-                                    } else {
-                                        currentLine += token;
-                                        currentLineWidth += wordW;
-                                    }
-                                }
-                                if (currentLine !== "") {
-                                    cellLines.push(currentLine);
-                                }
-                                cellLinesPerCol.push(cellLines);
-                            }
-                            
-                            const maxLinesInRow = Math.max(1, ...cellLinesPerCol.map(l => l.length));
-                            const rowHeight = maxLinesInRow * settings.lineSpacing;
-                            rowHeights.push(rowHeight);
-                            
-                            // Render text characters
-                            for (let cIdx = 0; cIdx < colCount; cIdx++) {
-                                // Calculate cell left offset X
-                                let cellLeftX = settings.leftMargin;
-                                for (let i = 0; i < cIdx; i++) {
-                                    cellLeftX += finalColWidths[i];
-                                }
-                                
-                                const lines = cellLinesPerCol[cIdx];
-                                lines.forEach((lineText, lIdx) => {
-                                    const lineY = rowStartBaseline + lIdx * settings.lineSpacing;
-                                    const lineDriftAmt = (pseudoRandom() - 0.5) * settings.drift * 2.0;
-                                    let currentX = cellLeftX + 2; // padding
-                                    
-                                    // Split words/chars in the line
-                                    const tokens = lineText.match(/\S+|\s+/g) || [];
-                                    for (let token of tokens) {
-                                        if (/^\s+$/.test(token)) {
-                                            currentX += settings.wordSpacing * token.length;
-                                            continue;
-                                        }
-                                        wordCounter++;
-                                        for (let i = 0; i < token.length; i++) {
-                                            const char = token[i];
-                                            const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
-                                            const localHeight = settings.charHeight * heightJitterMultiplier;
-                                            const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
-                                            const slantRad = (slantAngleDeg * Math.PI) / 180.0;
-                                            
-                                            let characterStrokes = [];
-                                            let charWidthMM = getCharWidth(char, localHeight, settings);
-                                            let chosenVariantIdx = 0;
-                                            
-                                            if (activeFontMode === 'stroke') {
-                                                const strokeDef = StrokeFont[char];
-                                                if (strokeDef) {
-                                                    characterStrokes = strokeDef.map(stroke => {
-                                                        return stroke.map(pt => {
-                                                            const normX = pt[0] / 10.0;
-                                                            const normY = pt[1] / 10.0;
-                                                            return { x: normX * charWidthMM, y: normY * localHeight };
-                                                        });
-                                                    });
-                                                }
-                                            } else if (activeFontMode === 'drawn') {
-                                                const variants = DrawnFont[char];
-                                                if (variants) {
-                                                    const indices = [];
-                                                    variants.forEach((v, idx) => {
-                                                        if (v && v.length > 0) indices.push(idx);
-                                                    });
-                                                    if (indices.length > 0) {
-                                                        const randChoice = Math.floor(pseudoRandom() * indices.length);
-                                                        chosenVariantIdx = indices[randChoice];
-                                                        const rawStrokes = variants[chosenVariantIdx];
-                                                        let minX = Infinity;
-                                                        rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
-                                                        characterStrokes = rawStrokes.map(stroke => {
-                                                            return stroke.map(pt => {
-                                                                const x = (pt[0] - minX) * (localHeight / 180.0);
-                                                                const y = (pt[1] - 240.0) * (localHeight / 180.0);
-                                                                return { x: x, y: localHeight + y };
-                                                            });
-                                                        });
-                                                    }
-                                                }
-                                            } else if (activeFontMode === 'custom' && uploadedFont) {
-                                                const glyph = uploadedFont.charToGlyph(char);
-                                                if (glyph) {
-                                                    const fontScale = 1 / uploadedFont.unitsPerEm;
-                                                    const path = glyph.getPath(0, 0, localHeight / fontScale);
-                                                    let activeStroke = [];
-                                                    for (let cmd of path.commands) {
-                                                        if (cmd.type === 'M') {
-                                                            if (activeStroke.length > 0) characterStrokes.push(activeStroke);
-                                                            activeStroke = [{ x: cmd.x * fontScale, y: -cmd.y * fontScale }];
-                                                        } else if (cmd.type === 'L' || cmd.type === 'Q' || cmd.type === 'C') {
-                                                            activeStroke.push({ x: cmd.x * fontScale, y: -cmd.y * fontScale });
-                                                        } else if (cmd.type === 'Z') {
-                                                            if (activeStroke.length > 0) {
-                                                                activeStroke.push({ x: activeStroke[0].x, y: activeStroke[0].y });
-                                                                characterStrokes.push(activeStroke);
-                                                                activeStroke = [];
-                                                            }
-                                                        }
-                                                    }
-                                                    if (activeStroke.length > 0) characterStrokes.push(activeStroke);
-                                                    charWidthMM = (glyph.advanceWidth || 0) * fontScale * localHeight;
-                                                    if (settings.ttfRender === 'skeleton') {
-                                                        characterStrokes = skeletonizeStrokes(characterStrokes, charWidthMM, localHeight, settings);
-                                                    } else if (settings.ttfRender === 'hatch-horizontal' || settings.ttfRender === 'hatch-diagonal') {
-                                                        const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
-                                                        characterStrokes = characterStrokes.concat(hatches);
-                                                    }
-                                                }
-                                            }
-                                            
-                                            if (characterStrokes.length > 0) {
-                                                for (let stroke of characterStrokes) {
-                                                    const compiledStroke = [];
-                                                    for (let pt of stroke) {
-                                                        const slantedX = pt.x + (localHeight - pt.y) * Math.sin(slantRad);
-                                                        let targetX = currentX + slantedX;
-                                                        let targetY = lineY - settings.letterYOffset - (localHeight - pt.y) + lineDriftAmt;
-                                                        if (settings.wobble > 0) {
-                                                            targetX += (pseudoRandom() - 0.5) * settings.wobble;
-                                                            targetY += (pseudoRandom() - 0.5) * settings.wobble;
-                                                        }
-                                                        compiledStroke.push({ x: targetX, y: targetY });
-                                                    }
-                                                    compiledStroke.isSlowStart = (wordCounter <= 3);
-                                                    paths.push(compiledStroke);
-                                                }
-                                            }
-                                            
-                                            renderedCharactersOnSheet.push({
-                                                char: char,
-                                                variantIndex: chosenVariantIdx,
-                                                minX: currentX,
-                                                maxX: currentX + charWidthMM,
-                                                minY: lineY - localHeight,
-                                                maxY: lineY
-                                            });
-                                            
-                                            let charSpacingJitterAmt = 0;
-                                            if (settings.charSpacingJitter > 0) {
-                                                charSpacingJitterAmt = (pseudoRandom() - 0.5) * settings.charSpacingJitter;
-                                            }
-                                            currentX += charWidthMM + settings.charSpacing + charSpacingJitterAmt;
-                                        }
-                                    }
-                                });
-                            }
-                            
-                            rowStartBaseline += rowHeight;
-                        });
-                        
-                        // Draw grid lines
-                        let currentYOffset = tableTopY;
-                        
-                        // Draw top border
-                        drawHanddrawnLine(settings.leftMargin, tableTopY, rightMarginX, tableTopY);
-                        
-                        // Draw row separators
-                        rowHeights.forEach(h => {
-                            currentYOffset += h;
-                            drawHanddrawnLine(settings.leftMargin, currentYOffset, rightMarginX, currentYOffset);
-                        });
-                        
-                        // Draw column dividers
-                        let currentXOffset = settings.leftMargin;
-                        drawHanddrawnLine(currentXOffset, tableTopY, currentXOffset, currentYOffset); // leftmost vertical
-                        
-                        for (let cIdx = 0; cIdx < colCount; cIdx++) {
-                            currentXOffset += finalColWidths[cIdx];
-                            drawHanddrawnLine(currentXOffset, tableTopY, currentXOffset, currentYOffset); // column separator
+                        if (bulletMatch) {
+                            const bulletStr = bulletMatch[0];
+                            bulletIndent = getTokenWidthLocal(bulletStr, settings.charHeight);
+                            wrapMarginX = block.x + bulletIndent;
                         }
                         
-                        // Advance line spacing Y to next row baseline
-                        currentLineY = currentYOffset + (settings.lineSpacing * 0.5);
-                    }
-                    continue;
-                } else {
-                    // Apply Baseline drift/wave organically across the text row using a slow sin curve
-                    const lineDriftAmt = (pseudoRandom() - 0.5) * settings.drift * 2.0;
-                    
-                    // Detect bullet list hanging indent
-                    const bulletMatch = lineText.match(/^\s*(?:[•*\-+]|\d+\.)\s+/);
-                    let bulletIndent = 0;
-                    let currentX = settings.leftMargin;
-                    let wrapMarginX = settings.leftMargin;
-                    
-                    if (bulletMatch) {
-                        const bulletStr = bulletMatch[0];
-                        bulletIndent = getTokenWidth(bulletStr, settings.charHeight);
-                        wrapMarginX = settings.leftMargin + bulletIndent;
-                    }
-                    
-                    // Parse line by inline size and scale tags: [size=6], [scale=1.5]
-                    const parts = lineText.split(/(\[size=\d+(?:\.\d+)?\]|\[\/size\]|\[scale=\d+(?:\.\d+)?\]|\[\/scale\])/);
-                    let scaleStack = [1.0];
-                    
-                    for (let part of parts) {
-                        if (!part) continue;
+                        const parts = lineText.split(/(\[size=\d+(?:\.\d+)?\]|\[\/size\]|\[scale=\d+(?:\.\d+)?\]|\[\/scale\])/);
+                        let scaleStack = [1.0];
                         
-                        if (part.startsWith('[size=')) {
-                            const h = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
-                            scaleStack.push(h / settings.charHeight);
-                            continue;
-                        } else if (part === '[/size]') {
-                            if (scaleStack.length > 1) scaleStack.pop();
-                            continue;
-                        } else if (part.startsWith('[scale=')) {
-                            const s = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
-                            scaleStack.push(s);
-                            continue;
-                        } else if (part === '[/scale]') {
-                            if (scaleStack.length > 1) scaleStack.pop();
-                            continue;
-                        }
-                        
-                        const currentScale = scaleStack[scaleStack.length - 1];
-                        const localHeightBase = settings.charHeight * currentScale;
-                        
-                        // Parse text block part into tokens of words and spaces
-                        const tokens = part.match(/\S+|\s+/g) || [];
-                        
-                        for (let token of tokens) {
-                            // Check if it is space token
-                            if (/^\s+$/.test(token)) {
-                                let spaceWidth = settings.wordSpacing * token.length * currentScale;
-                                if (settings.wordSpacingJitter > 0) {
-                                    spaceWidth += (pseudoRandom() - 0.5) * settings.wordSpacingJitter * token.length;
-                                }
-                                if (currentX + spaceWidth > rightMarginX) {
-                                    currentX = wrapMarginX;
-                                    currentLineY += settings.lineSpacing;
-                                } else {
-                                    currentX += spaceWidth;
-                                }
+                        for (let part of parts) {
+                            if (!part) continue;
+                            if (part.startsWith('[size=')) {
+                                const h = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
+                                scaleStack.push(h / settings.charHeight);
+                                continue;
+                            } else if (part === '[/size]') {
+                                if (scaleStack.length > 1) scaleStack.pop();
+                                continue;
+                            } else if (part.startsWith('[scale=')) {
+                                const s = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
+                                scaleStack.push(s);
+                                continue;
+                            } else if (part === '[/scale]') {
+                                if (scaleStack.length > 1) scaleStack.pop();
                                 continue;
                             }
                             
-                            // Word token!
-                            wordCounter++;
-                            const wordWidth = getTokenWidth(token, localHeightBase);
-                            if (currentX + wordWidth > rightMarginX && currentX > wrapMarginX) {
-                                currentX = wrapMarginX;
-                                currentLineY += settings.lineSpacing;
-                            }
+                            const currentScale = scaleStack[scaleStack.length - 1];
+                            const localHeightBase = settings.charHeight * currentScale;
+                            const tokens = part.match(/\S+|\s+/g) || [];
                             
-                            // Render characters of the word
-                            for (let i = 0; i < token.length; i++) {
-                                const char = token[i];
-                                const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
-                                const localHeight = localHeightBase * heightJitterMultiplier;
-                                const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
-                                const slantRad = (slantAngleDeg * Math.PI) / 180.0;
-                                
-                                let characterStrokes = [];
-                                let charWidthMM = getCharWidth(char, localHeight, settings);
-                                let chosenVariantIdx = 0;
-                                
-                                // Retrieve coordinate paths based on font source mode
-                                if (activeFontMode === 'stroke') {
-                                    const strokeDef = StrokeFont[char];
-                                    if (strokeDef) {
-                                        characterStrokes = strokeDef.map(stroke => {
-                                            return stroke.map(pt => {
-                                                const normX = pt[0] / 10.0;
-                                                const normY = pt[1] / 10.0;
-                                                return { x: normX * charWidthMM, y: normY * localHeight };
-                                            });
-                                        });
+                            for (let token of tokens) {
+                                if (/^\s+$/.test(token)) {
+                                    let spaceWidth = settings.wordSpacing * token.length * currentScale;
+                                    if (settings.wordSpacingJitter > 0) {
+                                        spaceWidth += (pseudoRandom() - 0.5) * settings.wordSpacingJitter * token.length;
                                     }
-                                } else if (activeFontMode === 'drawn') {
-                                    const variants = DrawnFont[char];
-                                    if (variants) {
-                                        const indices = [];
-                                        variants.forEach((v, idx) => {
-                                            if (v && v.length > 0) indices.push(idx);
-                                        });
-                                        if (indices.length > 0) {
-                                            const randChoice = Math.floor(pseudoRandom() * indices.length);
-                                            chosenVariantIdx = indices[randChoice];
-                                            const rawStrokes = variants[chosenVariantIdx];
-                                            let minX = Infinity;
-                                            rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
-                                            characterStrokes = rawStrokes.map(stroke => {
-                                                return stroke.map(pt => {
-                                                    const x = (pt[0] - minX) * (localHeight / 180.0);
-                                                    const y = (pt[1] - 240.0) * (localHeight / 180.0);
-                                                    return { x: x, y: localHeight + y };
-                                                });
-                                            });
-                                        }
+                                    if (currentX + spaceWidth > rightMarginX) {
+                                        currentX = wrapMarginX;
+                                        currentLineY += settings.lineSpacing;
+                                    } else {
+                                        currentX += spaceWidth;
                                     }
-                                } else if (activeFontMode === 'custom' && uploadedFont) {
-                                    const glyph = uploadedFont.charToGlyph(char);
-                                    if (glyph) {
-                                        const fontScale = 1 / uploadedFont.unitsPerEm;
-                                        const path = glyph.getPath(0, 0, localHeight / fontScale);
-                                        let activeStroke = [];
-                                        for (let cmd of path.commands) {
-                                            if (cmd.type === 'M') {
-                                                if (activeStroke.length > 0) characterStrokes.push(activeStroke);
-                                                activeStroke = [{ x: cmd.x * fontScale, y: -cmd.y * fontScale }];
-                                            } else if (cmd.type === 'L' || cmd.type === 'Q' || cmd.type === 'C') {
-                                                activeStroke.push({ x: cmd.x * fontScale, y: -cmd.y * fontScale });
-                                            } else if (cmd.type === 'Z') {
-                                                if (activeStroke.length > 0) {
-                                                    activeStroke.push({ x: activeStroke[0].x, y: activeStroke[0].y });
-                                                    characterStrokes.push(activeStroke);
-                                                    activeStroke = [];
+                                    continue;
+                                }
+                                
+                                wordCounter++;
+                                const wordWidth = getTokenWidthLocal(token, localHeightBase);
+                                if (currentX + wordWidth > rightMarginX && currentX > wrapMarginX) {
+                                    currentX = wrapMarginX;
+                                    currentLineY += settings.lineSpacing;
+                                }
+                                
+                                let idx = 0;
+                                while (idx < token.length) {
+                                    let char = token[idx];
+                                    if (char === '$') { idx++; continue; }
+                                    if (char === '_') {
+                                        idx++;
+                                        if (idx < token.length) {
+                                            if (token[idx] === '{') {
+                                                idx++;
+                                                let subChars = "";
+                                                while (idx < token.length && token[idx] !== '}') {
+                                                    subChars += token[idx];
+                                                    idx++;
                                                 }
+                                                if (idx < token.length && token[idx] === '}') idx++;
+                                                for (let sc of subChars) {
+                                                    renderChar(sc, currentScale * 0.6, localHeightBase * 0.35);
+                                                }
+                                            } else {
+                                                renderChar(token[idx], currentScale * 0.6, localHeightBase * 0.35);
+                                                idx++;
                                             }
                                         }
-                                        if (activeStroke.length > 0) characterStrokes.push(activeStroke);
-                                        charWidthMM = (glyph.advanceWidth || 0) * fontScale * localHeight;
-                                        if (settings.ttfRender === 'skeleton') {
-                                            characterStrokes = skeletonizeStrokes(characterStrokes, charWidthMM, localHeight, settings);
-                                        } else if (settings.ttfRender === 'hatch-horizontal' || settings.ttfRender === 'hatch-diagonal') {
-                                            const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
-                                            characterStrokes = characterStrokes.concat(hatches);
-                                        }
+                                        continue;
                                     }
-                                }
-                                
-                                if (characterStrokes.length > 0) {
-                                    for (let stroke of characterStrokes) {
-                                        const compiledStroke = [];
-                                        for (let pt of stroke) {
-                                            const slantedX = pt.x + (localHeight - pt.y) * Math.sin(slantRad);
-                                            let targetX = currentX + slantedX;
-                                            let targetY = currentLineY - settings.letterYOffset - (localHeight - pt.y) + lineDriftAmt;
-                                            if (settings.wobble > 0) {
-                                                targetX += (pseudoRandom() - 0.5) * settings.wobble;
-                                                targetY += (pseudoRandom() - 0.5) * settings.wobble;
+                                    if (char === '^') {
+                                        idx++;
+                                        if (idx < token.length) {
+                                            if (token[idx] === '{') {
+                                                idx++;
+                                                let superChars = "";
+                                                while (idx < token.length && token[idx] !== '}') {
+                                                    superChars += token[idx];
+                                                    idx++;
+                                                }
+                                                if (idx < token.length && token[idx] === '}') idx++;
+                                                for (let sc of superChars) {
+                                                    renderChar(sc, currentScale * 0.6, -localHeightBase * 0.45);
+                                                }
+                                            } else {
+                                                renderChar(token[idx], currentScale * 0.6, -localHeightBase * 0.45);
+                                                idx++;
                                             }
-                                            compiledStroke.push({ x: targetX, y: targetY });
                                         }
-                                        compiledStroke.isSlowStart = (wordCounter <= 3);
-                                        paths.push(compiledStroke);
+                                        continue;
                                     }
+                                    if (char === '\\') {
+                                        idx++;
+                                        let sym = "";
+                                        while (idx < token.length && /[a-zA-Z0-9]/.test(token[idx])) {
+                                            sym += token[idx];
+                                            idx++;
+                                        }
+                                        if (MathStrokeSymbols[sym]) {
+                                            renderChar({ type: 'math', name: sym }, currentScale, 0);
+                                        } else {
+                                            renderChar('\\', currentScale, 0);
+                                            for (let sc of sym) {
+                                                renderChar(sc, currentScale, 0);
+                                            }
+                                        }
+                                        continue;
+                                    }
+                                    
+                                    renderChar(char, currentScale, 0);
+                                    idx++;
+                                }
+                            }
+                        }
+                        currentLineY += settings.lineSpacing;
+                    }
+                    block.height = Math.max(15.0, currentLineY - block.y);
+                } else if (block.type === 'table') {
+                    const rows = block.content;
+                    const numRows = rows.length;
+                    const numCols = rows[0]?.length || 0;
+                    if (numCols === 0) return;
+                    
+                    const colWidth = block.width / numCols;
+                    const rowHeights = [];
+                    for (let r = 0; r < numRows; r++) {
+                        let maxLines = 1;
+                        for (let c = 0; c < numCols; c++) {
+                            const cellText = rows[r][c] || "";
+                            const cleanText = cellText.replace(/\*\*/g, '');
+                            const linesNeeded = Math.ceil(getTokenWidthLocal(cleanText, settings.charHeight) / (colWidth - 4.0));
+                            if (linesNeeded > maxLines) maxLines = linesNeeded;
+                        }
+                        rowHeights.push(Math.max(12.0, maxLines * settings.lineSpacing + 3.0));
+                    }
+                    
+                    let totalHeight = rowHeights.reduce((sum, h) => sum + h, 0);
+                    block.height = totalHeight;
+                    
+                    let currentYOffset = 0;
+                    for (let r = 0; r <= numRows; r++) {
+                        const lineY = block.y + currentYOffset;
+                        paths.push([
+                            { x: block.x, y: lineY },
+                            { x: block.x + block.width, y: lineY }
+                        ]);
+                        if (r < numRows) currentYOffset += rowHeights[r];
+                    }
+                    
+                    for (let c = 0; c <= numCols; c++) {
+                        const lineX = block.x + c * colWidth;
+                        paths.push([
+                            { x: lineX, y: block.y },
+                            { x: lineX, y: block.y + totalHeight }
+                        ]);
+                    }
+                    
+                    let rowY = block.y;
+                    for (let r = 0; r < numRows; r++) {
+                        const rHeight = rowHeights[r];
+                        for (let c = 0; c < numCols; c++) {
+                            const cellText = rows[r][c] || "";
+                            const cleanText = cellText.replace(/\*\*/g, '');
+                            
+                            let currentX = block.x + c * colWidth + 2.0;
+                            let currentLineY = rowY + settings.charHeight + 2.0;
+                            let wordCounter = 0;
+                            
+                            const tokens = cleanText.match(/\S+|\s+/g) || [];
+                            for (let token of tokens) {
+                                if (/^\s+$/.test(token)) {
+                                    let spaceWidth = settings.wordSpacing * token.length;
+                                    if (currentX + spaceWidth > block.x + (c + 1) * colWidth - 2.0) {
+                                        currentX = block.x + c * colWidth + 2.0;
+                                        currentLineY += settings.lineSpacing;
+                                    } else {
+                                        currentX += spaceWidth;
+                                    }
+                                    continue;
                                 }
                                 
-                                renderedCharactersOnSheet.push({
-                                    char: char,
-                                    variantIndex: chosenVariantIdx,
-                                    minX: currentX,
-                                    maxX: currentX + charWidthMM,
-                                    minY: currentLineY - localHeight,
-                                    maxY: currentLineY
+                                wordCounter++;
+                                const wordWidth = getTokenWidthLocal(token, settings.charHeight);
+                                if (currentX + wordWidth > block.x + (c + 1) * colWidth - 2.0 && currentX > block.x + c * colWidth + 2.0) {
+                                    currentX = block.x + c * colWidth + 2.0;
+                                    currentLineY += settings.lineSpacing;
+                                }
+                                
+                                let idx = 0;
+                                while (idx < token.length) {
+                                    let char = token[idx];
+                                    if (char === '$') { idx++; continue; }
+                                    if (char === '_') {
+                                        idx++;
+                                        if (idx < token.length) {
+                                            if (token[idx] === '{') {
+                                                idx++;
+                                                let subChars = "";
+                                                while (idx < token.length && token[idx] !== '}') {
+                                                    subChars += token[idx];
+                                                    idx++;
+                                                }
+                                                if (idx < token.length && token[idx] === '}') idx++;
+                                                for (let sc of subChars) {
+                                                    renderChar(sc, 0.6, settings.charHeight * 0.35);
+                                                }
+                                            } else {
+                                                renderChar(token[idx], 0.6, settings.charHeight * 0.35);
+                                                idx++;
+                                            }
+                                        }
+                                        continue;
+                                    }
+                                    if (char === '^') {
+                                        idx++;
+                                        if (idx < token.length) {
+                                            if (token[idx] === '{') {
+                                                idx++;
+                                                let superChars = "";
+                                                while (idx < token.length && token[idx] !== '}') {
+                                                    superChars += token[idx];
+                                                    idx++;
+                                                }
+                                                if (idx < token.length && token[idx] === '}') idx++;
+                                                for (let sc of superChars) {
+                                                    renderChar(sc, 0.6, -settings.charHeight * 0.45);
+                                                }
+                                            } else {
+                                                renderChar(token[idx], 0.6, -settings.charHeight * 0.45);
+                                                idx++;
+                                            }
+                                        }
+                                        continue;
+                                    }
+                                    if (char === '\\') {
+                                        idx++;
+                                        let sym = "";
+                                        while (idx < token.length && /[a-zA-Z0-9]/.test(token[idx])) {
+                                            sym += token[idx];
+                                            idx++;
+                                        }
+                                        if (MathStrokeSymbols[sym]) {
+                                            renderChar({ type: 'math', name: sym }, 1.0, 0);
+                                        } else {
+                                            renderChar('\\', 1.0, 0);
+                                            for (let sc of sym) {
+                                                renderChar(sc, 1.0, 0);
+                                            }
+                                        }
+                                        continue;
+                                    }
+                                    
+                                    renderChar(char, 1.0, 0);
+                                    idx++;
+                                }
+                            }
+                        }
+                        rowY += rHeight;
+                    }
+                }
+            });
+            
+            function renderChar(cInput, localScale, yOffset) {
+                const isMathSymbol = (typeof cInput === 'object' && cInput.type === 'math');
+                const char = isMathSymbol ? cInput.name : cInput;
+                
+                const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
+                const localHeight = settings.charHeight * localScale * heightJitterMultiplier;
+                const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
+                const slantRad = (slantAngleDeg * Math.PI) / 180.0;
+                
+                let characterStrokes = [];
+                let charWidthMM = 0;
+                let chosenVariantIdx = 0;
+                
+                if (isMathSymbol) {
+                    const symbolDef = MathStrokeSymbols[char];
+                    if (symbolDef) {
+                        charWidthMM = localHeight * 0.7;
+                        characterStrokes = symbolDef.map(stroke => {
+                            return stroke.map(pt => {
+                                const normX = pt[0] / 10.0;
+                                const normY = pt[1] / 10.0;
+                                return { x: normX * charWidthMM, y: normY * localHeight };
+                            });
+                        });
+                    }
+                } else {
+                    charWidthMM = getCharWidth(char, localHeight, settings);
+                    if (activeFontMode === 'stroke') {
+                        const strokeDef = StrokeFont[char];
+                        if (strokeDef) {
+                            characterStrokes = strokeDef.map(stroke => {
+                                return stroke.map(pt => {
+                                    const normX = pt[0] / 10.0;
+                                    const normY = pt[1] / 10.0;
+                                    return { x: normX * charWidthMM, y: normY * localHeight };
                                 });
+                            });
+                        }
+                    } else if (activeFontMode === 'drawn') {
+                        const variants = DrawnFont[char];
+                        if (variants) {
+                            const indices = [];
+                            variants.forEach((v, idx) => {
+                                if (v && v.length > 0) indices.push(idx);
+                            });
+                            if (indices.length > 0) {
+                                const randChoice = Math.floor(pseudoRandom() * indices.length);
+                                chosenVariantIdx = indices[randChoice];
+                                const rawStrokes = variants[chosenVariantIdx];
                                 
-                                let charSpacingJitterAmt = 0;
-                                if (settings.charSpacingJitter > 0) {
-                                    charSpacingJitterAmt = (pseudoRandom() - 0.5) * settings.charSpacingJitter;
+                                let minX = Infinity;
+                                rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
+                                
+                                characterStrokes = rawStrokes.map(stroke => {
+                                    return stroke.map(pt => {
+                                        const x = (pt[0] - minX) * (localHeight / 180.0);
+                                        const y = (pt[1] - 240.0) * (localHeight / 180.0);
+                                        const engineY = localHeight + y;
+                                        return { x: x, y: engineY };
+                                    });
+                                });
+                            }
+                        }
+                    } else if (activeFontMode === 'custom' && uploadedFont) {
+                        const glyph = uploadedFont.charToGlyph(char);
+                        if (glyph) {
+                            const fontScale = 1 / uploadedFont.unitsPerEm;
+                            const path = glyph.getPath(0, 0, localHeight / fontScale);
+                            let activeStroke = [];
+                            for (let cmd of path.commands) {
+                                if (cmd.type === 'M') {
+                                    if (activeStroke.length > 0) {
+                                        characterStrokes.push(activeStroke);
+                                    }
+                                    activeStroke = [{ x: cmd.x * fontScale, y: -cmd.y * fontScale }];
+                                } else if (cmd.type === 'L' || cmd.type === 'Q' || cmd.type === 'C') {
+                                    activeStroke.push({ x: cmd.x * fontScale, y: -cmd.y * fontScale });
+                                } else if (cmd.type === 'Z') {
+                                    if (activeStroke.length > 0) {
+                                        activeStroke.push({ x: activeStroke[0].x, y: activeStroke[0].y });
+                                        characterStrokes.push(activeStroke);
+                                        activeStroke = [];
+                                    }
                                 }
-                                currentX += charWidthMM + settings.charSpacing + charSpacingJitterAmt;
+                            }
+                            if (activeStroke.length > 0) {
+                                characterStrokes.push(activeStroke);
+                            }
+                            charWidthMM = (glyph.advanceWidth || 0) * fontScale * localHeight;
+                            if (settings.ttfRender === 'skeleton') {
+                                characterStrokes = skeletonizeStrokes(characterStrokes, charWidthMM, localHeight, settings);
+                            } else if (settings.ttfRender === 'hatch-horizontal' || settings.ttfRender === 'hatch-diagonal') {
+                                const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
+                                characterStrokes = characterStrokes.concat(hatches);
                             }
                         }
                     }
-                    currentLineY += settings.lineSpacing;
-                    lineIdx++;
                 }
+                
+                if (characterStrokes.length > 0) {
+                    for (let stroke of characterStrokes) {
+                        const compiledStroke = [];
+                        for (let pt of stroke) {
+                            const slantedX = pt.x + (localHeight - pt.y) * Math.sin(slantRad);
+                            let targetX = currentX + slantedX;
+                            let targetY = currentLineY - settings.letterYOffset - (localHeight - pt.y) + lineDriftAmt + yOffset;
+                            
+                            if (settings.wobble > 0) {
+                                targetX += (pseudoRandom() - 0.5) * settings.wobble;
+                                targetY += (pseudoRandom() - 0.5) * settings.wobble;
+                            }
+                            compiledStroke.push({ x: targetX, y: targetY });
+                        }
+                        compiledStroke.isSlowStart = (wordCounter <= 3);
+                        paths.push(compiledStroke);
+                    }
+                }
+                
+                if (!isMathSymbol) {
+                    renderedCharactersOnSheet.push({
+                        char: char,
+                        variantIndex: chosenVariantIdx,
+                        minX: currentX,
+                        maxX: currentX + charWidthMM,
+                        minY: currentLineY - localHeight + yOffset,
+                        maxY: currentLineY + yOffset
+                    });
+                }
+                
+                let charSpacingJitterAmt = 0;
+                if (settings.charSpacingJitter > 0) {
+                    charSpacingJitterAmt = (pseudoRandom() - 0.5) * settings.charSpacingJitter;
+                }
+                currentX += charWidthMM + settings.charSpacing * localScale + charSpacingJitterAmt;
+            }
             
             return paths;
         }
@@ -3232,6 +3459,44 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 }
                 pCtx.stroke();
             }
+            
+            // Draw modular block outlines & handles
+            workspaceBlocks.forEach(block => {
+                const isSelected = block.id === selectedBlockId;
+                let boxX, boxY;
+                if (calibMatrix) {
+                    const pt = mapDesignToBed(block.x, block.y, calibMatrix);
+                    boxX = pt.x * mmToPx;
+                    boxY = (220 - pt.y) * mmToPx;
+                } else {
+                    boxX = paperX + block.x * mmToPx;
+                    boxY = paperY + block.y * mmToPx;
+                }
+                const boxW = block.width * mmToPx;
+                const boxH = block.height * mmToPx;
+
+                if (isSelected) {
+                    pCtx.fillStyle = 'rgba(99, 102, 241, 0.04)';
+                    pCtx.fillRect(boxX, boxY, boxW, boxH);
+                }
+
+                pCtx.strokeStyle = isSelected ? 'rgba(99, 102, 241, 0.85)' : 'rgba(148, 163, 184, 0.35)';
+                pCtx.lineWidth = isSelected ? 2.0 : 1.0;
+                pCtx.setLineDash(isSelected ? [6, 4] : [3, 3]);
+                pCtx.strokeRect(boxX, boxY, boxW, boxH);
+                pCtx.setLineDash([]);
+
+                // Draw block type badge
+                pCtx.fillStyle = isSelected ? '#6366f1' : '#94a3b8';
+                pCtx.font = 'bold 9px sans-serif';
+                pCtx.fillText(block.type.toUpperCase() + (isSelected ? ' (Selected)' : ''), boxX + 4, boxY - 4);
+
+                // Draw resize handle in the bottom-right corner
+                if (isSelected) {
+                    pCtx.fillStyle = '#6366f1';
+                    pCtx.fillRect(boxX + boxW - 6, boxY + boxH - 6, 6, 6);
+                }
+            });
             
             // Draw a subtle bed boundary frame on top of the paper (Dashed green line) for positioning reference
             if (showBedGrid) {
@@ -5459,6 +5724,22 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             };
         }
 
+        function screenToDesignCoords(clientX, clientY, rect) {
+            const unpannedX = clientX - rect.left - panOffsetX;
+            const unpannedY = clientY - rect.top - panOffsetY;
+            const unscaledX = unpannedX / zoomScale;
+            const unscaledY = unpannedY / zoomScale;
+            
+            const mmToPx = 6.5;
+            const paperStartX = 40.0 * mmToPx;
+            const paperStartY = 20.0 * mmToPx;
+            
+            const designX = (unscaledX - paperStartX) / mmToPx;
+            const designY = (unscaledY - paperStartY) / mmToPx;
+            
+            return { x: designX, y: designY };
+        }
+
         // Mouse down event listener for calibration points dragging and right-click panning
         previewCanvas.addEventListener('mousedown', (e) => {
             const rect = previewCanvas.getBoundingClientRect();
@@ -5498,6 +5779,54 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                         }
                     }
                 }
+            } else {
+                // If not holding shift, check if we clicked a workspace block or its resize handle
+                const designCoords = screenToDesignCoords(e.clientX, e.clientY, rect);
+                const designX = designCoords.x;
+                const designY = designCoords.y;
+                
+                // Check resize handle of the selected block first
+                if (selectedBlockId) {
+                    const block = workspaceBlocks.find(b => b.id === selectedBlockId);
+                    if (block) {
+                        const handleX = block.x + block.width;
+                        const handleY = block.y + block.height;
+                        const threshold = 6.0; // 6mm click tolerance
+                        if (Math.abs(designX - handleX) < threshold && Math.abs(designY - handleY) < threshold) {
+                            activeResizeBlockId = block.id;
+                            blockDragStartX = designX;
+                            blockInitialWidth = block.width;
+                            e.preventDefault();
+                            return;
+                        }
+                    }
+                }
+                
+                // Check clicking inside blocks for drag-and-drop selection
+                let clickedBlock = false;
+                for (let i = workspaceBlocks.length - 1; i >= 0; i--) {
+                    const block = workspaceBlocks[i];
+                    if (designX >= block.x && designX <= block.x + block.width &&
+                        designY >= block.y && designY <= block.y + block.height) {
+                        selectedBlockId = block.id;
+                        activeDragBlockId = block.id;
+                        blockDragStartX = designX;
+                        blockDragStartY = designY;
+                        blockInitialX = block.x;
+                        blockInitialY = block.y;
+                        clickedBlock = true;
+                        updateBlocksListUI();
+                        triggerPreviewUpdate();
+                        e.preventDefault();
+                        return;
+                    }
+                }
+                
+                if (!clickedBlock && selectedBlockId) {
+                    selectedBlockId = null;
+                    updateBlocksListUI();
+                    triggerPreviewUpdate();
+                }
             }
         });
 
@@ -5528,6 +5857,30 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             hoverBedX = targetBedX;
             hoverBedY = targetBedY;
             
+            if (activeResizeBlockId) {
+                const designCoords = screenToDesignCoords(e.clientX, e.clientY, rect);
+                const block = workspaceBlocks.find(b => b.id === activeResizeBlockId);
+                if (block) {
+                    const deltaX = designCoords.x - blockDragStartX;
+                    block.width = Math.max(20.0, Math.min(200.0, blockInitialWidth + deltaX));
+                    triggerPreviewUpdate();
+                }
+                return;
+            }
+            
+            if (activeDragBlockId) {
+                const designCoords = screenToDesignCoords(e.clientX, e.clientY, rect);
+                const block = workspaceBlocks.find(b => b.id === activeDragBlockId);
+                if (block) {
+                    const deltaX = designCoords.x - blockDragStartX;
+                    const deltaY = designCoords.y - blockDragStartY;
+                    block.x = Math.max(-10.0, Math.min(210.0, blockInitialX + deltaX));
+                    block.y = Math.max(0.0, Math.min(297.0, blockInitialY + deltaY));
+                    triggerPreviewUpdate();
+                }
+                return;
+            }
+            
             if (isDraggingPoint && draggingPointIdx !== -1) {
                 let constrainedX = targetBedX;
                 let constrainedY = targetBedY;
@@ -5551,6 +5904,16 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         previewCanvas.addEventListener('mouseup', (e) => {
             if (isPanning) {
                 isPanning = false;
+                e.preventDefault();
+                return;
+            }
+            
+            if (activeResizeBlockId || activeDragBlockId) {
+                activeResizeBlockId = null;
+                activeDragBlockId = null;
+                saveBlocksToLocalStorage();
+                updateBlocksListUI();
+                triggerPreviewUpdate();
                 e.preventDefault();
                 return;
             }
@@ -5705,6 +6068,58 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             }
         });
 
+        function initBlocksWorkspace() {
+            loadBlocksFromLocalStorage();
+            updateBlocksListUI();
+            
+            const notesFileInput = document.getElementById('notesFileInput');
+            const btnUploadNotes = document.getElementById('btnUploadNotes');
+            const btnParseNotes = document.getElementById('btnParseNotes');
+            const btnResetBlocks = document.getElementById('btnResetBlocks');
+            
+            btnUploadNotes.addEventListener('click', () => {
+                notesFileInput.click();
+            });
+            
+            notesFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    btnUploadNotes.innerHTML = `📁 ${file.name.substring(0, 16)}${file.name.length > 16 ? '...' : ''}`;
+                }
+            });
+            
+            btnParseNotes.addEventListener('click', () => {
+                const file = notesFileInput.files[0];
+                if (!file) {
+                    const txt = document.getElementById('textInput').value;
+                    workspaceBlocks = parseNotesToBlocks(txt);
+                    saveBlocksToLocalStorage();
+                    updateBlocksListUI();
+                    triggerPreviewUpdate();
+                    showToast("Parsed text uploader into layout blocks!", "success");
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const content = evt.target.result;
+                    workspaceBlocks = parseNotesToBlocks(content);
+                    saveBlocksToLocalStorage();
+                    updateBlocksListUI();
+                    triggerPreviewUpdate();
+                    showToast("Successfully imported notes and created layout blocks!", "success");
+                };
+                reader.readAsText(file);
+            });
+            
+            btnResetBlocks.addEventListener('click', () => {
+                resetBlocksToDefault();
+                updateBlocksListUI();
+                triggerPreviewUpdate();
+                showToast("Blocks reset to default text block!", "success");
+            });
+        }
+
         // --- INITIALIZATION ---
         // Load settings profiles dict
         loadProfiles();
@@ -5714,6 +6129,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         initSlowStartTuningListeners();
         initNavigationToolbar();
         checkCalibrationStateConflict();
+        initBlocksWorkspace();
         
         // Render initial view
         rebuildVariantSelectors();
