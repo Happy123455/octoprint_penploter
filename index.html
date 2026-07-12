@@ -2307,205 +2307,473 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             let currentLineY = settings.topLineOffset;
             let wordCounter = 0;
             
-            for (let lineText of lines) {
-                // Apply Baseline drift/wave organically across the text row using a slow sin curve
-                const lineDriftAmt = (pseudoRandom() - 0.5) * settings.drift * 2.0;
+            // Check if a line is a table row
+            function isTableRow(text) {
+                return /^\s*\|.*\|\s*$/.test(text);
+            }
+
+            function drawHanddrawnLine(x1, y1, x2, y2) {
+                const lineStrokes = [];
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const distance = Math.sqrt(dx*dx + dy*dy);
+                const stepMM = 2.0;
+                const stepsCount = Math.max(1, Math.floor(distance / stepMM));
                 
-                // Detect bullet list hanging indent
-                const bulletMatch = lineText.match(/^\s*(?:[•*\-+]|\d+\.)\s+/);
-                let bulletIndent = 0;
-                let currentX = settings.leftMargin;
-                let wrapMarginX = settings.leftMargin;
-                
-                if (bulletMatch) {
-                    const bulletStr = bulletMatch[0];
-                    bulletIndent = getTokenWidth(bulletStr, settings.charHeight);
-                    wrapMarginX = settings.leftMargin + bulletIndent;
+                for (let s = 0; s <= stepsCount; s++) {
+                    const t = s / stepsCount;
+                    let targetX = x1 + dx * t;
+                    let targetY = y1 + dy * t;
+                    if (settings.wobble > 0) {
+                        targetX += (pseudoRandom() - 0.5) * settings.wobble;
+                        targetY += (pseudoRandom() - 0.5) * settings.wobble;
+                    }
+                    lineStrokes.push({ x: targetX, y: targetY });
                 }
+                paths.push(lineStrokes);
+            }
+
+            let lineIdx = 0;
+            while (lineIdx < lines.length) {
+                let lineText = lines[lineIdx];
                 
-                // Parse line by inline size and scale tags: [size=6], [scale=1.5]
-                const parts = lineText.split(/(\[size=\d+(?:\.\d+)?\]|\[\/size\]|\[scale=\d+(?:\.\d+)?\]|\[\/scale\])/);
-                let scaleStack = [1.0];
-                
-                for (let part of parts) {
-                    if (!part) continue;
-                    
-                    if (part.startsWith('[size=')) {
-                        const h = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
-                        scaleStack.push(h / settings.charHeight);
-                        continue;
-                    } else if (part === '[/size]') {
-                        if (scaleStack.length > 1) scaleStack.pop();
-                        continue;
-                    } else if (part.startsWith('[scale=')) {
-                        const s = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
-                        scaleStack.push(s);
-                        continue;
-                    } else if (part === '[/scale]') {
-                        if (scaleStack.length > 1) scaleStack.pop();
-                        continue;
+                if (isTableRow(lineText)) {
+                    // Contiguous table rows collector
+                    const tableRows = [];
+                    while (lineIdx < lines.length && isTableRow(lines[lineIdx])) {
+                        tableRows.push(lines[lineIdx]);
+                        lineIdx++;
                     }
                     
-                    const currentScale = scaleStack[scaleStack.length - 1];
-                    const localHeightBase = settings.charHeight * currentScale;
+                    // Parse rows into content cells, skipping horizontal dividers
+                    const contentRows = [];
+                    tableRows.forEach(row => {
+                        const cells = row.split('|').map(c => c.trim()).slice(1, -1);
+                        const isDivider = cells.every(c => /^[:\s\-]+$/.test(c));
+                        if (!isDivider && cells.length > 0) {
+                            contentRows.push(cells);
+                        }
+                    });
                     
-                    // Parse text block part into tokens of words and spaces
-                    const tokens = part.match(/\S+|\s+/g) || [];
+                    if (contentRows.length > 0) {
+                        const colCount = Math.max(...contentRows.map(r => r.length));
+                        const totalTableWidth = rightMarginX - settings.leftMargin;
+                        
+                        // Calculate max text length per column to assign proportional widths
+                        const colMaxTextLen = Array(colCount).fill(0);
+                        contentRows.forEach(row => {
+                            row.forEach((cell, idx) => {
+                                if (idx < colCount) {
+                                    colMaxTextLen[idx] = Math.max(colMaxTextLen[idx], cell.length);
+                                }
+                            });
+                        });
+                        const totalTextLen = colMaxTextLen.reduce((a, b) => a + b, 0) || 1;
+                        const colWidths = colMaxTextLen.map(len => {
+                            const propWidth = (len / totalTextLen) * totalTableWidth;
+                            return Math.max(25.0, propWidth); // minimum column width 25mm
+                        });
+                        const sumWidths = colWidths.reduce((a, b) => a + b, 0);
+                        const scale = totalTableWidth / sumWidths;
+                        const finalColWidths = colWidths.map(w => w * scale);
+                        
+                        const tableTopY = currentLineY - (settings.lineSpacing * 0.5);
+                        let rowStartBaseline = currentLineY;
+                        const rowHeights = [];
+                        
+                        // Render cells
+                        contentRows.forEach((row, rIdx) => {
+                            const cellLinesPerCol = [];
+                            for (let cIdx = 0; cIdx < colCount; cIdx++) {
+                                const text = row[cIdx] || "";
+                                // Word wrap inside cell
+                                const tokens = text.match(/\S+|\s+/g) || [];
+                                const cellLines = [];
+                                let currentLine = "";
+                                let currentLineWidth = 0;
+                                const maxCellWidth = finalColWidths[cIdx] - 4; // 2mm padding on each side
+                                
+                                for (let token of tokens) {
+                                    if (/^\s+$/.test(token)) {
+                                        const spaceW = settings.wordSpacing * token.length;
+                                        if (currentLineWidth + spaceW > maxCellWidth && currentLine !== "") {
+                                            cellLines.push(currentLine);
+                                            currentLine = "";
+                                            currentLineWidth = 0;
+                                        } else {
+                                            currentLine += token;
+                                            currentLineWidth += spaceW;
+                                        }
+                                        continue;
+                                    }
+                                    const wordW = getTokenWidth(token, settings.charHeight);
+                                    if (currentLineWidth + wordW > maxCellWidth) {
+                                        if (currentLine !== "") {
+                                            cellLines.push(currentLine);
+                                        }
+                                        currentLine = token;
+                                        currentLineWidth = wordW;
+                                    } else {
+                                        currentLine += token;
+                                        currentLineWidth += wordW;
+                                    }
+                                }
+                                if (currentLine !== "") {
+                                    cellLines.push(currentLine);
+                                }
+                                cellLinesPerCol.push(cellLines);
+                            }
+                            
+                            const maxLinesInRow = Math.max(1, ...cellLinesPerCol.map(l => l.length));
+                            const rowHeight = maxLinesInRow * settings.lineSpacing;
+                            rowHeights.push(rowHeight);
+                            
+                            // Render text characters
+                            for (let cIdx = 0; cIdx < colCount; cIdx++) {
+                                // Calculate cell left offset X
+                                let cellLeftX = settings.leftMargin;
+                                for (let i = 0; i < cIdx; i++) {
+                                    cellLeftX += finalColWidths[i];
+                                }
+                                
+                                const lines = cellLinesPerCol[cIdx];
+                                lines.forEach((lineText, lIdx) => {
+                                    const lineY = rowStartBaseline + lIdx * settings.lineSpacing;
+                                    const lineDriftAmt = (pseudoRandom() - 0.5) * settings.drift * 2.0;
+                                    let currentX = cellLeftX + 2; // padding
+                                    
+                                    // Split words/chars in the line
+                                    const tokens = lineText.match(/\S+|\s+/g) || [];
+                                    for (let token of tokens) {
+                                        if (/^\s+$/.test(token)) {
+                                            currentX += settings.wordSpacing * token.length;
+                                            continue;
+                                        }
+                                        wordCounter++;
+                                        for (let i = 0; i < token.length; i++) {
+                                            const char = token[i];
+                                            const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
+                                            const localHeight = settings.charHeight * heightJitterMultiplier;
+                                            const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
+                                            const slantRad = (slantAngleDeg * Math.PI) / 180.0;
+                                            
+                                            let characterStrokes = [];
+                                            let charWidthMM = getCharWidth(char, localHeight, settings);
+                                            let chosenVariantIdx = 0;
+                                            
+                                            if (activeFontMode === 'stroke') {
+                                                const strokeDef = StrokeFont[char];
+                                                if (strokeDef) {
+                                                    characterStrokes = strokeDef.map(stroke => {
+                                                        return stroke.map(pt => {
+                                                            const normX = pt[0] / 10.0;
+                                                            const normY = pt[1] / 10.0;
+                                                            return { x: normX * charWidthMM, y: normY * localHeight };
+                                                        });
+                                                    });
+                                                }
+                                            } else if (activeFontMode === 'drawn') {
+                                                const variants = DrawnFont[char];
+                                                if (variants) {
+                                                    const indices = [];
+                                                    variants.forEach((v, idx) => {
+                                                        if (v && v.length > 0) indices.push(idx);
+                                                    });
+                                                    if (indices.length > 0) {
+                                                        const randChoice = Math.floor(pseudoRandom() * indices.length);
+                                                        chosenVariantIdx = indices[randChoice];
+                                                        const rawStrokes = variants[chosenVariantIdx];
+                                                        let minX = Infinity;
+                                                        rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
+                                                        characterStrokes = rawStrokes.map(stroke => {
+                                                            return stroke.map(pt => {
+                                                                const x = (pt[0] - minX) * (localHeight / 180.0);
+                                                                const y = (pt[1] - 240.0) * (localHeight / 180.0);
+                                                                return { x: x, y: localHeight + y };
+                                                            });
+                                                        });
+                                                    }
+                                                }
+                                            } else if (activeFontMode === 'custom' && uploadedFont) {
+                                                const glyph = uploadedFont.charToGlyph(char);
+                                                if (glyph) {
+                                                    const fontScale = 1 / uploadedFont.unitsPerEm;
+                                                    const path = glyph.getPath(0, 0, localHeight / fontScale);
+                                                    let activeStroke = [];
+                                                    for (let cmd of path.commands) {
+                                                        if (cmd.type === 'M') {
+                                                            if (activeStroke.length > 0) characterStrokes.push(activeStroke);
+                                                            activeStroke = [{ x: cmd.x * fontScale, y: -cmd.y * fontScale }];
+                                                        } else if (cmd.type === 'L' || cmd.type === 'Q' || cmd.type === 'C') {
+                                                            activeStroke.push({ x: cmd.x * fontScale, y: -cmd.y * fontScale });
+                                                        } else if (cmd.type === 'Z') {
+                                                            if (activeStroke.length > 0) {
+                                                                activeStroke.push({ x: activeStroke[0].x, y: activeStroke[0].y });
+                                                                characterStrokes.push(activeStroke);
+                                                                activeStroke = [];
+                                                            }
+                                                        }
+                                                    }
+                                                    if (activeStroke.length > 0) characterStrokes.push(activeStroke);
+                                                    charWidthMM = (glyph.advanceWidth || 0) * fontScale * localHeight;
+                                                    if (settings.ttfRender === 'skeleton') {
+                                                        characterStrokes = skeletonizeStrokes(characterStrokes, charWidthMM, localHeight, settings);
+                                                    } else if (settings.ttfRender === 'hatch-horizontal' || settings.ttfRender === 'hatch-diagonal') {
+                                                        const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
+                                                        characterStrokes = characterStrokes.concat(hatches);
+                                                    }
+                                                }
+                                            }
+                                            
+                                            if (characterStrokes.length > 0) {
+                                                for (let stroke of characterStrokes) {
+                                                    const compiledStroke = [];
+                                                    for (let pt of stroke) {
+                                                        const slantedX = pt.x + (localHeight - pt.y) * Math.sin(slantRad);
+                                                        let targetX = currentX + slantedX;
+                                                        let targetY = lineY - settings.letterYOffset - (localHeight - pt.y) + lineDriftAmt;
+                                                        if (settings.wobble > 0) {
+                                                            targetX += (pseudoRandom() - 0.5) * settings.wobble;
+                                                            targetY += (pseudoRandom() - 0.5) * settings.wobble;
+                                                        }
+                                                        compiledStroke.push({ x: targetX, y: targetY });
+                                                    }
+                                                    compiledStroke.isSlowStart = (wordCounter <= 3);
+                                                    paths.push(compiledStroke);
+                                                }
+                                            }
+                                            
+                                            renderedCharactersOnSheet.push({
+                                                char: char,
+                                                variantIndex: chosenVariantIdx,
+                                                minX: currentX,
+                                                maxX: currentX + charWidthMM,
+                                                minY: lineY - localHeight,
+                                                maxY: lineY
+                                            });
+                                            
+                                            let charSpacingJitterAmt = 0;
+                                            if (settings.charSpacingJitter > 0) {
+                                                charSpacingJitterAmt = (pseudoRandom() - 0.5) * settings.charSpacingJitter;
+                                            }
+                                            currentX += charWidthMM + settings.charSpacing + charSpacingJitterAmt;
+                                        }
+                                    }
+                                });
+                            }
+                            
+                            rowStartBaseline += rowHeight;
+                        });
+                        
+                        // Draw grid lines
+                        let currentYOffset = tableTopY;
+                        
+                        // Draw top border
+                        drawHanddrawnLine(settings.leftMargin, tableTopY, rightMarginX, tableTopY);
+                        
+                        // Draw row separators
+                        rowHeights.forEach(h => {
+                            currentYOffset += h;
+                            drawHanddrawnLine(settings.leftMargin, currentYOffset, rightMarginX, currentYOffset);
+                        });
+                        
+                        // Draw column dividers
+                        let currentXOffset = settings.leftMargin;
+                        drawHanddrawnLine(currentXOffset, tableTopY, currentXOffset, currentYOffset); // leftmost vertical
+                        
+                        for (let cIdx = 0; cIdx < colCount; cIdx++) {
+                            currentXOffset += finalColWidths[cIdx];
+                            drawHanddrawnLine(currentXOffset, tableTopY, currentXOffset, currentYOffset); // column separator
+                        }
+                        
+                        // Advance line spacing Y to next row baseline
+                        currentLineY = currentYOffset + (settings.lineSpacing * 0.5);
+                    }
+                    continue;
+                } else {
+                    // Apply Baseline drift/wave organically across the text row using a slow sin curve
+                    const lineDriftAmt = (pseudoRandom() - 0.5) * settings.drift * 2.0;
                     
-                    for (let token of tokens) {
-                        // Check if it is space token
-                        if (/^\s+$/.test(token)) {
-                            let spaceWidth = settings.wordSpacing * token.length * currentScale;
-                            if (settings.wordSpacingJitter > 0) {
-                                spaceWidth += (pseudoRandom() - 0.5) * settings.wordSpacingJitter * token.length;
-                            }
-                            if (currentX + spaceWidth > rightMarginX) {
-                                currentX = wrapMarginX;
-                                currentLineY += settings.lineSpacing;
-                            } else {
-                                currentX += spaceWidth;
-                            }
+                    // Detect bullet list hanging indent
+                    const bulletMatch = lineText.match(/^\s*(?:[•*\-+]|\d+\.)\s+/);
+                    let bulletIndent = 0;
+                    let currentX = settings.leftMargin;
+                    let wrapMarginX = settings.leftMargin;
+                    
+                    if (bulletMatch) {
+                        const bulletStr = bulletMatch[0];
+                        bulletIndent = getTokenWidth(bulletStr, settings.charHeight);
+                        wrapMarginX = settings.leftMargin + bulletIndent;
+                    }
+                    
+                    // Parse line by inline size and scale tags: [size=6], [scale=1.5]
+                    const parts = lineText.split(/(\[size=\d+(?:\.\d+)?\]|\[\/size\]|\[scale=\d+(?:\.\d+)?\]|\[\/scale\])/);
+                    let scaleStack = [1.0];
+                    
+                    for (let part of parts) {
+                        if (!part) continue;
+                        
+                        if (part.startsWith('[size=')) {
+                            const h = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
+                            scaleStack.push(h / settings.charHeight);
+                            continue;
+                        } else if (part === '[/size]') {
+                            if (scaleStack.length > 1) scaleStack.pop();
+                            continue;
+                        } else if (part.startsWith('[scale=')) {
+                            const s = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
+                            scaleStack.push(s);
+                            continue;
+                        } else if (part === '[/scale]') {
+                            if (scaleStack.length > 1) scaleStack.pop();
                             continue;
                         }
                         
-                        // Word token!
-                        wordCounter++;
-                        const wordWidth = getTokenWidth(token, localHeightBase);
-                        if (currentX + wordWidth > rightMarginX && currentX > wrapMarginX) {
-                            currentX = wrapMarginX;
-                            currentLineY += settings.lineSpacing;
-                        }
+                        const currentScale = scaleStack[scaleStack.length - 1];
+                        const localHeightBase = settings.charHeight * currentScale;
                         
-                        // Render characters of the word
-                        for (let i = 0; i < token.length; i++) {
-                            const char = token[i];
-                            
-                            // Character specific height and slant jitters
-                            const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
-                            const localHeight = localHeightBase * heightJitterMultiplier;
-                            const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
-                            const slantRad = (slantAngleDeg * Math.PI) / 180.0;
-                            
-                            let characterStrokes = [];
-                            let charWidthMM = getCharWidth(char, localHeight, settings);
-                            let chosenVariantIdx = 0;
-                            
-                            // Retrieve coordinate paths based on font source mode
-                            if (activeFontMode === 'stroke') {
-                                const strokeDef = StrokeFont[char];
-                                if (strokeDef) {
-                                    characterStrokes = strokeDef.map(stroke => {
-                                        return stroke.map(pt => {
-                                            const normX = pt[0] / 10.0;
-                                            const normY = pt[1] / 10.0;
-                                            return { x: normX * charWidthMM, y: normY * localHeight };
-                                        });
-                                    });
+                        // Parse text block part into tokens of words and spaces
+                        const tokens = part.match(/\S+|\s+/g) || [];
+                        
+                        for (let token of tokens) {
+                            // Check if it is space token
+                            if (/^\s+$/.test(token)) {
+                                let spaceWidth = settings.wordSpacing * token.length * currentScale;
+                                if (settings.wordSpacingJitter > 0) {
+                                    spaceWidth += (pseudoRandom() - 0.5) * settings.wordSpacingJitter * token.length;
                                 }
-                            } else if (activeFontMode === 'drawn') {
-                                const variants = DrawnFont[char];
-                                if (variants) {
-                                    const indices = [];
-                                    variants.forEach((v, idx) => {
-                                        if (v && v.length > 0) indices.push(idx);
-                                    });
-                                    if (indices.length > 0) {
-                                        const randChoice = Math.floor(pseudoRandom() * indices.length);
-                                        chosenVariantIdx = indices[randChoice];
-                                        const rawStrokes = variants[chosenVariantIdx];
-                                        
-                                        // Measure minX of this variant to align left edge perfectly
-                                        let minX = Infinity;
-                                        rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
-                                        
-                                        characterStrokes = rawStrokes.map(stroke => {
+                                if (currentX + spaceWidth > rightMarginX) {
+                                    currentX = wrapMarginX;
+                                    currentLineY += settings.lineSpacing;
+                                } else {
+                                    currentX += spaceWidth;
+                                }
+                                continue;
+                            }
+                            
+                            // Word token!
+                            wordCounter++;
+                            const wordWidth = getTokenWidth(token, localHeightBase);
+                            if (currentX + wordWidth > rightMarginX && currentX > wrapMarginX) {
+                                currentX = wrapMarginX;
+                                currentLineY += settings.lineSpacing;
+                            }
+                            
+                            // Render characters of the word
+                            for (let i = 0; i < token.length; i++) {
+                                const char = token[i];
+                                const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
+                                const localHeight = localHeightBase * heightJitterMultiplier;
+                                const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
+                                const slantRad = (slantAngleDeg * Math.PI) / 180.0;
+                                
+                                let characterStrokes = [];
+                                let charWidthMM = getCharWidth(char, localHeight, settings);
+                                let chosenVariantIdx = 0;
+                                
+                                // Retrieve coordinate paths based on font source mode
+                                if (activeFontMode === 'stroke') {
+                                    const strokeDef = StrokeFont[char];
+                                    if (strokeDef) {
+                                        characterStrokes = strokeDef.map(stroke => {
                                             return stroke.map(pt => {
-                                                const x = (pt[0] - minX) * (localHeight / 180.0);
-                                                const y = (pt[1] - 240.0) * (localHeight / 180.0);
-                                                const engineY = localHeight + y;
-                                                return { x: x, y: engineY };
+                                                const normX = pt[0] / 10.0;
+                                                const normY = pt[1] / 10.0;
+                                                return { x: normX * charWidthMM, y: normY * localHeight };
                                             });
                                         });
                                     }
-                                }
-                            } else if (activeFontMode === 'custom' && uploadedFont) {
-                                const glyph = uploadedFont.charToGlyph(char);
-                                if (glyph) {
-                                    const fontScale = 1 / uploadedFont.unitsPerEm;
-                                    const path = glyph.getPath(0, 0, localHeight / fontScale);
-                                    let activeStroke = [];
-                                    for (let cmd of path.commands) {
-                                        if (cmd.type === 'M') {
-                                            if (activeStroke.length > 0) {
-                                                characterStrokes.push(activeStroke);
-                                            }
-                                            activeStroke = [{ x: cmd.x * fontScale, y: -cmd.y * fontScale }];
-                                        } else if (cmd.type === 'L' || cmd.type === 'Q' || cmd.type === 'C') {
-                                            activeStroke.push({ x: cmd.x * fontScale, y: -cmd.y * fontScale });
-                                        } else if (cmd.type === 'Z') {
-                                            if (activeStroke.length > 0) {
-                                                activeStroke.push({ x: activeStroke[0].x, y: activeStroke[0].y });
-                                                characterStrokes.push(activeStroke);
-                                                activeStroke = [];
-                                            }
+                                } else if (activeFontMode === 'drawn') {
+                                    const variants = DrawnFont[char];
+                                    if (variants) {
+                                        const indices = [];
+                                        variants.forEach((v, idx) => {
+                                            if (v && v.length > 0) indices.push(idx);
+                                        });
+                                        if (indices.length > 0) {
+                                            const randChoice = Math.floor(pseudoRandom() * indices.length);
+                                            chosenVariantIdx = indices[randChoice];
+                                            const rawStrokes = variants[chosenVariantIdx];
+                                            let minX = Infinity;
+                                            rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
+                                            characterStrokes = rawStrokes.map(stroke => {
+                                                return stroke.map(pt => {
+                                                    const x = (pt[0] - minX) * (localHeight / 180.0);
+                                                    const y = (pt[1] - 240.0) * (localHeight / 180.0);
+                                                    return { x: x, y: localHeight + y };
+                                                });
+                                            });
                                         }
                                     }
-                                    if (activeStroke.length > 0) {
-                                        characterStrokes.push(activeStroke);
-                                    }
-                                    charWidthMM = (glyph.advanceWidth || 0) * fontScale * localHeight;
-                                    if (settings.ttfRender === 'skeleton') {
-                                        characterStrokes = skeletonizeStrokes(characterStrokes, charWidthMM, localHeight, settings);
-                                    } else if (settings.ttfRender === 'hatch-horizontal' || settings.ttfRender === 'hatch-diagonal') {
-                                        const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
-                                        characterStrokes = characterStrokes.concat(hatches);
-                                    }
-                                }
-                            }
-                            
-                            // Render paths onto text alignment margins, applying slant tilt, micro-wobbles, and baseline drift
-                            if (characterStrokes.length > 0) {
-                                for (let stroke of characterStrokes) {
-                                    const compiledStroke = [];
-                                    for (let pt of stroke) {
-                                        const slantedX = pt.x + (localHeight - pt.y) * Math.sin(slantRad);
-                                        let targetX = currentX + slantedX;
-                                        let targetY = currentLineY - settings.letterYOffset - (localHeight - pt.y) + lineDriftAmt;
-                                        
-                                        if (settings.wobble > 0) {
-                                            targetX += (pseudoRandom() - 0.5) * settings.wobble;
-                                            targetY += (pseudoRandom() - 0.5) * settings.wobble;
+                                } else if (activeFontMode === 'custom' && uploadedFont) {
+                                    const glyph = uploadedFont.charToGlyph(char);
+                                    if (glyph) {
+                                        const fontScale = 1 / uploadedFont.unitsPerEm;
+                                        const path = glyph.getPath(0, 0, localHeight / fontScale);
+                                        let activeStroke = [];
+                                        for (let cmd of path.commands) {
+                                            if (cmd.type === 'M') {
+                                                if (activeStroke.length > 0) characterStrokes.push(activeStroke);
+                                                activeStroke = [{ x: cmd.x * fontScale, y: -cmd.y * fontScale }];
+                                            } else if (cmd.type === 'L' || cmd.type === 'Q' || cmd.type === 'C') {
+                                                activeStroke.push({ x: cmd.x * fontScale, y: -cmd.y * fontScale });
+                                            } else if (cmd.type === 'Z') {
+                                                if (activeStroke.length > 0) {
+                                                    activeStroke.push({ x: activeStroke[0].x, y: activeStroke[0].y });
+                                                    characterStrokes.push(activeStroke);
+                                                    activeStroke = [];
+                                                }
+                                            }
                                         }
-                                        compiledStroke.push({ x: targetX, y: targetY });
+                                        if (activeStroke.length > 0) characterStrokes.push(activeStroke);
+                                        charWidthMM = (glyph.advanceWidth || 0) * fontScale * localHeight;
+                                        if (settings.ttfRender === 'skeleton') {
+                                            characterStrokes = skeletonizeStrokes(characterStrokes, charWidthMM, localHeight, settings);
+                                        } else if (settings.ttfRender === 'hatch-horizontal' || settings.ttfRender === 'hatch-diagonal') {
+                                            const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
+                                            characterStrokes = characterStrokes.concat(hatches);
+                                        }
                                     }
-                                    compiledStroke.isSlowStart = (wordCounter <= 3);
-                                    paths.push(compiledStroke);
                                 }
+                                
+                                if (characterStrokes.length > 0) {
+                                    for (let stroke of characterStrokes) {
+                                        const compiledStroke = [];
+                                        for (let pt of stroke) {
+                                            const slantedX = pt.x + (localHeight - pt.y) * Math.sin(slantRad);
+                                            let targetX = currentX + slantedX;
+                                            let targetY = currentLineY - settings.letterYOffset - (localHeight - pt.y) + lineDriftAmt;
+                                            if (settings.wobble > 0) {
+                                                targetX += (pseudoRandom() - 0.5) * settings.wobble;
+                                                targetY += (pseudoRandom() - 0.5) * settings.wobble;
+                                            }
+                                            compiledStroke.push({ x: targetX, y: targetY });
+                                        }
+                                        compiledStroke.isSlowStart = (wordCounter <= 3);
+                                        paths.push(compiledStroke);
+                                    }
+                                }
+                                
+                                renderedCharactersOnSheet.push({
+                                    char: char,
+                                    variantIndex: chosenVariantIdx,
+                                    minX: currentX,
+                                    maxX: currentX + charWidthMM,
+                                    minY: currentLineY - localHeight,
+                                    maxY: currentLineY
+                                });
+                                
+                                let charSpacingJitterAmt = 0;
+                                if (settings.charSpacingJitter > 0) {
+                                    charSpacingJitterAmt = (pseudoRandom() - 0.5) * settings.charSpacingJitter;
+                                }
+                                currentX += charWidthMM + settings.charSpacing + charSpacingJitterAmt;
                             }
-                            
-                            // Store bounds of character for click selection (convert paper margins)
-                            renderedCharactersOnSheet.push({
-                                char: char,
-                                variantIndex: chosenVariantIdx,
-                                minX: currentX,
-                                maxX: currentX + charWidthMM,
-                                minY: currentLineY - localHeight,
-                                maxY: currentLineY
-                            });
-                            
-                            // Advance line index coordinate
-                            let charSpacingJitterAmt = 0;
-                            if (settings.charSpacingJitter > 0) {
-                                charSpacingJitterAmt = (pseudoRandom() - 0.5) * settings.charSpacingJitter;
-                            }
-                            currentX += charWidthMM + settings.charSpacing + charSpacingJitterAmt;
                         }
                     }
+                    currentLineY += settings.lineSpacing;
+                    lineIdx++;
                 }
-                
-                // Carriage return to next lined sheet row
-                currentLineY += settings.lineSpacing;
-            }
             
             return paths;
         }
