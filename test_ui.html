@@ -95,6 +95,18 @@
                     <label class="block text-sm font-semibold text-slate-200">1. Enter Text to Write</label>
                     <span class="text-xs text-indigo-400 cursor-pointer hover:underline" id="loadDemoBtn">Load Demo Story</span>
                 </div>
+                <!-- Page Tabs and Split Actions Row -->
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-1 overflow-x-auto max-w-[70%] pr-1 scrollbar-none" id="pageTabsContainer">
+                        <!-- Dynamic page tabs go here -->
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button id="btnSplitPage" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1" title="Split overflow to next page">
+                            ✂️ Split Page Overflow
+                        </button>
+                    </div>
+                </div>
+
                 <textarea id="textInput" rows="5" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-100 placeholder-slate-600 focus:outline-none" placeholder="Type or paste your text here... Use enter for new lines. Check the preview to align with notebook lines.">Dear Student,
 
 This is a demonstration of writing on standard Indian ruled paper using your Anycubic Kobra Neo.
@@ -105,6 +117,14 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     <button id="btnEditSelectedChar" class="hidden text-indigo-400 hover:text-indigo-300 font-bold transition flex items-center gap-1">
                         ✏️ Edit in Designer
                     </button>
+                </div>
+
+                <div id="missingCharsWarning" class="mt-2 p-2.5 bg-amber-950/20 border border-amber-900/40 rounded-lg hidden flex flex-col gap-1 text-[11px]">
+                    <div class="flex justify-between items-center text-amber-400 font-semibold mb-0.5">
+                        <span class="flex items-center gap-1">⚠️ Missing handwriting characters:</span>
+                        <button id="btnCopyMissingChars" class="px-2 py-0.5 bg-amber-950 hover:bg-amber-900 border border-amber-800 text-amber-300 rounded text-[9.5px] font-bold shadow-sm transition">📋 Copy Characters</button>
+                    </div>
+                    <span id="missingCharsList" class="font-mono text-slate-300 tracking-wider"></span>
                 </div>
 
                 <!-- Gemini API Editor Integration -->
@@ -147,6 +167,33 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     <div class="space-y-1">
                         <label class="block text-[9.5px] font-semibold text-slate-400">Instruction for AI</label>
                         <textarea id="geminiInstruction" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder-slate-600" placeholder="e.g. Fit text to bed space, summarize details, or fix phrasing..."></textarea>
+                    </div>
+
+                    <div class="flex items-center gap-2 py-0.5">
+                        <input type="checkbox" id="geminiAllowTweaking" checked class="w-3.5 h-3.5 rounded text-indigo-600 accent-indigo-500 bg-slate-950 border border-slate-800 cursor-pointer" />
+                        <label for="geminiAllowTweaking" class="text-[10px] text-slate-300 font-semibold select-none cursor-pointer">
+                            Allow Gemini to auto-tweak layout sizes (Height, Spacing)
+                        </label>
+                    </div>
+
+                    <!-- Custom Prompt Checkboxes Block -->
+                    <div class="space-y-1.5 border-t border-slate-800/60 pt-2.5 mt-1.5">
+                        <label class="block text-[9.5px] font-semibold text-slate-400">Gemini Prompt Add-ons</label>
+                        <div id="geminiCheckboxesContainer" class="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
+                            <!-- Default asterisk prompt checkbox -->
+                            <div class="flex items-start gap-2">
+                                <input type="checkbox" id="promptAddonAsterisk" checked class="w-3.5 h-3.5 rounded text-indigo-600 accent-indigo-500 bg-slate-950 border border-slate-800 cursor-pointer mt-0.5" />
+                                <label for="promptAddonAsterisk" class="text-[9.5px] text-slate-300 leading-tight select-none cursor-pointer">
+                                    Convert multiplication '*' to '×' (bullet points stay as '*')
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom prompt addition input -->
+                        <div class="flex items-center gap-1.5 mt-2">
+                            <input type="text" id="txtCustomPrompt" placeholder="Add custom prompt instruction..." class="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-[10px] text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500" />
+                            <button id="btnAddCustomPrompt" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold transition-all">+</button>
+                        </div>
                     </div>
 
                     <button id="btnCallGemini" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 border border-indigo-500 text-white rounded-lg text-xs font-semibold shadow transition flex items-center justify-center gap-1">
@@ -244,6 +291,43 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             <button id="btnOffsetDown" class="w-5 h-5 flex items-center justify-center rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-white text-[9px] font-bold select-none hover:bg-slate-800 active:scale-95 transition" title="Decrease offset">▼</button>
                             <span id="letterYOffsetVal" class="text-xs text-indigo-300 w-11 font-mono text-center">1.2mm</span>
                             <button id="btnOffsetUp" class="w-5 h-5 flex items-center justify-center rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-white text-[9px] font-bold select-none hover:bg-slate-800 active:scale-95 transition" title="Increase offset">▲</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="block text-[10px] text-slate-400 mb-1 leading-tight">Table Column Width Weights</label>
+                    <input type="text" id="tableColWidths" placeholder="e.g. 1, 2, 2 (comma separated ratio, or blank for auto)" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                </div>
+                <div class="mt-3">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-400 text-[10px]">Table Column 1 Width Ratio</span>
+                        <span class="text-indigo-400 font-semibold" id="tableCol1WidthVal">25%</span>
+                    </div>
+                    <input type="range" id="tableCol1Width" min="10" max="60" step="1" value="25" class="w-full accent-indigo-500" />
+                </div>
+                <div class="mt-3 border-t border-slate-800/60 pt-3">
+                    <span class="block text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-2">Math Fraction Settings</span>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400 text-[10px]">Fraction Line Wobble</span>
+                                <span class="text-indigo-400 font-semibold" id="mathLineWobbleVal">0.15mm</span>
+                            </div>
+                            <input type="range" id="mathLineWobble" min="0.0" max="0.8" step="0.05" value="0.15" class="w-full accent-indigo-500" />
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400 text-[10px]">Fraction Line Tilt</span>
+                                <span class="text-indigo-400 font-semibold" id="mathLineTiltVal">0.30mm</span>
+                            </div>
+                            <input type="range" id="mathLineTilt" min="0.0" max="1.5" step="0.05" value="0.30" class="w-full accent-indigo-500" />
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="text-slate-400 text-[10px]">Equation Left Indent (from margin)</span>
+                                <span class="text-indigo-400 font-semibold" id="mathLeftOffsetVal">Centered</span>
+                            </div>
+                            <input type="range" id="mathLeftOffset" min="0.0" max="60.0" step="1.0" value="0.0" class="w-full accent-indigo-500" />
                         </div>
                     </div>
                 </div>
@@ -556,9 +640,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
                 <div class="flex items-center justify-between">
                     <label class="block text-sm font-semibold text-slate-200">7. 3/4-Point Quick Calibration</label>
-                    <div class="flex items-center gap-1.5">
-                        <input type="checkbox" id="use3PointCalib" class="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-950 h-3.5 w-3.5" />
-                        <label for="use3PointCalib" class="text-[10px] text-indigo-400 font-bold cursor-pointer">Enable Map</label>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1.5">
+                            <input type="checkbox" id="enableCalibAutomation" checked class="rounded border-slate-800 text-emerald-600 focus:ring-emerald-500 bg-slate-950 h-3.5 w-3.5" />
+                            <label for="enableCalibAutomation" class="text-[10px] text-emerald-400 font-bold cursor-pointer select-none">Auto-Step</label>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <input type="checkbox" id="use3PointCalib" class="rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-950 h-3.5 w-3.5" />
+                            <label for="use3PointCalib" class="text-[10px] text-indigo-400 font-bold cursor-pointer select-none">Enable Map</label>
+                        </div>
                     </div>
                 </div>
 
@@ -618,6 +708,34 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
                     <div class="text-[9.5px] text-slate-400 leading-normal p-2 bg-slate-900/40 rounded border border-slate-850">
                         🎯 <strong>Quick Jog:</strong> Switch canvas click mode to <strong class="text-indigo-400">Move Pen</strong>. Click anywhere on the preview sheet (zoom in for millimeter precision) and the pen nozzle will travel to that point instantly!
+                    </div>
+
+                    <!-- Precise Jump Move Helper -->
+                    <div class="border-t border-slate-900/60 pt-2.5 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">📐 Precise Jump Helper</span>
+                            <span class="text-[8px] text-slate-500 font-mono">Press 'X' (Y Down) or 'C' (X Right)</span>
+                        </div>
+                        <div class="flex gap-1.5 items-center">
+                            <div class="flex items-center gap-1 w-1/2">
+                                <span class="text-[9px] text-indigo-400 font-bold">Y Down:</span>
+                                <input type="number" id="jumpYDistanceInput" value="146.00" step="0.5" class="w-full bg-slate-950 border border-slate-800 rounded px-1 py-0.5 text-[10px] text-slate-200 font-mono text-center" />
+                                <span class="text-[8.5px] text-slate-500">mm</span>
+                            </div>
+                            <div class="flex items-center gap-1 w-1/2">
+                                <span class="text-[9px] text-indigo-400 font-bold">X Right:</span>
+                                <input type="number" id="jumpXDistanceInput" value="168.50" step="0.5" class="w-full bg-slate-950 border border-slate-800 rounded px-1 py-0.5 text-[10px] text-slate-200 font-mono text-center" />
+                                <span class="text-[8.5px] text-slate-500">mm</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button id="btnJumpYDown" class="flex-1 py-1.5 text-[9.5px] font-semibold bg-indigo-950 border border-indigo-800 hover:bg-indigo-900 text-indigo-300 rounded transition flex items-center justify-center gap-1 shadow-sm">
+                                ⬇️ Jump Y Down (X key)
+                            </button>
+                            <button id="btnJumpXRight" class="flex-1 py-1.5 text-[9.5px] font-semibold bg-indigo-950 border border-indigo-800 hover:bg-indigo-900 text-indigo-300 rounded transition flex items-center justify-center gap-1 shadow-sm">
+                                ➡️ Jump X Right (C key)
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -730,8 +848,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 <button id="tabGcode" class="flex-1 py-2 px-1 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-white">
                     💻 G-Code Console
                 </button>
+                <button id="tabLeveling" class="flex-1 py-2 px-1 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-white">
+                    📐 Bed Leveling
+                </button>
                 <button id="tabHelp" class="flex-1 py-2 px-1 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-white">
-                    ℹ️ Mount Guide
+                    ℹ️ Guide
                 </button>
             </div>
 
@@ -871,22 +992,30 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         </div>
 
                         <!-- Nudge & Scale Alignment Toolkit -->
-                        <div class="mt-2 p-2.5 bg-slate-950/60 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nudge / Shift Letter:</span>
-                            <div class="flex items-center gap-1">
-                                <button id="btnNudgeLeft" class="w-7 h-7 bg-slate-900 border border-slate-800 rounded flex items-center justify-center hover:bg-slate-800 text-xs font-bold text-slate-300" title="Move Left 2mm">←</button>
-                                <div class="flex flex-col gap-0.5">
-                                    <button id="btnNudgeUp" class="w-7 h-7 bg-slate-900 border border-slate-800 rounded flex items-center justify-center hover:bg-slate-800 text-[10px] font-bold text-slate-300" title="Move Up 2mm">↑</button>
-                                    <button id="btnNudgeDown" class="w-7 h-7 bg-slate-900 border border-slate-800 rounded flex items-center justify-center hover:bg-slate-800 text-[10px] font-bold text-slate-300" title="Move Down 2mm">↓</button>
+                        <div class="mt-2 p-2.5 bg-slate-950/60 rounded-xl border border-slate-800 flex flex-col gap-2">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nudge / Shift Letter:</span>
+                                <div class="flex items-center gap-1">
+                                    <button id="btnNudgeLeft" class="w-7 h-7 bg-slate-900 border border-slate-800 rounded flex items-center justify-center hover:bg-slate-800 text-xs font-bold text-slate-300" title="Move Left 2mm">←</button>
+                                    <div class="flex flex-col gap-0.5">
+                                        <button id="btnNudgeUp" class="w-7 h-7 bg-slate-900 border border-slate-800 rounded flex items-center justify-center hover:bg-slate-800 text-[10px] font-bold text-slate-300" title="Move Up 2mm">↑</button>
+                                        <button id="btnNudgeDown" class="w-7 h-7 bg-slate-900 border border-slate-800 rounded flex items-center justify-center hover:bg-slate-800 text-[10px] font-bold text-slate-300" title="Move Down 2mm">↓</button>
+                                    </div>
+                                    <button id="btnNudgeRight" class="w-7 h-7 bg-slate-900 border border-slate-800 rounded flex items-center justify-center hover:bg-slate-800 text-xs font-bold text-slate-300" title="Move Right 2mm">→</button>
                                 </div>
-                                <button id="btnNudgeRight" class="w-7 h-7 bg-slate-900 border border-slate-800 rounded flex items-center justify-center hover:bg-slate-800 text-xs font-bold text-slate-300" title="Move Right 2mm">→</button>
+                                
+                                <div class="h-6 w-px bg-slate-800"></div>
+                                
+                                <div class="flex items-center gap-1">
+                                    <button id="btnScaleDown" class="px-2 py-1 bg-slate-900 border border-slate-800 rounded hover:bg-slate-800 text-[10px] font-bold text-slate-300" title="Scale Down 95%">🔍- Shrink</button>
+                                    <button id="btnScaleUp" class="px-2 py-1 bg-slate-900 border border-slate-800 rounded hover:bg-slate-800 text-[10px] font-bold text-slate-300" title="Scale Up 105%">🔍+ Grow</button>
+                                </div>
                             </div>
-                            
-                            <div class="h-6 w-px bg-slate-800"></div>
-                            
-                            <div class="flex items-center gap-1">
-                                <button id="btnScaleDown" class="px-2 py-1 bg-slate-900 border border-slate-800 rounded hover:bg-slate-800 text-[10px] font-bold text-slate-300" title="Scale Down 95%">🔍- Shrink</button>
-                                <button id="btnScaleUp" class="px-2 py-1 bg-slate-900 border border-slate-800 rounded hover:bg-slate-800 text-[10px] font-bold text-slate-300" title="Scale Up 105%">🔍+ Grow</button>
+                            <div class="flex items-center gap-1.5 pt-1.5 border-t border-slate-900">
+                                <input type="checkbox" id="nudgeAllVariants" class="w-3.5 h-3.5 rounded text-indigo-600 accent-indigo-500 bg-slate-950 border border-slate-800 cursor-pointer" />
+                                <label for="nudgeAllVariants" class="text-[9px] text-slate-400 font-semibold select-none cursor-pointer">
+                                    Apply nudge & scale to ALL variants of this letter
+                                </label>
                             </div>
                         </div>
 
@@ -986,6 +1115,164 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             <li><b>Babystepping during USB Printing (OctoPrint):</b> Marlin disables LCD tuning menus during host USB prints on some firmware. Use the <b>Live Z-Offset (USB Babystepping)</b> widget under Step 6 in the browser! Clicking these buttons will inject Marlin <code class="bg-slate-900 px-1 py-0.5 rounded text-amber-400">M290</code> commands to raise/lower the pen by 0.05mm increments on the fly!</li>
                             <li><b>Dry Run Alignment first:</b> Always run the <b>"Run 10s Alignment Verification (Dry Run)"</b> sequence before printing. The pen stays safely raised at all times while moving to check if the path lines up.</li>
                         </ul>
+                    </div>
+                </div>
+
+                <!-- Tab: Bed Leveling Calculator -->
+                <div id="contentLeveling" class="hidden flex-1 overflow-y-auto p-6 space-y-6 text-sm text-slate-300">
+                    <div class="space-y-2">
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            📐 FDM Printer Bed Leveling & Screw Calculator
+                        </h3>
+                        <p class="text-slate-400 text-xs">
+                            Keep your heatbed perfectly flat. Measure probe deviation values, and automatically calculate exact rotational screw adjustments needed for each corner.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Step 1: Calibration (Thread Pitch) -->
+                        <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4.5 space-y-4">
+                            <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                🔧 Step 1: Calibrate Thread Pitch
+                            </h4>
+                            <p class="text-[11px] text-slate-400 leading-normal">
+                                First, measure how much the bed height changes per rotation. Turn one bed screw exactly 360° Clockwise (+) and record the probe difference below.
+                            </p>
+                            
+                            <div class="grid grid-cols-2 gap-3.5">
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-semibold text-slate-400 uppercase">Initial Value (mm)</label>
+                                    <input type="number" id="calibLevelingInitial" value="0.200" step="0.01" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-semibold text-slate-400 uppercase">Post-360° Turn (mm)</label>
+                                    <input type="number" id="calibLevelingFinal" value="0.950" step="0.01" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono" />
+                                </div>
+                            </div>
+                            
+                            <div class="p-3 bg-slate-900 border border-slate-850 rounded-lg space-y-1">
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-400">Total Height change (360°):</span>
+                                    <span id="levelingPitchTotal" class="font-mono text-emerald-400 font-bold">0.750 mm</span>
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-400">Pitch per 1° rotation:</span>
+                                    <span id="levelingPitchPerDegree" class="font-mono text-indigo-300 font-bold">0.00208 mm</span>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-indigo-950/20 border border-indigo-900/30 text-indigo-300 rounded p-2.5 text-[10px] leading-normal">
+                                <b>Assumption:</b> Clockwise (+) turn moves bed UP; Counter-Clockwise (-) turn moves bed DOWN.
+                            </div>
+                        </div>
+
+                        <!-- Step 2: 4-Corner Input Readings -->
+                        <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4.5 space-y-4">
+                            <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                📊 Step 2: Input Current Variations
+                            </h4>
+                            <p class="text-[11px] text-slate-400 leading-normal">
+                                Enter your printer's current bed mesh probe variation values (in mm) for the four bed screw coordinates.
+                            </p>
+                            
+                            <div class="grid grid-cols-2 gap-3.5">
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-semibold text-slate-400 uppercase">Back-Left (mm)</label>
+                                    <input type="number" id="cornerBLInput" value="0.12" step="0.01" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-semibold text-slate-400 uppercase">Back-Right (mm)</label>
+                                    <input type="number" id="cornerBRInput" value="-0.08" step="0.01" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-semibold text-slate-400 uppercase">Front-Left (mm)</label>
+                                    <input type="number" id="cornerFLInput" value="0.05" step="0.01" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono" />
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-semibold text-slate-400 uppercase">Front-Right (mm)</label>
+                                    <input type="number" id="cornerFRInput" value="-0.15" step="0.01" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono" />
+                                </div>
+                            </div>
+                            
+                            <button id="btnCalculateLeveling" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg shadow-md transition shadow-indigo-600/10">
+                                ⚡ Calculate Bed Adjustments
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Top-Down Visual Instruction Bed Grid -->
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-5 space-y-4">
+                        <div class="flex justify-between items-center border-b border-slate-850 pb-2.5">
+                            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                                🗺️ Visual Adjustment Blueprint
+                            </h4>
+                            <div class="flex gap-4 text-[10px] text-slate-400">
+                                <span>Average Bed Height: <b id="levelingAvgVal" class="font-mono text-slate-200">-0.015 mm</b></span>
+                                <span>Target: <b class="text-emerald-400">Average Level</b></span>
+                            </div>
+                        </div>
+                        
+                        <!-- 2D Top-down Grid Map -->
+                        <div class="flex justify-center py-4 select-none">
+                            <div class="relative w-[340px] h-[340px] bg-slate-900 border-2 border-slate-800 rounded-2xl flex flex-col p-4 shadow-2xl justify-between">
+                                <!-- Top/Back Label -->
+                                <div class="absolute top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Back / Y Max</div>
+                                <!-- Bottom/Front Label -->
+                                <div class="absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-bold text-slate-600 uppercase tracking-widest">Front / Y Min</div>
+                                <!-- Left Label -->
+                                <div class="absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 text-[9px] font-bold text-slate-600 uppercase tracking-widest origin-center">Left / X Min</div>
+                                <!-- Right Label -->
+                                <div class="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 text-[9px] font-bold text-slate-600 uppercase tracking-widest origin-center">Right / X Max</div>
+                                
+                                <!-- Inner grid body representing the metal bed -->
+                                <div class="flex-1 border border-slate-800/80 rounded-xl m-4 flex flex-col justify-between p-3 bg-[#0d1424]/40">
+                                    <!-- Back Row -->
+                                    <div class="flex justify-between items-start">
+                                        <!-- Back-Left Corner Instruction -->
+                                        <div class="w-[120px] bg-slate-950/80 border border-slate-800 rounded-lg p-2 flex flex-col items-center text-center space-y-1" id="cardBL">
+                                            <span class="text-[9px] font-bold text-slate-400">Back-Left</span>
+                                            <span class="font-mono text-[9px] text-indigo-300 font-semibold" id="lblBLVal">0.12 mm</span>
+                                            <canvas id="canvasBL" width="40" height="40" class="block w-[40px] h-[40px]"></canvas>
+                                            <span class="text-[9.5px] font-extrabold" id="lblBLInstruction">Wait...</span>
+                                        </div>
+                                        
+                                        <!-- Back-Right Corner Instruction -->
+                                        <div class="w-[120px] bg-slate-950/80 border border-slate-800 rounded-lg p-2 flex flex-col items-center text-center space-y-1" id="cardBR">
+                                            <span class="text-[9px] font-bold text-slate-400">Back-Right</span>
+                                            <span class="font-mono text-[9px] text-indigo-300 font-semibold" id="lblBRVal">-0.08 mm</span>
+                                            <canvas id="canvasBR" width="40" height="40" class="block w-[40px] h-[40px]"></canvas>
+                                            <span class="text-[9.5px] font-extrabold" id="lblBRInstruction">Wait...</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Center Nozzle Icon -->
+                                    <div class="flex justify-center items-center">
+                                        <div class="w-8 h-8 rounded-full border border-slate-800/60 bg-slate-900/50 flex items-center justify-center text-[10px] text-slate-500 font-bold shadow-inner">
+                                            🛏️
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Front Row -->
+                                    <div class="flex justify-between items-end">
+                                        <!-- Front-Left Corner Instruction -->
+                                        <div class="w-[120px] bg-slate-950/80 border border-slate-800 rounded-lg p-2 flex flex-col items-center text-center space-y-1" id="cardFL">
+                                            <span class="text-[9px] font-bold text-slate-400">Front-Left</span>
+                                            <span class="font-mono text-[9px] text-indigo-300 font-semibold" id="lblFLVal">0.05 mm</span>
+                                            <canvas id="canvasFL" width="40" height="40" class="block w-[40px] h-[40px]"></canvas>
+                                            <span class="text-[9.5px] font-extrabold" id="lblFLInstruction">Wait...</span>
+                                        </div>
+                                        
+                                        <!-- Front-Right Corner Instruction -->
+                                        <div class="w-[120px] bg-slate-950/80 border border-slate-800 rounded-lg p-2 flex flex-col items-center text-center space-y-1" id="cardFR">
+                                            <span class="text-[9px] font-bold text-slate-400">Front-Right</span>
+                                            <span class="font-mono text-[9px] text-indigo-300 font-semibold" id="lblFRVal">-0.15 mm</span>
+                                            <canvas id="canvasFR" width="40" height="40" class="block w-[40px] h-[40px]"></canvas>
+                                            <span class="text-[9.5px] font-extrabold" id="lblFRInstruction">Wait...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1504,20 +1791,34 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
         // Nudge / Move and Scale character strokes
         function nudgeActiveVariant(dx, dy) {
-            const strokes = DrawnFont[activeDesignerChar][activeVariant];
-            if (!strokes || strokes.length === 0) {
-                showToast("No drawn strokes in active variant to move!", "error");
-                return;
-            }
-            for (let stroke of strokes) {
-                for (let pt of stroke) {
-                    pt[0] += dx;
-                    pt[1] += dy;
-                    
-                    // Bound checks within [0, 300] limits
-                    pt[0] = Math.max(0, Math.min(300, pt[0]));
-                    pt[1] = Math.max(0, Math.min(300, pt[1]));
+            const applyToAll = document.getElementById('nudgeAllVariants') ? document.getElementById('nudgeAllVariants').checked : false;
+            const targetChar = activeDesignerChar;
+            
+            let variantsToProcess = [];
+            if (applyToAll) {
+                variantsToProcess = DrawnFont[targetChar] || [];
+            } else {
+                if (DrawnFont[targetChar] && DrawnFont[targetChar][activeVariant]) {
+                    variantsToProcess = [DrawnFont[targetChar][activeVariant]];
                 }
+            }
+            
+            let movedAny = false;
+            for (let strokes of variantsToProcess) {
+                if (!strokes || strokes.length === 0) continue;
+                movedAny = true;
+                for (let stroke of strokes) {
+                    for (let pt of stroke) {
+                        pt[0] += dx;
+                        pt[1] += dy;
+                        pt[0] = Math.max(0, Math.min(300, pt[0]));
+                        pt[1] = Math.max(0, Math.min(300, pt[1]));
+                    }
+                }
+            }
+            if (!movedAny) {
+                showToast("No drawn strokes to move!", "error");
+                return;
             }
             drawDesignerGrid();
             saveDrawnFontToLocalStorage();
@@ -1525,33 +1826,47 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
 
         function scaleActiveVariant(factor) {
-            const strokes = DrawnFont[activeDesignerChar][activeVariant];
-            if (!strokes || strokes.length === 0) {
-                showToast("No drawn strokes in active variant to scale!", "error");
+            const applyToAll = document.getElementById('nudgeAllVariants') ? document.getElementById('nudgeAllVariants').checked : false;
+            const targetChar = activeDesignerChar;
+            
+            let variantsToProcess = [];
+            if (applyToAll) {
+                variantsToProcess = DrawnFont[targetChar] || [];
+            } else {
+                if (DrawnFont[targetChar] && DrawnFont[targetChar][activeVariant]) {
+                    variantsToProcess = [DrawnFont[targetChar][activeVariant]];
+                }
+            }
+            
+            let scaledAny = false;
+            for (let strokes of variantsToProcess) {
+                if (!strokes || strokes.length === 0) continue;
+                scaledAny = true;
+                
+                let minX = 300, maxX = 0, minY = 300, maxY = 0;
+                for (let stroke of strokes) {
+                    for (let pt of stroke) {
+                        if (pt[0] < minX) minX = pt[0];
+                        if (pt[0] > maxX) maxX = pt[0];
+                        if (pt[1] < minY) minY = pt[1];
+                        if (pt[1] > maxY) maxY = pt[1];
+                    }
+                }
+                const cx = (minX + maxX) / 2;
+                const cy = (minY + maxY) / 2;
+                
+                for (let stroke of strokes) {
+                    for (let pt of stroke) {
+                        pt[0] = cx + (pt[0] - cx) * factor;
+                        pt[1] = cy + (pt[1] - cy) * factor;
+                        pt[0] = Math.max(0, Math.min(300, pt[0]));
+                        pt[1] = Math.max(0, Math.min(300, pt[1]));
+                    }
+                }
+            }
+            if (!scaledAny) {
+                showToast("No drawn strokes to scale!", "error");
                 return;
-            }
-            
-            // Calculate center of character strokes bounding box to scale relative to it
-            let minX = 300, maxX = 0, minY = 300, maxY = 0;
-            for (let stroke of strokes) {
-                for (let pt of stroke) {
-                    if (pt[0] < minX) minX = pt[0];
-                    if (pt[0] > maxX) maxX = pt[0];
-                    if (pt[1] < minY) minY = pt[1];
-                    if (pt[1] > maxY) maxY = pt[1];
-                }
-            }
-            const cx = (minX + maxX) / 2;
-            const cy = (minY + maxY) / 2;
-            
-            for (let stroke of strokes) {
-                for (let pt of stroke) {
-                    pt[0] = cx + (pt[0] - cx) * factor;
-                    pt[1] = cy + (pt[1] - cy) * factor;
-                    
-                    pt[0] = Math.max(0, Math.min(300, pt[0]));
-                    pt[1] = Math.max(0, Math.min(300, pt[1]));
-                }
             }
             drawDesignerGrid();
             saveDrawnFontToLocalStorage();
@@ -2063,18 +2378,20 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         const tabCanvas = document.getElementById('tabCanvas');
         const tabDesigner = document.getElementById('tabDesigner');
         const tabGcode = document.getElementById('tabGcode');
+        const tabLeveling = document.getElementById('tabLeveling');
         const tabHelp = document.getElementById('tabHelp');
         
         const contentCanvas = document.getElementById('contentCanvas');
         const contentDesigner = document.getElementById('contentDesigner');
         const contentGcode = document.getElementById('contentGcode');
+        const contentLeveling = document.getElementById('contentLeveling');
         const contentHelp = document.getElementById('contentHelp');
 
         function switchTab(activeBtn, activePane) {
-            [tabCanvas, tabDesigner, tabGcode, tabHelp].forEach(btn => {
+            [tabCanvas, tabDesigner, tabGcode, tabLeveling, tabHelp].forEach(btn => {
                 btn.className = "flex-1 py-2 px-1 text-[11px] sm:text-xs font-semibold text-slate-400 hover:text-white";
             });
-            [contentCanvas, contentDesigner, contentGcode, contentHelp].forEach(pane => {
+            [contentCanvas, contentDesigner, contentGcode, contentLeveling, contentHelp].forEach(pane => {
                 pane.classList.add('hidden');
             });
             
@@ -2086,12 +2403,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 resizeDesignerCanvas();
             } else if (activePane === contentCanvas) {
                 renderPreview();
+            } else if (activePane === contentLeveling) {
+                calculateBedLeveling();
             }
         }
 
         tabCanvas.addEventListener('click', () => switchTab(tabCanvas, contentCanvas));
         tabDesigner.addEventListener('click', () => switchTab(tabDesigner, contentDesigner));
         tabGcode.addEventListener('click', () => switchTab(tabGcode, contentGcode));
+        tabLeveling.addEventListener('click', () => switchTab(tabLeveling, contentLeveling));
         tabHelp.addEventListener('click', () => switchTab(tabHelp, contentHelp));
 
 
@@ -2125,6 +2445,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
         let activeFontMode = 'stroke'; // 'stroke', 'custom', or 'drawn'
         let uploadedFont = null;
+        let lastMissingChars = new Set();
 
         function setFontMode(mode) {
             activeFontMode = mode;
@@ -2171,8 +2492,12 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         const previewCanvas = document.getElementById('previewCanvas');
         const pCtx = previewCanvas.getContext('2d');
         
+        window.handwritingLayoutDirty = true;
+        window.cachedHandwritingPaths = null;
+        
         let previewDebounce = null;
         function triggerPreviewUpdate() {
+            window.handwritingLayoutDirty = true;
             if (previewDebounce) clearTimeout(previewDebounce);
             previewDebounce = setTimeout(renderPreview, 80);
         }
@@ -2210,6 +2535,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 penOffsetX: (parseFloat(document.getElementById('penOffsetX').value) || 0.0) * 10.0,
                 penOffsetY: (parseFloat(document.getElementById('penOffsetY').value) || 0.0) * 10.0,
                 showCalibBox: document.getElementById('showCalibBox').checked,
+                tableColWidths: document.getElementById('tableColWidths') ? document.getElementById('tableColWidths').value.trim() : "",
+                tableCol1Width: parseFloat(document.getElementById('tableCol1Width').value) || 25,
+                mathLineWobble: parseFloat(document.getElementById('mathLineWobble').value) || 0.15,
+                mathLineTilt: parseFloat(document.getElementById('mathLineTilt').value) || 0.30,
+                mathLeftOffset: parseFloat(document.getElementById('mathLeftOffset').value) || 0.0,
                 calibBoxWidth: parseFloat(document.getElementById('calibBoxWidth').value) || 150.0,
                 calibBoxHeight: parseFloat(document.getElementById('calibBoxHeight').value) || 150.0,
                 calibBoxX: isNaN(parseFloat(document.getElementById('calibBoxX').value)) ? 30.0 : parseFloat(document.getElementById('calibBoxX').value),
@@ -2271,24 +2601,668 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             return localHeight * 0.8;
         }
 
+        function tokenizeText(text) {
+            const tokens = [];
+            let i = 0;
+            while (i < text.length) {
+                if (text[i] === '^' || text[i] === '_') {
+                    const type = text[i] === '^' ? 'super' : 'sub';
+                    i++;
+                    if (i < text.length) {
+                        if (text[i] === '{') {
+                            let end = text.indexOf('}', i);
+                            if (end !== -1) {
+                                tokens.push({ text: text.substring(i + 1, end), type: type });
+                                i = end + 1;
+                            } else {
+                                tokens.push({ text: '{', type: 'normal' });
+                                i++;
+                            }
+                        } else if (text[i] === '(') {
+                            let end = text.indexOf(')', i);
+                            if (end !== -1) {
+                                tokens.push({ text: text.substring(i + 1, end), type: type });
+                                i = end + 1;
+                            } else {
+                                tokens.push({ text: '(', type: 'normal' });
+                                i++;
+                            }
+                        } else {
+                            let start = i;
+                            if (/[0-9]/.test(text[i])) {
+                                while (i < text.length && /[0-9]/.test(text[i])) {
+                                    i++;
+                                }
+                                tokens.push({ text: text.substring(start, i), type: type });
+                            } else if (/[a-z]/.test(text[i])) {
+                                while (i < text.length && /[a-z]/.test(text[i])) {
+                                    i++;
+                                }
+                                tokens.push({ text: text.substring(start, i), type: type });
+                            } else {
+                                tokens.push({ text: text[i], type: type });
+                                i++;
+                            }
+                        }
+                    }
+                } else {
+                    let nextSpecial = -1;
+                    for (let j = i; j < text.length; j++) {
+                        if (text[j] === '^' || text[j] === '_') {
+                            nextSpecial = j;
+                            break;
+                        }
+                    }
+                    if (nextSpecial !== -1) {
+                        tokens.push({ text: text.substring(i, nextSpecial), type: 'normal' });
+                        i = nextSpecial;
+                    } else {
+                        tokens.push({ text: text.substring(i), type: 'normal' });
+                        break;
+                    }
+                }
+            }
+            return tokens;
+        }
+
+        function renderTableBlock(tableBlock, startY, paths, settings, pseudoRandom, getCharWidth, getTokenWidth, activeFontMode, StrokeFont, DrawnFont, uploadedFont, skeletonizeStrokes, generateGlyphHatchFill, drawMathElements) {
+            const rows = tableBlock.rows;
+            if (rows.length === 0) return startY;
+            
+            const numCols = Math.max(...rows.map(r => r.length));
+            const leftMargin = settings.leftMargin;
+            const rightMarginX = 210 - settings.rightMargin;
+            const maxTableWidth = rightMarginX - leftMargin;
+            
+            const colWidths = new Array(numCols).fill(0);
+            let hasCustomWidths = false;
+            
+            if (settings.tableColWidths) {
+                const parts = settings.tableColWidths.split(',').map(p => parseFloat(p.trim())).filter(p => !isNaN(p) && p > 0);
+                if (parts.length > 0) {
+                    hasCustomWidths = true;
+                    while (parts.length < numCols) {
+                        parts.push(1.0);
+                    }
+                    const totalWeight = parts.slice(0, numCols).reduce((a, b) => a + b, 0);
+                    for (let c = 0; c < numCols; c++) {
+                        colWidths[c] = (parts[c] / totalWeight) * maxTableWidth;
+                    }
+                }
+            }
+            
+            if (!hasCustomWidths) {
+                if (!settings.tableColWidths || settings.tableColWidths === 'auto') {
+                    for (let r = 0; r < rows.length; r++) {
+                        const row = rows[r];
+                        for (let c = 0; c < numCols; c++) {
+                            const cellText = row[c] || "";
+                            const rawLines = cellText.split(/<br\s*\/?>/i);
+                            let maxLineW = 0;
+                            for (let rawLine of rawLines) {
+                                const trimmedLine = rawLine.trim();
+                                let w;
+                                if (trimmedLine.includes('\\frac{') || trimmedLine.includes('\\sqrt{') || trimmedLine.includes('\\bar{')) {
+                                    const elements = parseMathString(trimmedLine);
+                                    const layout = layoutMath(elements, settings, getTokenWidth);
+                                    w = layout.width;
+                                } else {
+                                    w = getTokenWidth(trimmedLine, settings.charHeight);
+                                }
+                                if (w > maxLineW) maxLineW = w;
+                            }
+                            if (maxLineW > colWidths[c]) {
+                                colWidths[c] = maxLineW;
+                            }
+                        }
+                    }
+                    const colPadding = 5.0;
+                    for (let c = 0; c < numCols; c++) {
+                        colWidths[c] += colPadding;
+                    }
+                    const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+                    if (totalWidth > maxTableWidth) {
+                        const scale = maxTableWidth / totalWidth;
+                        for (let c = 0; c < numCols; c++) {
+                            colWidths[c] = Math.max(10.0, colWidths[c] * scale);
+                        }
+                    }
+                } else {
+                    if (numCols === 1) {
+                        colWidths[0] = maxTableWidth;
+                    } else {
+                        colWidths[0] = maxTableWidth * (settings.tableCol1Width / 100.0);
+                        const remainingWidth = maxTableWidth * (1.0 - settings.tableCol1Width / 100.0);
+                        const otherColWidth = remainingWidth / (numCols - 1);
+                        for (let c = 1; c < numCols; c++) {
+                            colWidths[c] = otherColWidth;
+                        }
+                    }
+                }
+            }
+            
+            const colStartX = new Array(numCols);
+            let accumX = leftMargin;
+            for (let c = 0; c < numCols; c++) {
+                colStartX[c] = accumX;
+                accumX += colWidths[c];
+            }
+            
+            let currentY = startY;
+            const cellLineSpacing = settings.lineSpacing * 0.85;
+            
+            for (let r = 0; r < rows.length; r++) {
+                window.currentRenderingLineIdx = (tableBlock.startLineIdx !== undefined ? tableBlock.startLineIdx : 0) + r;
+                const row = rows[r];
+                const rowCellsData = [];
+                let maxCellHeight = 0;
+                
+                for (let c = 0; c < numCols; c++) {
+                    const cellText = row[c] || "";
+                    const rawLines = cellText.split(/<br\s*\/?>/i);
+                    const cellLinesData = [];
+                    let cellHeight = 0;
+                    
+                    for (let rawLine of rawLines) {
+                        const trimmedLine = rawLine.trim();
+                        if (trimmedLine.includes('\\frac{') || trimmedLine.includes('\\sqrt{') || trimmedLine.includes('\\bar{')) {
+                            const elements = parseMathString(trimmedLine);
+                            const layout = layoutMath(elements, settings, getTokenWidth);
+                            cellLinesData.push({ type: 'math', layout: layout, elements: elements });
+                            cellHeight += layout.heightAbove + layout.heightBelow;
+                        } else {
+                            const words = trimmedLine.match(/\S+|\s+/g) || [];
+                            const maxCellWidth = colWidths[c] - 2.0;
+                            const wrappedLines = [];
+                            let currentLine = "";
+                            let currentLineWidth = 0;
+                            for (let word of words) {
+                                const wordW = getTokenWidth(word, settings.charHeight);
+                                if (currentLineWidth + wordW > maxCellWidth && currentLine.length > 0) {
+                                    wrappedLines.push(currentLine);
+                                    currentLine = word;
+                                    currentLineWidth = wordW;
+                                } else {
+                                    currentLine += word;
+                                    currentLineWidth += wordW;
+                                }
+                            }
+                            if (currentLine.length > 0 || words.length === 0) {
+                                wrappedLines.push(currentLine);
+                            }
+                            
+                            for (let wl of wrappedLines) {
+                                cellLinesData.push({ type: 'text', text: wl });
+                                cellHeight += cellLineSpacing;
+                            }
+                        }
+                    }
+                    rowCellsData.push({ lines: cellLinesData, height: cellHeight });
+                    if (cellHeight > maxCellHeight) maxCellHeight = cellHeight;
+                }
+                
+                const rowHeight = maxCellHeight + 2.0;
+                const linesUsed = Math.max(1, Math.ceil((rowHeight - 2.5) / settings.lineSpacing));
+                const rowTopY = currentY;
+                
+                for (let c = 0; c < numCols; c++) {
+                    const cellData = rowCellsData[c];
+                    if (!cellData) continue;
+                    
+                    const numLines = cellData.lines.length;
+                    for (let lineIdx = 0; lineIdx < numLines; lineIdx++) {
+                        const lineData = cellData.lines[lineIdx];
+                        const cellY = rowTopY + (lineIdx + 1) * settings.lineSpacing;
+                        
+                        if (lineData.type === 'math') {
+                            const cellStartX = colStartX[c] + 1.0;
+                            const mathCenterY = cellY - settings.lineSpacing / 2.0;
+                            drawMathElements(lineData.layout.layouts, cellStartX, mathCenterY);
+                        } else {
+                            const lineText = lineData.text;
+                            if (!lineText) continue;
+                            
+                            let cellX = colStartX[c] + 1.0;
+                            const mathTokens = tokenizeText(lineText);
+                            for (let mToken of mathTokens) {
+                                let tokenScale = 1.0;
+                                let yOffset = 0;
+                                if (mToken.type === 'super') {
+                                    tokenScale = 0.65;
+                                    yOffset = -settings.charHeight * 0.45;
+                                } else if (mToken.type === 'sub') {
+                                    tokenScale = 0.65;
+                                    yOffset = settings.charHeight * 0.15;
+                                }
+                                
+                                const tokenHeight = settings.charHeight * tokenScale;
+                                const tokens = mToken.text.match(/\S+|\s+/g) || [];
+                                
+                                for (let token of tokens) {
+                                    if (/^\s+$/.test(token)) {
+                                        cellX += settings.wordSpacing * token.length * tokenScale;
+                                        continue;
+                                    }
+                                    
+                                    for (let i = 0; i < token.length; i++) {
+                                        const char = token[i];
+                                        const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
+                                        const localHeight = tokenHeight * heightJitterMultiplier;
+                                        const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
+                                        const slantRad = (slantAngleDeg * Math.PI) / 180.0;
+                                        
+                                        let characterStrokes = [];
+                                        let charWidthMM = getCharWidth(char, localHeight, settings);
+                                        
+                                        if (activeFontMode === 'stroke') {
+                                            const strokeDef = StrokeFont[char];
+                                            if (strokeDef) {
+                                                characterStrokes = strokeDef.map(stroke => {
+                                                    return stroke.map(pt => {
+                                                        const normX = pt[0] / 10.0;
+                                                        const normY = pt[1] / 10.0;
+                                                        return { x: normX * charWidthMM, y: normY * localHeight };
+                                                    });
+                                                });
+                                            }
+                                        } else if (activeFontMode === 'drawn') {
+                                            const variants = DrawnFont[char];
+                                            if (variants) {
+                                                const indices = [];
+                                                variants.forEach((v, idx) => {
+                                                    if (v && v.length > 0) indices.push(idx);
+                                                });
+                                                if (indices.length > 0) {
+                                                    let chosenVariantIdx = 0;
+                                                    const lastIdx = window.lastCharVariant ? window.lastCharVariant[char] : undefined;
+                                                    if (indices.length > 1 && lastIdx !== undefined) {
+                                                        const allowedIndices = indices.filter(idx => idx !== lastIdx);
+                                                        chosenVariantIdx = allowedIndices[Math.floor(pseudoRandom() * allowedIndices.length)];
+                                                    } else {
+                                                        chosenVariantIdx = indices[Math.floor(pseudoRandom() * indices.length)];
+                                                    }
+                                                    if (!window.lastCharVariant) window.lastCharVariant = {};
+                                                    window.lastCharVariant[char] = chosenVariantIdx;
+                                                    const rawStrokes = variants[chosenVariantIdx];
+                                                    let minX = Infinity;
+                                                    rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
+                                                    characterStrokes = rawStrokes.map(stroke => {
+                                                        return stroke.map(pt => {
+                                                            const x = (pt[0] - minX) * (localHeight / 180.0);
+                                                            const y = (pt[1] - 240.0) * (localHeight / 180.0);
+                                                            const engineY = localHeight + y;
+                                                            return { x: x, y: engineY };
+                                                        });
+                                                    });
+                                                }
+                                            }
+                                        } else if (activeFontMode === 'custom' && uploadedFont) {
+                                            const glyph = uploadedFont.charToGlyph(char);
+                                            if (glyph) {
+                                                const fontScale = 1 / uploadedFont.unitsPerEm;
+                                                const path = glyph.getPath(0, 0, localHeight / fontScale);
+                                                let activeStroke = [];
+                                                for (let cmd of path.commands) {
+                                                    if (cmd.type === 'M') {
+                                                        if (activeStroke.length > 0) characterStrokes.push(activeStroke);
+                                                        activeStroke = [{ x: cmd.x * fontScale, y: -cmd.y * fontScale }];
+                                                    } else if (cmd.type === 'L' || cmd.type === 'Q' || cmd.type === 'C') {
+                                                        activeStroke.push({ x: cmd.x * fontScale, y: -cmd.y * fontScale });
+                                                    } else if (cmd.type === 'Z') {
+                                                        if (activeStroke.length > 0) {
+                                                            activeStroke.push({ x: activeStroke[0].x, y: activeStroke[0].y });
+                                                            characterStrokes.push(activeStroke);
+                                                            activeStroke = [];
+                                                        }
+                                                    }
+                                                }
+                                                if (activeStroke.length > 0) characterStrokes.push(activeStroke);
+                                                charWidthMM = (glyph.advanceWidth || 0) * fontScale * localHeight;
+                                                if (settings.ttfRender === 'skeleton') {
+                                                    characterStrokes = skeletonizeStrokes(characterStrokes, charWidthMM, localHeight, settings);
+                                                } else if (settings.ttfRender === 'hatch-horizontal' || settings.ttfRender === 'hatch-diagonal') {
+                                                    const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
+                                                    characterStrokes = characterStrokes.concat(hatches);
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (characterStrokes.length > 0) {
+                                            for (let stroke of characterStrokes) {
+                                                const compiledStroke = [];
+                                                for (let pt of stroke) {
+                                                    const slantedX = pt.x + (localHeight - pt.y) * Math.sin(slantRad);
+                                                    let targetX = cellX + slantedX;
+                                                    let targetY = cellY - settings.letterYOffset - (localHeight - pt.y) + yOffset;
+                                                    compiledStroke.push({ x: targetX, y: targetY });
+                                                }
+                                                compiledStroke.isSlowStart = false;
+                                                paths.push(compiledStroke);
+                                            }
+                                        }
+                                        
+                                        renderedCharactersOnSheet.push({
+                                            char: char,
+                                            minX: cellX,
+                                            maxX: cellX + charWidthMM,
+                                            minY: cellY - localHeight + yOffset,
+                                            maxY: cellY + yOffset,
+                                            lineIdx: window.currentRenderingLineIdx || 0
+                                        });
+                                        
+                                        cellX += charWidthMM + settings.charSpacing;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                currentY = rowTopY + linesUsed * settings.lineSpacing;
+            }
+            
+            return currentY;
+        }
+
+        function preprocessLaTeX(text) {
+            let processed = text;
+            
+            // 1. Convert block math $$...$$ to indented text
+            processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, equation) => {
+                const eqTrimmed = equation.trim();
+                return "\n    " + eqTrimmed.split('\n').join('\n    ') + "\n";
+            });
+            
+            // 2. Convert inline math $...$ by stripping the $ signs
+            processed = processed.replace(/\$([^\$]+?)\$/g, (match, inline) => {
+                return inline;
+            });
+
+            // 2.5. Remove bold markers **
+            processed = processed.replace(/\*\*/g, '');
+
+            // 2.7. Strip \left and \right scaling commands
+            processed = processed.replace(/\\left/g, '');
+            processed = processed.replace(/\\right/g, '');
+
+            // 2.8. Strip \text{...} wrappers in math equations
+            processed = processed.replace(/\\text\{([^\}]+?)\}/g, '$1');
+
+            // 2.9. Map unicode superscripts and subscripts to standard carets/underscores
+            const supersMap = {
+                '⁰': '^0', '¹': '^1', '²': '^2', '³': '^3', '⁴': '^4',
+                '⁵': '^5', '⁶': '^6', '⁷': '^7', '⁸': '^8', '⁹': '^9'
+            };
+            for (let sup in supersMap) {
+                processed = processed.replaceAll(sup, supersMap[sup]);
+            }
+            const subsMap = {
+                '₀': '_0', '₁': '_1', '₂': '_2', '₃': '_3', '₄': '_4',
+                '₅': '_5', '₆': '_6', '₇': '_7', '₈': '_8', '₉': '_9'
+            };
+            for (let sub in subsMap) {
+                processed = processed.replaceAll(sub, subsMap[sub]);
+            }
+            
+            // 3. Replace common LaTeX math commands with unicode/standard symbols
+            const symbols = {
+                '\\\\times': '×',
+                '\\\\cdot': '·',
+                '\\\\approx': '≈',
+                '\\\\neq': '≠',
+                '\\\\leq': '≤',
+                '\\\\geq': '≥',
+                '\\\\le': '≤',
+                '\\\\ge': '≥',
+                '\\\\pm': '±',
+                '\\\\div': '÷',
+                '\\\\alpha': 'α',
+                '\\\\beta': 'β',
+                '\\\\gamma': 'γ',
+                '\\\\delta': 'δ',
+                '\\\\Delta': 'Δ',
+                '\\\\theta': 'θ',
+                '\\\\pi': 'π',
+                '\\\\phi': 'φ',
+                '\\\\Phi': 'Φ',
+                '\\\\omega': 'ω',
+                '\\\\sigma': 'σ',
+                '\\\\Sigma': 'Σ',
+                '\\\\sum': 'Σ',
+                '\\\\epsilon': 'ε',
+                '\\\\eta': 'η',
+                '\\\\infty': '∞'
+            };
+            
+            for (let latex in symbols) {
+                const re = new RegExp(latex, 'g');
+                processed = processed.replace(re, symbols[latex]);
+            }
+            
+            return processed;
+        }
+        function parseMathString(str) {
+            const elements = [];
+            let i = 0;
+            while (i < str.length) {
+                let nextFrac = str.indexOf('\\frac{', i);
+                let nextSqrt = str.indexOf('\\sqrt{', i);
+                let nextBar = str.indexOf('\\bar{', i);
+                
+                let nextIndex = -1;
+                let cmdType = '';
+                
+                const candidates = [];
+                if (nextFrac !== -1) candidates.push({ idx: nextFrac, type: 'frac' });
+                if (nextSqrt !== -1) candidates.push({ idx: nextSqrt, type: 'sqrt' });
+                if (nextBar !== -1) candidates.push({ idx: nextBar, type: 'bar' });
+                
+                if (candidates.length > 0) {
+                    candidates.sort((a, b) => a.idx - b.idx);
+                    nextIndex = candidates[0].idx;
+                    cmdType = candidates[0].type;
+                }
+                
+                if (nextIndex === -1) {
+                    elements.push({ type: 'text', text: str.substring(i) });
+                    break;
+                }
+                
+                if (nextIndex > i) {
+                    elements.push({ type: 'text', text: str.substring(i, nextIndex) });
+                }
+                
+                i = nextIndex;
+                
+                if (cmdType === 'frac') {
+                    i += 6; // skip '\frac{'
+                    let braceCount = 1;
+                    let numStart = i;
+                    while (i < str.length && braceCount > 0) {
+                        if (str[i] === '{') braceCount++;
+                        else if (str[i] === '}') braceCount--;
+                        i++;
+                    }
+                    const numStr = str.substring(numStart, i - 1);
+                    
+                    if (i < str.length && str[i] === '{') {
+                        i++; // skip '{'
+                        braceCount = 1;
+                        let denStart = i;
+                        while (i < str.length && braceCount > 0) {
+                            if (str[i] === '{') braceCount++;
+                            else if (str[i] === '}') braceCount--;
+                            i++;
+                        }
+                        const denStr = str.substring(denStart, i - 1);
+                        elements.push({
+                            type: 'fraction',
+                            num: parseMathString(numStr),
+                            den: parseMathString(denStr)
+                        });
+                    } else {
+                        elements.push({ type: 'text', text: '\\frac{' + numStr + '}' });
+                    }
+                } else if (cmdType === 'sqrt') {
+                    i += 6; // skip '\sqrt{'
+                    let braceCount = 1;
+                    let innerStart = i;
+                    while (i < str.length && braceCount > 0) {
+                        if (str[i] === '{') braceCount++;
+                        else if (str[i] === '}') braceCount--;
+                        i++;
+                    }
+                    const innerStr = str.substring(innerStart, i - 1);
+                    elements.push({
+                        type: 'sqrt',
+                        content: parseMathString(innerStr)
+                    });
+                } else if (cmdType === 'bar') {
+                    i += 5; // skip '\bar{'
+                    let braceCount = 1;
+                    let innerStart = i;
+                    while (i < str.length && braceCount > 0) {
+                        if (str[i] === '{') braceCount++;
+                        else if (str[i] === '}') braceCount--;
+                        i++;
+                    }
+                    const innerStr = str.substring(innerStart, i - 1);
+                    elements.push({
+                        type: 'bar',
+                        content: parseMathString(innerStr)
+                    });
+                }
+            }
+            return elements;
+        }
+
+        function layoutMath(elements, settings, getTokenWidth) {
+            let totalW = 0;
+            let maxHA = 0;
+            let maxHB = 0;
+            
+            const layouts = [];
+            for (let el of elements) {
+                if (el.type === 'text') {
+                    const tokens = tokenizeText(el.text);
+                    let w = 0;
+                    for (let tok of tokens) {
+                        const tokHeight = tok.type === 'normal' ? settings.charHeight : settings.charHeight * 0.65;
+                        w += getTokenWidth(tok.text, tokHeight);
+                    }
+                    const ha = settings.charHeight * 0.8;
+                    const hb = settings.charHeight * 0.2;
+                    layouts.push({
+                        element: el,
+                        width: w,
+                        heightAbove: ha,
+                        heightBelow: hb,
+                        tokens: tokens
+                    });
+                    totalW += w;
+                    if (ha > maxHA) maxHA = ha;
+                    if (hb > maxHB) maxHB = hb;
+                } else if (el.type === 'fraction') {
+                    const numLayout = layoutMath(el.num, settings, getTokenWidth);
+                    const denLayout = layoutMath(el.den, settings, getTokenWidth);
+                    
+                    const padX = 2.0;
+                    const w = Math.max(numLayout.width, denLayout.width) + 2 * padX;
+                    
+                    const gapY = 1.5; 
+                    const ha = gapY + numLayout.heightBelow + numLayout.heightAbove;
+                    const hb = gapY + denLayout.heightAbove + denLayout.heightBelow;
+                    
+                    layouts.push({
+                        element: el,
+                        width: w,
+                        heightAbove: ha,
+                        heightBelow: hb,
+                        numLayout: numLayout,
+                        denLayout: denLayout,
+                        padX: padX,
+                        gapY: gapY
+                    });
+                    totalW += w;
+                    if (ha > maxHA) maxHA = ha;
+                    if (hb > maxHB) maxHB = hb;
+                } else if (el.type === 'sqrt') {
+                    const innerLay = layoutMath(el.content, settings, getTokenWidth);
+                    const radWidth = settings.charHeight * 0.8;
+                    const ha = innerLay.heightAbove + settings.charHeight * 0.25;
+                    const hb = innerLay.heightBelow;
+                    
+                    layouts.push({
+                        element: el,
+                        width: radWidth + innerLay.width + 1.0,
+                        heightAbove: ha,
+                        heightBelow: hb,
+                        innerLayout: innerLay,
+                        radWidth: radWidth
+                    });
+                    totalW += radWidth + innerLay.width + 1.0;
+                    if (ha > maxHA) maxHA = ha;
+                    if (hb > maxHB) maxHB = hb;
+                } else if (el.type === 'bar') {
+                    const innerLay = layoutMath(el.content, settings, getTokenWidth);
+                    const ha = innerLay.heightAbove + settings.charHeight * 0.25;
+                    const hb = innerLay.heightBelow;
+                    
+                    layouts.push({
+                        element: el,
+                        width: innerLay.width,
+                        heightAbove: ha,
+                        heightBelow: hb,
+                        innerLayout: innerLay
+                    });
+                    totalW += innerLay.width;
+                    if (ha > maxHA) maxHA = ha;
+                    if (hb > maxHB) maxHB = hb;
+                }
+            }
+            
+            return {
+                width: totalW,
+                heightAbove: maxHA,
+                heightBelow: maxHB,
+                layouts: layouts
+            };
+        }
+
         // Live text layout compiler & stroke generator
         // Computes all hand-drawn jitters and outputs coordinates arrays mapped to sheet millimeters
         function computeHandwritingLayout(settings) {
             renderedCharactersOnSheet = [];
+            window.lastCharVariant = {};
             
-            // Normalize tabs to 4 spaces to preserve copy-paste layouts perfectly
-            const normalizedText = settings.text.replace(/\t/g, '    ');
+            // Preprocess LaTeX equations and math symbols
+            const cleanText = preprocessLaTeX(settings.text);
+            
+            const missingChars = new Set();
+            if (activeFontMode === 'drawn') {
+                for (let i = 0; i < cleanText.length; i++) {
+                    const char = cleanText[i];
+                    if (char !== ' ' && char !== '\n' && char !== '\r' && char !== '\t') {
+                        const variants = DrawnFont[char];
+                        const hasVariant = variants && variants.some(v => v && v.length > 0);
+                        if (!hasVariant) {
+                            missingChars.add(char);
+                        }
+                    }
+                }
+            }
+            lastMissingChars = missingChars;
+            
+            const normalizedText = cleanText.replace(/\t/g, '    ');
             const lines = normalizedText.split('\n');
-            const paths = []; // Structure: Array of strokes. Stroke is Array of points {x, y} in mm
+            const paths = [];
             
-            // Random jitter seed index to keep layout calculations relatively stable between redraws
             let jitterIndex = 0;
             function pseudoRandom() {
                 const x = Math.sin(jitterIndex++) * 10000;
                 return x - Math.floor(x);
             }
             
-            // Helper to get estimated token width
             function getTokenWidth(token, currentHeight) {
                 let w = 0;
                 for (let i = 0; i < token.length; i++) {
@@ -2300,211 +3274,615 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 return w;
             }
 
-            // Indian standard lined paper bounding area limits
+            function drawMathLetter(char, x, y, localHeight, slantRad, yOffset) {
+                if (char === ' ') return;
+                
+                let characterStrokes = [];
+                let charWidthMM = getCharWidth(char, localHeight, settings);
+                
+                if (activeFontMode === 'stroke') {
+                    const strokeDef = StrokeFont[char];
+                    if (strokeDef) {
+                        characterStrokes = strokeDef.map(stroke => {
+                            return stroke.map(pt => {
+                                const normX = pt[0] / 10.0;
+                                const normY = pt[1] / 10.0;
+                                return { x: normX * charWidthMM, y: normY * localHeight };
+                            });
+                        });
+                    }
+                } else if (activeFontMode === 'drawn') {
+                    const variants = DrawnFont[char];
+                    if (variants) {
+                        const indices = [];
+                        variants.forEach((v, idx) => {
+                            if (v && v.length > 0) indices.push(idx);
+                        });
+                        if (indices.length > 0) {
+                            let chosenVariantIdx = 0;
+                            const lastIdx = window.lastCharVariant ? window.lastCharVariant[char] : undefined;
+                            if (indices.length > 1 && lastIdx !== undefined) {
+                                const allowedIndices = indices.filter(idx => idx !== lastIdx);
+                                chosenVariantIdx = allowedIndices[Math.floor(pseudoRandom() * allowedIndices.length)];
+                            } else {
+                                chosenVariantIdx = indices[Math.floor(pseudoRandom() * indices.length)];
+                            }
+                            if (!window.lastCharVariant) window.lastCharVariant = {};
+                            window.lastCharVariant[char] = chosenVariantIdx;
+                            const rawStrokes = variants[chosenVariantIdx];
+                            let minX = Infinity;
+                            rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
+                            characterStrokes = rawStrokes.map(stroke => {
+                                return stroke.map(pt => {
+                                    const xx = (pt[0] - minX) * (localHeight / 180.0);
+                                    const yy = (pt[1] - 240.0) * (localHeight / 180.0);
+                                    const engineY = localHeight + yy;
+                                    return { x: xx, y: engineY };
+                                });
+                            });
+                        }
+                    }
+                } else if (activeFontMode === 'custom' && uploadedFont) {
+                    const glyph = uploadedFont.charToGlyph(char);
+                    if (glyph) {
+                        const fontScale = 1 / uploadedFont.unitsPerEm;
+                        const path = glyph.getPath(0, 0, localHeight / fontScale);
+                        let activeStroke = [];
+                        for (let cmd of path.commands) {
+                            if (cmd.type === 'M') {
+                                if (activeStroke.length > 0) characterStrokes.push(activeStroke);
+                                activeStroke = [{ x: cmd.x * fontScale, y: -cmd.y * fontScale }];
+                            } else if (cmd.type === 'L' || cmd.type === 'Q' || cmd.type === 'C') {
+                                activeStroke.push({ x: cmd.x * fontScale, y: -cmd.y * fontScale });
+                            } else if (cmd.type === 'Z') {
+                                if (activeStroke.length > 0) {
+                                    activeStroke.push({ x: activeStroke[0].x, y: activeStroke[0].y });
+                                    characterStrokes.push(activeStroke);
+                                    activeStroke = [];
+                                }
+                            }
+                        }
+                        if (activeStroke.length > 0) characterStrokes.push(activeStroke);
+                        charWidthMM = (glyph.advanceWidth || 0) * fontScale * localHeight;
+                        if (settings.ttfRender === 'skeleton') {
+                            characterStrokes = skeletonizeStrokes(characterStrokes, charWidthMM, localHeight, settings);
+                        } else if (settings.ttfRender === 'hatch-horizontal' || settings.ttfRender === 'hatch-diagonal') {
+                            const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
+                            characterStrokes = characterStrokes.concat(hatches);
+                        }
+                    }
+                }
+                
+                if (characterStrokes.length > 0) {
+                    for (let stroke of characterStrokes) {
+                        const compiledStroke = [];
+                        for (let pt of stroke) {
+                            const slantedX = pt.x + (localHeight - pt.y) * Math.sin(slantRad);
+                            let targetX = x + slantedX;
+                            let targetY = y - settings.letterYOffset - (localHeight - pt.y) + yOffset;
+                            compiledStroke.push({ x: targetX, y: targetY });
+                        }
+                        compiledStroke.isSlowStart = false;
+                        paths.push(compiledStroke);
+                        
+                        compiledStroke.forEach(pt => {
+                            renderedCharactersOnSheet.push({
+                                char: char,
+                                minX: pt.x,
+                                maxX: pt.x,
+                                minY: pt.y,
+                                maxY: pt.y,
+                                lineIdx: window.currentRenderingLineIdx || 0
+                            });
+                        });
+                    }
+                }
+            }
+
+            function drawMathElements(layouts, startX, centerY) {
+                let x = startX;
+                for (let lay of layouts) {
+                    const el = lay.element;
+                    if (el.type === 'text') {
+                        const textBaselineY = centerY + settings.charHeight * 0.15;
+                        for (let tok of lay.tokens) {
+                            const tokHeight = tok.type === 'normal' ? settings.charHeight : settings.charHeight * 0.65;
+                            let tokYOffset = 0;
+                            if (tok.type === 'super') {
+                                tokYOffset = -settings.charHeight * 0.45;
+                            } else if (tok.type === 'sub') {
+                                tokYOffset = settings.charHeight * 0.15;
+                            }
+                            
+                            for (let c = 0; c < tok.text.length; c++) {
+                                const char = tok.text[c];
+                                if (char === ' ') {
+                                    x += settings.wordSpacing;
+                                    continue;
+                                }
+                                
+                                const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
+                                const localHeight = tokHeight * heightJitterMultiplier;
+                                const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
+                                const slantRad = (slantAngleDeg * Math.PI) / 180.0;
+                                
+                                drawMathLetter(char, x, textBaselineY, localHeight, slantRad, tokYOffset);
+                                x += getCharWidth(char, localHeight, settings) + settings.charSpacing;
+                            }
+                        }
+                    } else if (el.type === 'fraction') {
+                        const barStroke = [];
+                        const steps = Math.ceil(lay.width / 1.5);
+                        const startY = centerY + (pseudoRandom() - 0.5) * settings.mathLineTilt;
+                        const endY = centerY + (pseudoRandom() - 0.5) * settings.mathLineTilt;
+                        
+                        for (let s = 0; s <= steps; s++) {
+                            const t = s / steps;
+                            const px = x + t * lay.width;
+                            let py = startY + t * (endY - startY);
+                            py += (pseudoRandom() - 0.5) * settings.mathLineWobble;
+                            barStroke.push({ x: px, y: py });
+                        }
+                        paths.push(barStroke);
+                        
+                        const numStartX = x + (lay.width - lay.numLayout.width) / 2;
+                        const denStartX = x + (lay.width - lay.denLayout.width) / 2;
+                        
+                        const numCenterY = centerY - lay.gapY - lay.numLayout.heightBelow;
+                        const denCenterY = centerY + lay.gapY + lay.denLayout.heightAbove;
+                        
+                        drawMathElements(lay.numLayout.layouts, numStartX, numCenterY);
+                        drawMathElements(lay.denLayout.layouts, denStartX, denCenterY);
+                        
+                        x += lay.width;
+                    } else if (el.type === 'sqrt') {
+                        const radPath = [];
+                        
+                        function addWobblySegment(xStart, yStart, xEnd, yEnd) {
+                            const dx = xEnd - xStart;
+                            const dy = yEnd - yStart;
+                            const len = Math.sqrt(dx * dx + dy * dy);
+                            const steps = Math.ceil(len / 1.5);
+                            
+                            const startY = yStart + (pseudoRandom() - 0.5) * settings.mathLineTilt;
+                            const endY = yEnd + (pseudoRandom() - 0.5) * settings.mathLineTilt;
+                            
+                            for (let s = 0; s <= steps; s++) {
+                                const t = s / steps;
+                                const px = xStart + t * dx;
+                                let py = startY + t * (endY - startY);
+                                py += (pseudoRandom() - 0.5) * settings.mathLineWobble;
+                                radPath.push({ x: px, y: py });
+                            }
+                        }
+                        
+                        const p0_x = x;
+                        const p0_y = centerY;
+                        const p1_x = x + lay.radWidth * 0.35;
+                        const p1_y = centerY + lay.innerLayout.heightBelow + 0.5;
+                        
+                        const p2_x = x + lay.radWidth * 0.75;
+                        const p2_y = centerY - lay.innerLayout.heightAbove - settings.charHeight * 0.25;
+                        
+                        const p3_x = x + lay.width;
+                        const p3_y = p2_y;
+                        
+                        const p4_x = p3_x;
+                        const p4_y = p3_y + 0.8;
+                        
+                        addWobblySegment(p0_x, p0_y, p1_x, p1_y);
+                        addWobblySegment(p1_x, p1_y, p2_x, p2_y);
+                        addWobblySegment(p2_x, p2_y, p3_x, p3_y);
+                        addWobblySegment(p3_x, p3_y, p4_x, p4_y);
+                        
+                        paths.push(radPath);
+                        
+                        drawMathElements(lay.innerLayout.layouts, x + lay.radWidth, centerY);
+                    } else if (el.type === 'bar') {
+                        const barStroke = [];
+                        const steps = Math.ceil(lay.width / 1.5);
+                        const barY = centerY - lay.innerLayout.heightAbove - settings.charHeight * 0.1;
+                        const startY = barY + (pseudoRandom() - 0.5) * settings.mathLineTilt;
+                        const endY = barY + (pseudoRandom() - 0.5) * settings.mathLineTilt;
+                        
+                        for (let s = 0; s <= steps; s++) {
+                            const t = s / steps;
+                            const px = x + t * lay.width;
+                            let py = startY + t * (endY - startY);
+                            py += (pseudoRandom() - 0.5) * settings.mathLineWobble;
+                            barStroke.push({ x: px, y: py });
+                        }
+                        paths.push(barStroke);
+                        
+                        drawMathElements(lay.innerLayout.layouts, x, centerY);
+                        x += lay.width;
+                    }
+                }
+            }
+
             const paperWidth = 210; // A4
             const rightMarginX = 210 - settings.rightMargin;
             
             let currentLineY = settings.topLineOffset;
             let wordCounter = 0;
             
-            for (let lineText of lines) {
-                // Apply Baseline drift/wave organically across the text row using a slow sin curve
-                const lineDriftAmt = (pseudoRandom() - 0.5) * settings.drift * 2.0;
+            // Group lines into table blocks vs text blocks
+            const blocks = [];
+            let currentTable = null;
+            
+            lines.forEach((lineText, idx) => {
+                const trimmed = lineText.trim();
+                const isTableRow = trimmed.startsWith('|') && trimmed.endsWith('|');
                 
-                // Detect bullet list hanging indent
-                const bulletMatch = lineText.match(/^\s*(?:[•*\-+]|\d+\.)\s+/);
-                let bulletIndent = 0;
-                let currentX = settings.leftMargin;
-                let wrapMarginX = settings.leftMargin;
-                
-                if (bulletMatch) {
-                    const bulletStr = bulletMatch[0];
-                    bulletIndent = getTokenWidth(bulletStr, settings.charHeight);
-                    wrapMarginX = settings.leftMargin + bulletIndent;
-                }
-                
-                // Parse line by inline size and scale tags: [size=6], [scale=1.5]
-                const parts = lineText.split(/(\[size=\d+(?:\.\d+)?\]|\[\/size\]|\[scale=\d+(?:\.\d+)?\]|\[\/scale\])/);
-                let scaleStack = [1.0];
-                
-                for (let part of parts) {
-                    if (!part) continue;
+                if (isTableRow) {
+                    if (!currentTable) {
+                        currentTable = { type: 'table', rows: [], startLineIdx: idx };
+                        blocks.push(currentTable);
+                    }
+                    const cells = lineText.split('|').map(c => c.trim());
+                    cells.shift();
+                    if (cells.length > 0) cells.pop();
                     
-                    if (part.startsWith('[size=')) {
-                        const h = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
-                        scaleStack.push(h / settings.charHeight);
-                        continue;
-                    } else if (part === '[/size]') {
-                        if (scaleStack.length > 1) scaleStack.pop();
-                        continue;
-                    } else if (part.startsWith('[scale=')) {
-                        const s = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
-                        scaleStack.push(s);
-                        continue;
-                    } else if (part === '[/scale]') {
-                        if (scaleStack.length > 1) scaleStack.pop();
-                        continue;
+                    const isSeparator = cells.every(c => /^[:\- ]+$/.test(c));
+                    if (!isSeparator) {
+                        const cleanedCells = cells.map(c => c.replace(/\*\*/g, '').replace(/\*/g, ''));
+                        currentTable.rows.push(cleanedCells);
+                    }
+                } else {
+                    currentTable = null;
+                    blocks.push({ type: 'text', text: lineText, lineIdx: idx });
+                }
+            });
+            
+            for (let block of blocks) {
+                window.currentRenderingLineIdx = block.lineIdx !== undefined ? block.lineIdx : (block.startLineIdx || 0);
+                if (block.type === 'table') {
+                    currentLineY = renderTableBlock(block, currentLineY, paths, settings, pseudoRandom, getCharWidth, getTokenWidth, activeFontMode, StrokeFont, DrawnFont, uploadedFont, skeletonizeStrokes, generateGlyphHatchFill, drawMathElements);
+                } else if (block.text.includes('\\frac{') || block.text.includes('\\sqrt{') || block.text.includes('\\bar{')) {
+                    const isBlockMath = block.text.startsWith('    ');
+                    if (isBlockMath) {
+                        const elements = parseMathString(block.text);
+                        const layout = layoutMath(elements, settings, getTokenWidth);
+                        const totalHeight = layout.heightAbove + layout.heightBelow;
+                        const requiredLines = Math.max(1, Math.ceil(totalHeight / settings.lineSpacing));
+                        
+                        let centerY = currentLineY + (requiredLines * settings.lineSpacing) / 2.0;
+                        const lineIndex = Math.round((centerY - settings.topLineOffset) / settings.lineSpacing);
+                        centerY = settings.topLineOffset + lineIndex * settings.lineSpacing;
+                        
+                        let startX;
+                        if (settings.mathLeftOffset === 0) {
+                            const printableWidth = rightMarginX - settings.leftMargin;
+                            startX = settings.leftMargin + Math.max(0, (printableWidth - layout.width) / 2);
+                        } else {
+                            startX = settings.leftMargin + settings.mathLeftOffset;
+                        }
+                        
+                        drawMathElements(layout.layouts, startX, centerY);
+                        currentLineY += requiredLines * settings.lineSpacing;
+                    } else {
+                        const tokens = [];
+                        const elements = parseMathString(block.text);
+                        for (let el of elements) {
+                            if (el.type === 'text') {
+                                const words = el.text.match(/\S+|\s+/g) || [];
+                                for (let word of words) {
+                                    tokens.push({ type: 'text', text: word });
+                                }
+                            } else if (el.type === 'fraction' || el.type === 'sqrt' || el.type === 'bar') {
+                                tokens.push({ type: 'math', element: el });
+                            }
+                        }
+                        
+                        const linesOfTokens = [];
+                        let currentLineTokens = [];
+                        let currentX = settings.leftMargin;
+                        
+                        const bulletMatch = block.text.match(/^\s*(?:[•*\-+]|\d+\.)\s+/);
+                        let bulletIndent = 0;
+                        let wrapMarginX = settings.leftMargin;
+                        if (bulletMatch) {
+                            const bulletStr = bulletMatch[0];
+                            bulletIndent = getTokenWidth(bulletStr, settings.charHeight);
+                            wrapMarginX = settings.leftMargin + bulletIndent;
+                        }
+                        
+                        for (let tok of tokens) {
+                            let tokWidth = 0;
+                            if (tok.type === 'text') {
+                                if (/^\s+$/.test(tok.text)) {
+                                    tokWidth = settings.wordSpacing * tok.text.length;
+                                } else {
+                                    const wordTokens = tokenizeText(tok.text);
+                                    for (let wt of wordTokens) {
+                                        const wtHeight = wt.type === 'normal' ? settings.charHeight : settings.charHeight * 0.65;
+                                        tokWidth += getTokenWidth(wt.text, wtHeight);
+                                    }
+                                }
+                            } else if (tok.type === 'math') {
+                                const inlineScale = 0.70;
+                                const inlineSettings = Object.assign({}, settings, { charHeight: settings.charHeight * inlineScale });
+                                const lay = layoutMath([tok.element], inlineSettings, getTokenWidth);
+                                tokWidth = lay.width;
+                                tok.layout = lay;
+                            }
+                            
+                            if (currentX + tokWidth > rightMarginX && currentLineTokens.length > 0) {
+                                linesOfTokens.push(currentLineTokens);
+                                currentLineTokens = [tok];
+                                currentX = wrapMarginX + tokWidth;
+                            } else {
+                                currentLineTokens.push(tok);
+                                currentX += tokWidth;
+                            }
+                        }
+                        if (currentLineTokens.length > 0) {
+                            linesOfTokens.push(currentLineTokens);
+                        }
+                        
+                        let isFirstLine = true;
+                        for (let lineTokens of linesOfTokens) {
+                            let maxHA = settings.charHeight * 0.8;
+                            let maxHB = settings.charHeight * 0.2;
+                            for (let tok of lineTokens) {
+                                if (tok.type === 'math') {
+                                    const belowBaseline = tok.layout.heightBelow - settings.charHeight * 0.3;
+                                    if (belowBaseline > maxHB) maxHB = belowBaseline;
+                                    const aboveBaseline = tok.layout.heightAbove + settings.charHeight * 0.3;
+                                    if (aboveBaseline > maxHA) maxHA = aboveBaseline;
+                                }
+                            }
+                            
+                            const textBaselineY = currentLineY;
+                            const centerY = currentLineY - settings.charHeight * 0.3;
+                            let x = isFirstLine ? settings.leftMargin : wrapMarginX;
+                            
+                            for (let tok of lineTokens) {
+                                if (tok.type === 'text') {
+                                    if (/^\s+$/.test(tok.text)) {
+                                        x += settings.wordSpacing * tok.text.length;
+                                    } else {
+                                        const wordTokens = tokenizeText(tok.text);
+                                        for (let wt of wordTokens) {
+                                            const wtHeight = wt.type === 'normal' ? settings.charHeight : settings.charHeight * 0.65;
+                                            let wtYOffset = 0;
+                                            if (wt.type === 'super') wtYOffset = -settings.charHeight * 0.45;
+                                            else if (wt.type === 'sub') wtYOffset = settings.charHeight * 0.15;
+                                            
+                                            for (let c = 0; c < wt.text.length; c++) {
+                                                const char = wt.text[c];
+                                                const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
+                                                const localHeight = wtHeight * heightJitterMultiplier;
+                                                const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
+                                                const slantRad = (slantAngleDeg * Math.PI) / 180.0;
+                                                
+                                                drawMathLetter(char, x, textBaselineY, localHeight, slantRad, wtYOffset);
+                                                x += getCharWidth(char, localHeight, settings) + settings.charSpacing;
+                                            }
+                                        }
+                                    }
+                                } else if (tok.type === 'math') {
+                                    drawMathElements(tok.layout.layouts, x, centerY);
+                                    x += tok.layout.width;
+                                }
+                            }
+                            
+                            isFirstLine = false;
+                            const totalRowHeight = maxHA + maxHB;
+                            const requiredLines = Math.max(1, Math.ceil((totalRowHeight + 2.0) / settings.lineSpacing));
+                            currentLineY += requiredLines * settings.lineSpacing;
+                        }
+                    }
+                } else {
+                    const lineText = block.text;
+                    const lineDriftAmt = (pseudoRandom() - 0.5) * settings.drift * 2.0;
+                    
+                    const bulletMatch = lineText.match(/^\s*(?:[•*\-+]|\d+\.)\s+/);
+                    let bulletIndent = 0;
+                    let currentX = settings.leftMargin;
+                    let wrapMarginX = settings.leftMargin;
+                    
+                    if (bulletMatch) {
+                        const bulletStr = bulletMatch[0];
+                        bulletIndent = getTokenWidth(bulletStr, settings.charHeight);
+                        wrapMarginX = settings.leftMargin + bulletIndent;
                     }
                     
-                    const currentScale = scaleStack[scaleStack.length - 1];
-                    const localHeightBase = settings.charHeight * currentScale;
+                    const parts = lineText.split(/(\[size=\d+(?:\.\d+)?\]|\[\/size\]|\[scale=\d+(?:\.\d+)?\]|\[\/scale\])/);
+                    let scaleStack = [1.0];
                     
-                    // Parse text block part into tokens of words and spaces
-                    const tokens = part.match(/\S+|\s+/g) || [];
-                    
-                    for (let token of tokens) {
-                        // Check if it is space token
-                        if (/^\s+$/.test(token)) {
-                            let spaceWidth = settings.wordSpacing * token.length * currentScale;
-                            if (settings.wordSpacingJitter > 0) {
-                                spaceWidth += (pseudoRandom() - 0.5) * settings.wordSpacingJitter * token.length;
-                            }
-                            if (currentX + spaceWidth > rightMarginX) {
-                                currentX = wrapMarginX;
-                                currentLineY += settings.lineSpacing;
-                            } else {
-                                currentX += spaceWidth;
-                            }
+                    for (let part of parts) {
+                        if (!part) continue;
+                        
+                        if (part.startsWith('[size=')) {
+                            const h = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
+                            scaleStack.push(h / settings.charHeight);
+                            continue;
+                        } else if (part === '[/size]') {
+                            if (scaleStack.length > 1) scaleStack.pop();
+                            continue;
+                        } else if (part.startsWith('[scale=')) {
+                            const s = parseFloat(part.match(/\d+(?:\.\d+)?/)[0]);
+                            scaleStack.push(s);
+                            continue;
+                        } else if (part === '[/scale]') {
+                            if (scaleStack.length > 1) scaleStack.pop();
                             continue;
                         }
                         
-                        // Word token!
-                        wordCounter++;
-                        const wordWidth = getTokenWidth(token, localHeightBase);
-                        if (currentX + wordWidth > rightMarginX && currentX > wrapMarginX) {
-                            currentX = wrapMarginX;
-                            currentLineY += settings.lineSpacing;
-                        }
+                        const currentScale = scaleStack[scaleStack.length - 1];
+                        const localHeightBase = settings.charHeight * currentScale;
                         
-                        // Render characters of the word
-                        for (let i = 0; i < token.length; i++) {
-                            const char = token[i];
-                            
-                            // Character specific height and slant jitters
-                            const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
-                            const localHeight = localHeightBase * heightJitterMultiplier;
-                            const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
-                            const slantRad = (slantAngleDeg * Math.PI) / 180.0;
-                            
-                            let characterStrokes = [];
-                            let charWidthMM = getCharWidth(char, localHeight, settings);
-                            let chosenVariantIdx = 0;
-                            
-                            // Retrieve coordinate paths based on font source mode
-                            if (activeFontMode === 'stroke') {
-                                const strokeDef = StrokeFont[char];
-                                if (strokeDef) {
-                                    characterStrokes = strokeDef.map(stroke => {
-                                        return stroke.map(pt => {
-                                            const normX = pt[0] / 10.0;
-                                            const normY = pt[1] / 10.0;
-                                            return { x: normX * charWidthMM, y: normY * localHeight };
-                                        });
-                                    });
+                        const tokens = part.match(/\S+|\s+/g) || [];
+                        
+                        for (let token of tokens) {
+                            if (/^\s+$/.test(token)) {
+                                let spaceWidth = settings.wordSpacing * token.length * currentScale;
+                                if (settings.wordSpacingJitter > 0) {
+                                    spaceWidth += (pseudoRandom() - 0.5) * settings.wordSpacingJitter * token.length;
                                 }
-                            } else if (activeFontMode === 'drawn') {
-                                const variants = DrawnFont[char];
-                                if (variants) {
-                                    const indices = [];
-                                    variants.forEach((v, idx) => {
-                                        if (v && v.length > 0) indices.push(idx);
-                                    });
-                                    if (indices.length > 0) {
-                                        const randChoice = Math.floor(pseudoRandom() * indices.length);
-                                        chosenVariantIdx = indices[randChoice];
-                                        const rawStrokes = variants[chosenVariantIdx];
-                                        
-                                        // Measure minX of this variant to align left edge perfectly
-                                        let minX = Infinity;
-                                        rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
-                                        
-                                        characterStrokes = rawStrokes.map(stroke => {
-                                            return stroke.map(pt => {
-                                                const x = (pt[0] - minX) * (localHeight / 180.0);
-                                                const y = (pt[1] - 240.0) * (localHeight / 180.0);
-                                                const engineY = localHeight + y;
-                                                return { x: x, y: engineY };
+                                if (currentX + spaceWidth > rightMarginX) {
+                                    currentX = wrapMarginX;
+                                    currentLineY += settings.lineSpacing;
+                                } else {
+                                    currentX += spaceWidth;
+                                }
+                                continue;
+                            }
+                            
+                            const wordTokens = tokenizeText(token);
+                            let wordWidth = 0;
+                            for (let wToken of wordTokens) {
+                                let wScale = currentScale;
+                                if (wToken.type === 'super' || wToken.type === 'sub') {
+                                    wScale = currentScale * 0.65;
+                                }
+                                wordWidth += getTokenWidth(wToken.text, settings.charHeight * wScale);
+                            }
+                            
+                            if (currentX + wordWidth > rightMarginX && currentX > wrapMarginX) {
+                                currentX = wrapMarginX;
+                                currentLineY += settings.lineSpacing;
+                            }
+                            
+                            wordCounter++;
+                            
+                            for (let wToken of wordTokens) {
+                                let tokenScale = currentScale;
+                                let yOffset = 0;
+                                if (wToken.type === 'super') {
+                                    tokenScale = currentScale * 0.65;
+                                    yOffset = -localHeightBase * 0.45;
+                                } else if (wToken.type === 'sub') {
+                                    tokenScale = currentScale * 0.65;
+                                    yOffset = localHeightBase * 0.15;
+                                }
+                                
+                                const tokenHeightBase = settings.charHeight * tokenScale;
+                                for (let i = 0; i < wToken.text.length; i++) {
+                                    const char = wToken.text[i];
+                                    const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
+                                    const localHeight = tokenHeightBase * heightJitterMultiplier;
+                                    const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
+                                    const slantRad = (slantAngleDeg * Math.PI) / 180.0;
+                                    
+                                    let characterStrokes = [];
+                                    let charWidthMM = getCharWidth(char, localHeight, settings);
+                                    let chosenVariantIdx = 0;
+                                    
+                                    if (activeFontMode === 'stroke') {
+                                        const strokeDef = StrokeFont[char];
+                                        if (strokeDef) {
+                                            characterStrokes = strokeDef.map(stroke => {
+                                                return stroke.map(pt => {
+                                                    const normX = pt[0] / 10.0;
+                                                    const normY = pt[1] / 10.0;
+                                                    return { x: normX * charWidthMM, y: normY * localHeight };
+                                                });
                                             });
-                                        });
-                                    }
-                                }
-                            } else if (activeFontMode === 'custom' && uploadedFont) {
-                                const glyph = uploadedFont.charToGlyph(char);
-                                if (glyph) {
-                                    const fontScale = 1 / uploadedFont.unitsPerEm;
-                                    const path = glyph.getPath(0, 0, localHeight / fontScale);
-                                    let activeStroke = [];
-                                    for (let cmd of path.commands) {
-                                        if (cmd.type === 'M') {
-                                            if (activeStroke.length > 0) {
-                                                characterStrokes.push(activeStroke);
+                                        }
+                                    } else if (activeFontMode === 'drawn') {
+                                        const variants = DrawnFont[char];
+                                        if (variants) {
+                                            const indices = [];
+                                            variants.forEach((v, idx) => {
+                                                if (v && v.length > 0) indices.push(idx);
+                                            });
+                                            if (indices.length > 0) {
+                                                let chosenVariantIdx = 0;
+                                                const lastIdx = window.lastCharVariant ? window.lastCharVariant[char] : undefined;
+                                                if (indices.length > 1 && lastIdx !== undefined) {
+                                                    const allowedIndices = indices.filter(idx => idx !== lastIdx);
+                                                    chosenVariantIdx = allowedIndices[Math.floor(pseudoRandom() * allowedIndices.length)];
+                                                } else {
+                                                    chosenVariantIdx = indices[Math.floor(pseudoRandom() * indices.length)];
+                                                }
+                                                if (!window.lastCharVariant) window.lastCharVariant = {};
+                                                window.lastCharVariant[char] = chosenVariantIdx;
+                                                const rawStrokes = variants[chosenVariantIdx];
+                                                let minX = Infinity;
+                                                rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
+                                                characterStrokes = rawStrokes.map(stroke => {
+                                                    return stroke.map(pt => {
+                                                        const x = (pt[0] - minX) * (localHeight / 180.0);
+                                                        const y = (pt[1] - 240.0) * (localHeight / 180.0);
+                                                        const engineY = localHeight + y;
+                                                        return { x: x, y: engineY };
+                                                    });
+                                                });
                                             }
-                                            activeStroke = [{ x: cmd.x * fontScale, y: -cmd.y * fontScale }];
-                                        } else if (cmd.type === 'L' || cmd.type === 'Q' || cmd.type === 'C') {
-                                            activeStroke.push({ x: cmd.x * fontScale, y: -cmd.y * fontScale });
-                                        } else if (cmd.type === 'Z') {
-                                            if (activeStroke.length > 0) {
-                                                activeStroke.push({ x: activeStroke[0].x, y: activeStroke[0].y });
-                                                characterStrokes.push(activeStroke);
-                                                activeStroke = [];
+                                        }
+                                    } else if (activeFontMode === 'custom' && uploadedFont) {
+                                        const glyph = uploadedFont.charToGlyph(char);
+                                        if (glyph) {
+                                            const fontScale = 1 / uploadedFont.unitsPerEm;
+                                            const path = glyph.getPath(0, 0, localHeight / fontScale);
+                                            let activeStroke = [];
+                                            for (let cmd of path.commands) {
+                                                if (cmd.type === 'M') {
+                                                    if (activeStroke.length > 0) characterStrokes.push(activeStroke);
+                                                    activeStroke = [{ x: cmd.x * fontScale, y: -cmd.y * fontScale }];
+                                                } else if (cmd.type === 'L' || cmd.type === 'Q' || cmd.type === 'C') {
+                                                    activeStroke.push({ x: cmd.x * fontScale, y: -cmd.y * fontScale });
+                                                } else if (cmd.type === 'Z') {
+                                                    if (activeStroke.length > 0) {
+                                                        activeStroke.push({ x: activeStroke[0].x, y: activeStroke[0].y });
+                                                        characterStrokes.push(activeStroke);
+                                                        activeStroke = [];
+                                                    }
+                                                }
+                                            }
+                                            if (activeStroke.length > 0) characterStrokes.push(activeStroke);
+                                            charWidthMM = (glyph.advanceWidth || 0) * fontScale * localHeight;
+                                            if (settings.ttfRender === 'skeleton') {
+                                                characterStrokes = skeletonizeStrokes(characterStrokes, charWidthMM, localHeight, settings);
+                                            } else if (settings.ttfRender === 'hatch-horizontal' || settings.ttfRender === 'hatch-diagonal') {
+                                                const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
+                                                characterStrokes = characterStrokes.concat(hatches);
                                             }
                                         }
                                     }
-                                    if (activeStroke.length > 0) {
-                                        characterStrokes.push(activeStroke);
-                                    }
-                                    charWidthMM = (glyph.advanceWidth || 0) * fontScale * localHeight;
-                                    if (settings.ttfRender === 'skeleton') {
-                                        characterStrokes = skeletonizeStrokes(characterStrokes, charWidthMM, localHeight, settings);
-                                    } else if (settings.ttfRender === 'hatch-horizontal' || settings.ttfRender === 'hatch-diagonal') {
-                                        const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
-                                        characterStrokes = characterStrokes.concat(hatches);
-                                    }
-                                }
-                            }
-                            
-                            // Render paths onto text alignment margins, applying slant tilt, micro-wobbles, and baseline drift
-                            if (characterStrokes.length > 0) {
-                                for (let stroke of characterStrokes) {
-                                    const compiledStroke = [];
-                                    for (let pt of stroke) {
-                                        const slantedX = pt.x + (localHeight - pt.y) * Math.sin(slantRad);
-                                        let targetX = currentX + slantedX;
-                                        let targetY = currentLineY - settings.letterYOffset - (localHeight - pt.y) + lineDriftAmt;
-                                        
-                                        if (settings.wobble > 0) {
-                                            targetX += (pseudoRandom() - 0.5) * settings.wobble;
-                                            targetY += (pseudoRandom() - 0.5) * settings.wobble;
+                                    
+                                    if (characterStrokes.length > 0) {
+                                        for (let stroke of characterStrokes) {
+                                            const compiledStroke = [];
+                                            for (let pt of stroke) {
+                                                const slantedX = pt.x + (localHeight - pt.y) * Math.sin(slantRad);
+                                                let targetX = currentX + slantedX;
+                                                let targetY = currentLineY - settings.letterYOffset - (localHeight - pt.y) + lineDriftAmt + yOffset;
+                                                
+                                                if (settings.wobble > 0) {
+                                                    targetX += (pseudoRandom() - 0.5) * settings.wobble;
+                                                    targetY += (pseudoRandom() - 0.5) * settings.wobble;
+                                                }
+                                                compiledStroke.push({ x: targetX, y: targetY });
+                                            }
+                                            compiledStroke.isSlowStart = (wordCounter <= 3);
+                                            paths.push(compiledStroke);
                                         }
-                                        compiledStroke.push({ x: targetX, y: targetY });
                                     }
-                                    compiledStroke.isSlowStart = (wordCounter <= 3);
-                                    paths.push(compiledStroke);
+                                    
+                                    renderedCharactersOnSheet.push({
+                                        char: char,
+                                        variantIndex: chosenVariantIdx,
+                                        minX: currentX,
+                                        maxX: currentX + charWidthMM,
+                                        minY: currentLineY - localHeight + yOffset,
+                                        maxY: currentLineY + yOffset,
+                                        lineIdx: window.currentRenderingLineIdx || 0
+                                    });
+                                    
+                                    let charSpacingJitterAmt = 0;
+                                    if (settings.charSpacingJitter > 0) {
+                                        charSpacingJitterAmt = (pseudoRandom() - 0.5) * settings.charSpacingJitter;
+                                    }
+                                    currentX += charWidthMM + settings.charSpacing + charSpacingJitterAmt;
                                 }
                             }
-                            
-                            // Store bounds of character for click selection (convert paper margins)
-                            renderedCharactersOnSheet.push({
-                                char: char,
-                                variantIndex: chosenVariantIdx,
-                                minX: currentX,
-                                maxX: currentX + charWidthMM,
-                                minY: currentLineY - localHeight,
-                                maxY: currentLineY
-                            });
-                            
-                            // Advance line index coordinate
-                            let charSpacingJitterAmt = 0;
-                            if (settings.charSpacingJitter > 0) {
-                                charSpacingJitterAmt = (pseudoRandom() - 0.5) * settings.charSpacingJitter;
-                            }
-                            currentX += charWidthMM + settings.charSpacing + charSpacingJitterAmt;
                         }
                     }
+                    currentLineY += settings.lineSpacing;
                 }
-                
-                // Carriage return to next lined sheet row
-                currentLineY += settings.lineSpacing;
             }
             
             return paths;
@@ -2818,6 +4196,32 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             return { x: xPhysical, y: yPhysical };
         }
 
+        function updateMissingCharsUI(missingSet) {
+            const warningEl = document.getElementById('missingCharsWarning');
+            const listEl = document.getElementById('missingCharsList');
+            if (!warningEl || !listEl) return;
+            
+            if (activeFontMode === 'drawn' && missingSet && missingSet.size > 0) {
+                warningEl.classList.remove('hidden');
+                const rawChars = Array.from(missingSet).join('');
+                const sortedList = Array.from(missingSet).map(c => `'${c}'`).join('  ');
+                listEl.textContent = `${sortedList} (${missingSet.size} total)`;
+                
+                const copyBtn = document.getElementById('btnCopyMissingChars');
+                if (copyBtn) {
+                    copyBtn.onclick = () => {
+                        navigator.clipboard.writeText(rawChars).then(() => {
+                            showToast("Copied missing characters to clipboard!", "success");
+                        }).catch(() => {
+                            showToast("Failed to copy characters", "error");
+                        });
+                    };
+                }
+            } else {
+                warningEl.classList.add('hidden');
+            }
+        }
+
         // Draw preview grid on right panel Canvas
         function renderPreview() {
             const settings = getSettings();
@@ -2927,7 +4331,12 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
             
         // Compile text handwriting paths
-            const paths = computeHandwritingLayout(settings);
+            if (window.handwritingLayoutDirty || !window.cachedHandwritingPaths) {
+                window.cachedHandwritingPaths = computeHandwritingLayout(settings);
+                window.handwritingLayoutDirty = false;
+                updateMissingCharsUI(lastMissingChars);
+            }
+            const paths = window.cachedHandwritingPaths || [];
             
             // Draw compiled writing paths
             pCtx.strokeStyle = '#1d4ed8'; // Royal Blue gel pen color
@@ -2970,7 +4379,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 pCtx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
                 pCtx.lineWidth = 2.0;
                 pCtx.setLineDash([12, 10]);
-                pCtx.strokeRect(-8.3 * mmToPx, 0, (220 + 8.3) * mmToPx, 220 * mmToPx);
+                pCtx.strokeRect(-16.6 * mmToPx, 0, (220 + 16.6) * mmToPx, 220 * mmToPx);
                 pCtx.setLineDash([]);
             }
 
@@ -3104,7 +4513,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     pCtx.strokeStyle = 'rgba(239, 68, 68, 0.65)'; // Dashed red
                     pCtx.beginPath();
                     // Horizontal top margin line
-                    pCtx.moveTo(-8.3 * mmToPx, (220 - hoverBedY) * mmToPx);
+                    pCtx.moveTo(-16.6 * mmToPx, (220 - hoverBedY) * mmToPx);
                     pCtx.lineTo(220 * mmToPx, (220 - hoverBedY) * mmToPx);
                     // Vertical left margin line
                     pCtx.moveTo(hoverBedX * mmToPx, 0);
@@ -3247,6 +4656,24 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             triggerPreviewUpdate();
         });
 
+        const tableCol1WidthSlider = document.getElementById('tableCol1Width');
+        tableCol1WidthSlider.addEventListener('input', (e) => {
+            document.getElementById('tableCol1WidthVal').textContent = e.target.value + "%";
+            triggerPreviewUpdate();
+        });
+
+        const mathLineWobbleSlider = document.getElementById('mathLineWobble');
+        mathLineWobbleSlider.addEventListener('input', (e) => {
+            document.getElementById('mathLineWobbleVal').textContent = parseFloat(e.target.value).toFixed(2) + "mm";
+            triggerPreviewUpdate();
+        });
+
+        const mathLineTiltSlider = document.getElementById('mathLineTilt');
+        mathLineTiltSlider.addEventListener('input', (e) => {
+            document.getElementById('mathLineTiltVal').textContent = parseFloat(e.target.value).toFixed(2) + "mm";
+            triggerPreviewUpdate();
+        });
+
         document.getElementById('btnOffsetDown').addEventListener('click', () => {
             const el = document.getElementById('letterYOffset');
             const val = Math.max(-15, parseFloat(el.value) - 0.1);
@@ -3280,7 +4707,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
         // Trigger updates when numeric sizing properties change
         ['textInput', 'charHeight', 'charSpacing', 'wordSpacing', 'lineSpacing', 'topLineOffset', 'leftMargin', 'rightMargin',
-         'letterYOffset', 'paperXShift', 'paperYShift', 'charSpacingJitter', 'wordSpacingJitter', 'penOffsetX', 'penOffsetY',
+         'letterYOffset', 'paperXShift', 'paperYShift', 'charSpacingJitter', 'wordSpacingJitter', 'penOffsetX', 'penOffsetY', 'tableColWidths', 'tableCol1Width',
+         'mathLineWobble', 'mathLineTilt',
          'showCalibBox', 'calibBoxWidth', 'calibBoxHeight', 'calibBoxX', 'calibBoxY', 'calibBoxStyle',
          'calibDTopToMargin', 'calibDBottomToMargin', 'calibDRightToMargin', 'calibDLeftToMargin', 'calibDLine1To20',
          'calibDBoxTopToBedTop', 'calibDBoxRightToBedRight'].forEach(id => {
@@ -3334,12 +4762,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
         // --- DEMO STORIES ---
         document.getElementById('loadDemoBtn').addEventListener('click', () => {
-            document.getElementById('textInput').value = `Anycubic Kobra Neo Pen Plotter
+            const demoVal = `Anycubic Kobra Neo Pen Plotter
 
 Indian Ruled Paper Calibration Test
 
 This is a live preview test demonstrating perfect line alignment. By virtualizing the sheet positioning and home offsets, the plotter writes cleanly inside standard notebook rows.`;
+            document.getElementById('textInput').value = demoVal;
+            pagesText[currentPageIdx] = demoVal;
             triggerPreviewUpdate();
+            saveCachedWebData();
             showToast("Loaded demo text", "info");
         });
 
@@ -3879,6 +5310,18 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         octoprintApiKeyInput.addEventListener('change', () => {
             safeSetItem('octoprint_apikey', octoprintApiKeyInput.value);
         });
+
+        // Save & Restore Gemini API Key locally
+        const storedGeminiKey = safeGetItem('gemini_api_key');
+        if (storedGeminiKey) {
+            document.getElementById('geminiApiKey').value = storedGeminiKey;
+        }
+        document.getElementById('geminiApiKey').addEventListener('change', (e) => {
+            safeSetItem('gemini_api_key', e.target.value.trim());
+        });
+        document.getElementById('geminiApiKey').addEventListener('input', (e) => {
+            safeSetItem('gemini_api_key', e.target.value.trim());
+        });
         
         // Test connection
         document.getElementById('testConnectionBtn').addEventListener('click', () => {
@@ -4242,35 +5685,96 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
 
         document.getElementById('btnJogHome').addEventListener('click', homePrinter);
 
-        // Capture functions
-        document.getElementById('btnSetP1').addEventListener('click', () => {
-            document.getElementById('calibP1X').value = jogVirtualX.toFixed(2);
-            document.getElementById('calibP1Y').value = jogVirtualY.toFixed(2);
+        function performJumpYDown() {
+            const distance = parseFloat(document.getElementById('jumpYDistanceInput').value) || 146.0;
+            jogVirtualY = Math.max(0.0, jogVirtualY - distance);
+            updateVirtualUI();
+            sendJogGCodeCommands(["G90", `G0 X${jogVirtualX.toFixed(2)} Y${jogVirtualY.toFixed(2)} F3000`]);
+            triggerPreviewUpdate();
+            showToast(`Jumped Y down by ${distance.toFixed(1)}mm!`, "info");
+        }
+
+        function performJumpXRight() {
+            const distance = parseFloat(document.getElementById('jumpXDistanceInput').value) || 168.5;
+            jogVirtualX = Math.min(220.0, jogVirtualX + distance);
+            updateVirtualUI();
+            sendJogGCodeCommands(["G90", `G0 X${jogVirtualX.toFixed(2)} Y${jogVirtualY.toFixed(2)} F3000`]);
+            triggerPreviewUpdate();
+            showToast(`Jumped X right by ${distance.toFixed(1)}mm!`, "info");
+        }
+
+        document.getElementById('btnJumpYDown').addEventListener('click', performJumpYDown);
+        document.getElementById('btnJumpXRight').addEventListener('click', performJumpXRight);
+
+        // Capture functions and automation helper
+        function captureCalibPoint(index) {
+            document.getElementById(`calibP${index}X`).value = jogVirtualX.toFixed(2);
+            document.getElementById(`calibP${index}Y`).value = jogVirtualY.toFixed(2);
             updateCalibLabels();
             saveCalibPointsToLocalStorage();
-            showToast("Point 1 captured successfully!", "success");
-        });
-        document.getElementById('btnSetP2').addEventListener('click', () => {
-            document.getElementById('calibP2X').value = jogVirtualX.toFixed(2);
-            document.getElementById('calibP2Y').value = jogVirtualY.toFixed(2);
-            updateCalibLabels();
-            saveCalibPointsToLocalStorage();
-            showToast("Point 2 captured successfully!", "success");
-        });
-        document.getElementById('btnSetP3').addEventListener('click', () => {
-            document.getElementById('calibP3X').value = jogVirtualX.toFixed(2);
-            document.getElementById('calibP3Y').value = jogVirtualY.toFixed(2);
-            updateCalibLabels();
-            saveCalibPointsToLocalStorage();
-            showToast("Point 3 captured successfully!", "success");
-        });
-        document.getElementById('btnSetP4').addEventListener('click', () => {
-            document.getElementById('calibP4X').value = jogVirtualX.toFixed(2);
-            document.getElementById('calibP4Y').value = jogVirtualY.toFixed(2);
-            updateCalibLabels();
-            saveCalibPointsToLocalStorage();
-            showToast("Point 4 captured successfully!", "success");
-        });
+            showToast(`Point ${index} captured successfully!`, "success");
+            triggerPreviewUpdate();
+
+            // Run automation if enabled
+            const autoEnabled = document.getElementById('enableCalibAutomation') ? document.getElementById('enableCalibAutomation').checked : true;
+            if (autoEnabled) {
+                if (index === 1) {
+                    // Rule 2: when 1st point is set then automate the "C" button action (Jump X Right)
+                    setTimeout(() => {
+                        performJumpXRight();
+                    }, 500);
+                } else if (index === 2) {
+                    // Rule 3: when 2nd point is set then travel to the 1st point and hit "X" button action (Jump Y Down)
+                    setTimeout(() => {
+                        const p1 = getLiveCalibPoint(1);
+                        if (p1) {
+                            travelToPoint(p1.x, p1.y);
+                            setTimeout(() => {
+                                performJumpYDown();
+                            }, 400);
+                        }
+                    }, 500);
+                } else if (index === 3) {
+                    // Rule 4: when 3rd point is set then go to the 4th predicted point
+                    setTimeout(() => {
+                        const p1 = getLiveCalibPoint(1);
+                        const p2 = getLiveCalibPoint(2);
+                        const p3 = getLiveCalibPoint(3);
+                        if (p1 && p2 && p3) {
+                            const p4_proj_x = p2.x + p3.x - p1.x;
+                            const p4_proj_y = p2.y + p3.y - p1.y;
+                            let targetX = Math.max(-16.6, Math.min(220.0, p4_proj_x));
+                            let targetY = Math.max(0.0, Math.min(220.0, p4_proj_y));
+                            travelToPoint(targetX, targetY);
+                        }
+                    }, 500);
+                }
+            }
+        }
+
+        function triggerCalibrationCapture() {
+            const p1 = getLiveCalibPoint(1);
+            const p2 = getLiveCalibPoint(2);
+            const p3 = getLiveCalibPoint(3);
+            const p4 = getLiveCalibPoint(4);
+            
+            if (!p1) {
+                captureCalibPoint(1);
+            } else if (!p2) {
+                captureCalibPoint(2);
+            } else if (!p3) {
+                captureCalibPoint(3);
+            } else if (!p4) {
+                captureCalibPoint(4);
+            } else {
+                showToast("All calibration points are already set! Reset them first to capture again.", "warning");
+            }
+        }
+
+        document.getElementById('btnSetP1').addEventListener('click', () => captureCalibPoint(1));
+        document.getElementById('btnSetP2').addEventListener('click', () => captureCalibPoint(2));
+        document.getElementById('btnSetP3').addEventListener('click', () => captureCalibPoint(3));
+        document.getElementById('btnSetP4').addEventListener('click', () => captureCalibPoint(4));
 
         // Travel listeners
         document.getElementById('btnGoToP1').addEventListener('click', () => {
@@ -4561,6 +6065,16 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             document.getElementById('calibDBoxTopToBedTop').value = "0.50";
             document.getElementById('calibDBoxRightToBedRight').value = "6.50";
 
+            if (p.customPromptAddons !== undefined) {
+                customPromptAddons = JSON.parse(JSON.stringify(p.customPromptAddons));
+            } else {
+                customPromptAddons = [];
+            }
+            rebuildCustomPromptCheckboxes();
+            if (p.promptAddonAsteriskChecked !== undefined && document.getElementById('promptAddonAsterisk')) {
+                document.getElementById('promptAddonAsterisk').checked = p.promptAddonAsteriskChecked;
+            }
+
             triggerPreviewUpdate();
         }
         
@@ -4603,6 +6117,9 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                     }
                 }
             });
+            
+            currentSettings.customPromptAddons = JSON.parse(JSON.stringify(customPromptAddons));
+            currentSettings.promptAddonAsteriskChecked = document.getElementById('promptAddonAsterisk') ? document.getElementById('promptAddonAsterisk').checked : true;
             
             profiles[name] = currentSettings;
             saveProfilesToStorage();
@@ -5035,6 +6552,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const instruction = document.getElementById('geminiInstruction').value.trim();
             const textArea = document.getElementById('textInput');
             const currentText = textArea.value;
+            const allowTweaking = document.getElementById('geminiAllowTweaking') ? document.getElementById('geminiAllowTweaking').checked : true;
             
             if (!apiKey) {
                 showToast("Please enter a Gemini API Key", "error");
@@ -5047,6 +6565,40 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             
             const stats = getBedLayoutStats();
             const settings = getSettings();
+            
+            let tweakingInstructions = "";
+            if (allowTweaking) {
+                tweakingInstructions = `2. In addition to editing the text, you are allowed to adjust the layout settings ("charHeight", "charSpacing", "wordSpacing") within these limits to make the text fit perfectly on the page:
+   - "charHeight" must be a number between 3.0 and 7.5 (standard handwriting height in mm).
+   - "charSpacing" must be a number between 0.5 and 2.5 (in mm).
+   - "wordSpacing" must be a number between 1.5 and 4.5 (in mm).
+3. If the text goes outside the bed limits, prioritize reducing the font size ("charHeight") and spacing, or slightly condensing the wording to ensure it fits perfectly.
+4. Output your response strictly as a JSON object with these keys:
+   - "text": The final edited text content (use newline characters \\n for line breaks).
+   - "charHeight": The suggested letter height (float number).
+   - "charSpacing": The suggested character spacing (float number).
+   - "wordSpacing": The suggested word spacing (float number).`;
+            } else {
+                tweakingInstructions = `2. You are NOT allowed to adjust or change any of the layout settings (charHeight, charSpacing, wordSpacing). Keep them exactly as they are.
+3. If the text goes outside the bed limits, condense the wording/phrasing slightly to ensure it fits perfectly inside the bed limits.
+4. Output your response strictly as a JSON object with this key:
+   - "text": The final edited text content (use newline characters \\n for line breaks).`;
+            }
+            
+            let addOnInstructions = [];
+            if (document.getElementById('promptAddonAsterisk') && document.getElementById('promptAddonAsterisk').checked) {
+                addOnInstructions.push(`Identify the context of each "*" symbol. If it is used for multiplication, replace it with the multiplication symbol "×". If it is used as a bullet point, keep it as "*".`);
+            }
+            customPromptAddons.forEach(item => {
+                if (item.checked) {
+                    addOnInstructions.push(item.text);
+                }
+            });
+            
+            let addOnsText = "";
+            if (addOnInstructions.length > 0) {
+                addOnsText = "\nAdditional formatting rules to satisfy:\n" + addOnInstructions.map(ins => `- ${ins}`).join('\n');
+            }
             
             const prompt = `You are a layout optimizer and editor for a handwriting pen plotter.
 The user wants you to edit or adjust their text based on this instruction:
@@ -5069,18 +6621,11 @@ Physical Printbed & Paper Layout context:
 
 Instructions:
 1. Modify the text to satisfy the user's instruction.
-2. In addition to editing the text, you are allowed to adjust the layout settings ("charHeight", "charSpacing", "wordSpacing") within these limits to make the text fit perfectly on the page:
-   - "charHeight" must be a number between 3.0 and 7.5 (standard handwriting height in mm).
-   - "charSpacing" must be a number between 0.5 and 2.5 (in mm).
-   - "wordSpacing" must be a number between 1.5 and 4.5 (in mm).
-3. If the text goes outside the bed limits, prioritize reducing the font size ("charHeight") and spacing, or slightly condensing the wording to ensure it fits perfectly.
-4. Output your response strictly as a JSON object with these keys:
-   - "text": The final edited text content (use newline characters \\n for line breaks).
-   - "charHeight": The suggested letter height (float number).
-   - "charSpacing": The suggested character spacing (float number).
-   - "wordSpacing": The suggested word spacing (float number).
-Do not include any chat commentary, explanation, or markdown code fences (e.g. do not wrap in \`\`\`json). Output only the raw JSON.`;
+${tweakingInstructions}
+${addOnsText}
 
+Do not include any chat commentary, explanation, or markdown code fences (e.g. do not wrap in \`\`\`json). Output only the raw JSON.`;
+ 
             const btn = document.getElementById('btnCallGemini');
             btn.disabled = true;
             btn.innerHTML = `<span>🪄 Editing & Tuning...</span>`;
@@ -5111,7 +6656,6 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                     throw new Error("Invalid response format from Gemini API");
                 }
                 
-                // Clean up markdown code blocks if the model wrapped the JSON
                 let cleanJson = responseText.trim();
                 if (cleanJson.startsWith("```")) {
                     const firstNL = cleanJson.indexOf("\n");
@@ -5124,38 +6668,38 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                     cleanJson = cleanJson.trim();
                 }
                 
-                // Parse the JSON payload
                 const parsed = JSON.parse(cleanJson);
                 
                 if (parsed.text !== undefined) {
                     textArea.value = parsed.text;
                     textArea.dispatchEvent(new Event('input'));
                     
-                    // Synchronously update sliders if provided
-                    if (parsed.charHeight !== undefined) {
-                        const el = document.getElementById('charHeight');
-                        if (el) {
-                            el.value = parseFloat(parsed.charHeight).toFixed(1);
-                            el.dispatchEvent(new Event('input'));
+                    if (allowTweaking) {
+                        if (parsed.charHeight !== undefined) {
+                            const el = document.getElementById('charHeight');
+                            if (el) {
+                                el.value = parseFloat(parsed.charHeight).toFixed(1);
+                                el.dispatchEvent(new Event('input'));
+                            }
                         }
-                    }
-                    if (parsed.charSpacing !== undefined) {
-                        const el = document.getElementById('charSpacing');
-                        if (el) {
-                            el.value = parseFloat(parsed.charSpacing).toFixed(1);
-                            el.dispatchEvent(new Event('input'));
+                        if (parsed.charSpacing !== undefined) {
+                            const el = document.getElementById('charSpacing');
+                            if (el) {
+                                el.value = parseFloat(parsed.charSpacing).toFixed(1);
+                                el.dispatchEvent(new Event('input'));
+                            }
                         }
-                    }
-                    if (parsed.wordSpacing !== undefined) {
-                        const el = document.getElementById('wordSpacing');
-                        if (el) {
-                            el.value = parseFloat(parsed.wordSpacing).toFixed(1);
-                            el.dispatchEvent(new Event('input'));
+                        if (parsed.wordSpacing !== undefined) {
+                            const el = document.getElementById('wordSpacing');
+                            if (el) {
+                                el.value = parseFloat(parsed.wordSpacing).toFixed(1);
+                                el.dispatchEvent(new Event('input'));
+                            }
                         }
                     }
                     
-                    showToast("Text and layout settings successfully optimized by Gemini!", "success");
-                    document.getElementById('geminiInstruction').value = ""; // Clear instruction prompt
+                    showToast("Text successfully processed by Gemini!", "success");
+                    document.getElementById('geminiInstruction').value = "";
                 } else {
                     throw new Error("Parsed JSON does not contain 'text' key");
                 }
@@ -5249,7 +6793,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 
                 panStartX = e.clientX;
                 panStartY = e.clientY;
-                triggerPreviewUpdate();
+                renderPreview();
                 return;
             }
             
@@ -5263,7 +6807,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             if (isDraggingPoint && draggingPointIdx !== -1) {
                 let constrainedX = targetBedX;
                 let constrainedY = targetBedY;
-                if (constrainedX < -8.3) constrainedX = -8.3;
+                if (constrainedX < -16.6) constrainedX = -16.6;
                 if (constrainedX > 220.0) constrainedX = 220.0;
                 if (constrainedY < 0.0) constrainedY = 0.0;
                 if (constrainedY > 220.0) constrainedY = 220.0;
@@ -5273,9 +6817,9 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 
                 updateCalibLabels();
                 saveCalibPointsToLocalStorage();
-                triggerPreviewUpdate();
+                renderPreview();
             } else if (isCalibratingHoverNeeded()) {
-                triggerPreviewUpdate();
+                renderPreview();
             }
         });
 
@@ -5310,11 +6854,11 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             }
             
             if (canvasClickMode === 'jog') {
-                if (targetBedX >= -8.3 && targetBedX <= 220 && targetBedY >= 0 && targetBedY <= 220) {
+                if (targetBedX >= -16.6 && targetBedX <= 220 && targetBedY >= 0 && targetBedY <= 220) {
                     travelToPoint(targetBedX, targetBedY);
                     renderPreview();
                 } else {
-                    showToast("Click is outside physical bed limits (-8.3 to 220mm)!", "warning");
+                    showToast("Click is outside physical bed limits (-16.6 to 220mm)!", "warning");
                 }
             } else {
                 const settings = getSettings();
@@ -5391,6 +6935,51 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
                 return;
             }
+
+            // Spacebar shortcut to set calibration point
+            if (e.key === ' ' || e.code === 'Space') {
+                triggerCalibrationCapture();
+                e.preventDefault();
+                return;
+            }
+
+            // Keyboard shortcuts 'x' and 'c' for precise relative jump movements
+            if (e.key === 'x' || e.key === 'X') {
+                performJumpYDown();
+                e.preventDefault();
+                return;
+            }
+            if (e.key === 'c' || e.key === 'C') {
+                performJumpXRight();
+                e.preventDefault();
+                return;
+            }
+            
+            // w, a, s, d for precise 0.1mm jog target adjustments (only when zoom >= 10.0)
+            if (zoomScale >= 10.0) {
+                let moved = false;
+                if (e.key === 'w' || e.key === 'W') {
+                    jogVirtualY = Math.min(220.0, jogVirtualY + 0.1);
+                    moved = true;
+                } else if (e.key === 's' || e.key === 'S') {
+                    jogVirtualY = Math.max(0.0, jogVirtualY - 0.1);
+                    moved = true;
+                } else if (e.key === 'a' || e.key === 'A') {
+                    jogVirtualX = Math.max(-16.6, jogVirtualX - 0.1);
+                    moved = true;
+                } else if (e.key === 'd' || e.key === 'D') {
+                    jogVirtualX = Math.min(220.0, jogVirtualX + 0.1);
+                    moved = true;
+                }
+                
+                if (moved) {
+                    updateVirtualUI();
+                    sendJogGCodeCommands(["G90", `G0 X${jogVirtualX.toFixed(2)} Y${jogVirtualY.toFixed(2)} F3000`]);
+                    triggerPreviewUpdate();
+                    e.preventDefault();
+                    return;
+                }
+            }
             
             const step = 80; // Speed of movement per keystroke
             
@@ -5437,15 +7026,568 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             }
         });
 
+        // --- GEMINI PROMPT ADD-ONS & GLOBAL WEB DATA AUTO-SAVE SYSTEM ---
+        let customPromptAddons = [];
+        let pagesText = ["Dear Student,\n\nThis is a demonstration of writing on standard Indian ruled paper using your Anycubic Kobra Neo.\n\nWe solved the outline \"bubble\" text issue by rendering true single-stroke vectors, even with custom TTF fonts! Plus, we added realistic human hand jitters."];
+        let currentPageIdx = 0;
+
+        function rebuildPageTabs() {
+            const container = document.getElementById('pageTabsContainer');
+            if (!container) return;
+            
+            container.innerHTML = "";
+            
+            pagesText.forEach((pText, idx) => {
+                const btn = document.createElement('button');
+                const isActive = (idx === currentPageIdx);
+                
+                btn.className = `px-3 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-all ${
+                    isActive 
+                        ? "bg-indigo-600 border border-indigo-500 text-white shadow-md" 
+                        : "bg-slate-950 border border-slate-800 text-slate-400 hover:text-white"
+                }`;
+                
+                const titleSpan = document.createElement('span');
+                titleSpan.textContent = `Page ${idx + 1}`;
+                btn.appendChild(titleSpan);
+                
+                if (pagesText.length > 1) {
+                    const delBtn = document.createElement('span');
+                    delBtn.className = "text-[9px] text-slate-500 hover:text-red-400 ml-1 select-none cursor-pointer font-bold transition-all px-0.5";
+                    delBtn.innerHTML = "✕";
+                    delBtn.title = "Delete Page";
+                    delBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showConfirmModal(
+                            "Delete Page",
+                            `Are you sure you want to delete Page ${idx + 1}?`,
+                            () => {
+                                pagesText.splice(idx, 1);
+                                currentPageIdx = Math.max(0, currentPageIdx - 1);
+                                textInput.value = pagesText[currentPageIdx];
+                                rebuildPageTabs();
+                                triggerPreviewUpdate();
+                                saveCachedWebData();
+                                showToast(`Deleted Page ${idx + 1}`, "success");
+                            }
+                        );
+                    });
+                    btn.appendChild(delBtn);
+                }
+                
+                btn.addEventListener('click', () => {
+                    currentPageIdx = idx;
+                    textInput.value = pagesText[idx];
+                    rebuildPageTabs();
+                    triggerPreviewUpdate();
+                    saveCachedWebData();
+                });
+                
+                container.appendChild(btn);
+            });
+            
+            const addBtn = document.createElement('button');
+            addBtn.className = "px-2.5 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white rounded text-xs font-bold transition-all flex items-center justify-center";
+            addBtn.innerHTML = "＋";
+            addBtn.title = "Add New Page";
+            addBtn.addEventListener('click', () => {
+                pagesText.push("");
+                currentPageIdx = pagesText.length - 1;
+                textInput.value = "";
+                rebuildPageTabs();
+                triggerPreviewUpdate();
+                saveCachedWebData();
+                showToast(`Created Page ${pagesText.length}`, "success");
+            });
+            container.appendChild(addBtn);
+        }
+
+        function splitPageOverflow() {
+            const stats = getBedLayoutStats();
+            if (stats.linesCutOff <= 0) {
+                showToast("All text fits on the current page!", "info");
+                return;
+            }
+            
+            const settings = getSettings();
+            const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
+            let firstOutLineIdx = Infinity;
+            
+            renderedCharactersOnSheet.forEach(char => {
+                const charDesignYCenter = (char.minY + char.maxY) / 2;
+                const pt = calibMatrix ? mapDesignToBed(char.minX, charDesignYCenter, calibMatrix) : {
+                    x: char.minX + settings.paperXShift - settings.penOffsetX,
+                    y: (297 - charDesignYCenter) + settings.paperYShift - settings.penOffsetY
+                };
+                if (pt.y < 0 || pt.y > 220) {
+                    if (char.lineIdx !== undefined && char.lineIdx < firstOutLineIdx) {
+                        firstOutLineIdx = char.lineIdx;
+                    }
+                }
+            });
+            
+            if (firstOutLineIdx === Infinity) {
+                showToast("Could not determine split line index", "error");
+                return;
+            }
+            
+            const cleanText = preprocessLaTeX(settings.text);
+            const normalizedText = cleanText.replace(/\t/g, '    ');
+            const lines = normalizedText.split('\n');
+            
+            const page1Text = lines.slice(0, firstOutLineIdx).join('\n');
+            const overflowText = lines.slice(firstOutLineIdx).join('\n');
+            
+            pagesText[currentPageIdx] = page1Text;
+            
+            const nextPageIdx = currentPageIdx + 1;
+            if (nextPageIdx >= pagesText.length) {
+                pagesText.push(overflowText);
+            } else {
+                pagesText[nextPageIdx] = overflowText + (pagesText[nextPageIdx] ? '\n' + pagesText[nextPageIdx] : '');
+            }
+            
+            textInput.value = pagesText[currentPageIdx];
+            rebuildPageTabs();
+            triggerPreviewUpdate();
+            saveCachedWebData();
+            
+            showToast(`Split text! Moved overflow lines to Page ${nextPageIdx + 1}`, "success");
+        }
+
+        document.getElementById('btnSplitPage').addEventListener('click', splitPageOverflow);
+
+        function rebuildCustomPromptCheckboxes() {
+            const container = document.getElementById('geminiCheckboxesContainer');
+            if (!container) return;
+            
+            const defaultChecked = document.getElementById('promptAddonAsterisk') ? document.getElementById('promptAddonAsterisk').checked : true;
+            container.innerHTML = `
+                <div class="flex items-start gap-2">
+                    <input type="checkbox" id="promptAddonAsterisk" ${defaultChecked ? 'checked' : ''} class="w-3.5 h-3.5 rounded text-indigo-600 accent-indigo-500 bg-slate-950 border border-slate-800 cursor-pointer mt-0.5" />
+                    <label for="promptAddonAsterisk" class="text-[9.5px] text-slate-300 leading-tight select-none cursor-pointer">
+                        Convert multiplication '*' to '×' (bullet points stay as '*')
+                    </label>
+                </div>
+            `;
+            
+            document.getElementById('promptAddonAsterisk').addEventListener('change', () => {
+                saveCachedWebData();
+            });
+            
+            customPromptAddons.forEach((item, idx) => {
+                const div = document.createElement('div');
+                div.className = "flex items-start gap-2 justify-between group";
+                
+                const checkboxId = `promptAddon_${idx}`;
+                div.innerHTML = `
+                    <div class="flex items-start gap-2 flex-1">
+                        <input type="checkbox" id="${checkboxId}" ${item.checked ? 'checked' : ''} class="w-3.5 h-3.5 rounded text-indigo-600 accent-indigo-500 bg-slate-950 border border-slate-800 cursor-pointer mt-0.5" />
+                        <label for="${checkboxId}" class="text-[9.5px] text-slate-300 leading-tight select-none cursor-pointer pr-4">
+                            ${item.text}
+                        </label>
+                    </div>
+                    <button class="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 text-[10px] font-bold select-none cursor-pointer transition-all mr-1" title="Delete custom prompt">✕</button>
+                `;
+                
+                div.querySelector('input').addEventListener('change', (e) => {
+                    item.checked = e.target.checked;
+                    saveCachedWebData();
+                });
+                
+                div.querySelector('button').addEventListener('click', () => {
+                    customPromptAddons.splice(idx, 1);
+                    rebuildCustomPromptCheckboxes();
+                    saveCachedWebData();
+                });
+                
+                container.appendChild(div);
+            });
+        }
+
+        document.getElementById('btnAddCustomPrompt').addEventListener('click', () => {
+            const input = document.getElementById('txtCustomPrompt');
+            const text = input.value.trim();
+            if (text) {
+                customPromptAddons.push({ text: text, checked: true });
+                input.value = "";
+                rebuildCustomPromptCheckboxes();
+                saveCachedWebData();
+            }
+        });
+        document.getElementById('txtCustomPrompt').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const text = e.target.value.trim();
+                if (text) {
+                    customPromptAddons.push({ text: text, checked: true });
+                    e.target.value = "";
+                    rebuildCustomPromptCheckboxes();
+                    saveCachedWebData();
+                }
+            }
+        });
+
+        function saveCachedWebData() {
+            const data = {
+                text: document.getElementById('textInput').value,
+                pagesText: pagesText,
+                currentPageIdx: currentPageIdx,
+                geminiApiKey: document.getElementById('geminiApiKey').value,
+                geminiModel: document.getElementById('geminiModelSelect').value,
+                geminiInstruction: document.getElementById('geminiInstruction').value,
+                geminiAllowTweaking: document.getElementById('geminiAllowTweaking') ? document.getElementById('geminiAllowTweaking').checked : true,
+                customPromptAddons: customPromptAddons,
+                promptAddonAsteriskChecked: document.getElementById('promptAddonAsterisk') ? document.getElementById('promptAddonAsterisk').checked : true,
+                selectedProfile: document.getElementById('profileSelect') ? document.getElementById('profileSelect').value : "",
+                
+                charHeight: document.getElementById('charHeight').value,
+                charSpacing: document.getElementById('charSpacing').value,
+                wordSpacing: document.getElementById('wordSpacing').value,
+                letterYOffset: document.getElementById('letterYOffset').value,
+                tableColWidths: document.getElementById('tableColWidths') ? document.getElementById('tableColWidths').value : "",
+                tableCol1Width: document.getElementById('tableCol1Width').value,
+                mathLineWobble: document.getElementById('mathLineWobble').value,
+                mathLineTilt: document.getElementById('mathLineTilt').value,
+                mathLeftOffset: document.getElementById('mathLeftOffset').value,
+                
+                wobbleStrength: document.getElementById('wobbleStrength').value,
+                baselineDrift: document.getElementById('baselineDrift').value,
+                slantJitter: document.getElementById('slantJitter').value,
+                heightJitter: document.getElementById('heightJitter').value,
+                lineSpacing: document.getElementById('lineSpacing').value,
+                topLineOffset: document.getElementById('topLineOffset').value,
+                leftMargin: document.getElementById('leftMargin').value,
+                rightMargin: document.getElementById('rightMargin').value,
+                activeFontMode: activeFontMode,
+                enableCalibAutomation: document.getElementById('enableCalibAutomation') ? document.getElementById('enableCalibAutomation').checked : true
+            };
+            safeSetItem('plotter_cached_webdata', JSON.stringify(data));
+        }
+
+        function triggerSliderValueBadgeUpdates() {
+            const sliders = [
+                { id: 'wobbleStrength', valId: 'wobbleVal', suffix: 'mm' },
+                { id: 'baselineDrift', valId: 'driftVal', suffix: 'mm' },
+                { id: 'slantJitter', valId: 'slantVal', suffix: '°' },
+                { id: 'heightJitter', valId: 'heightVal', suffix: '%' },
+                { id: 'charSpacingJitter', valId: 'charSpacingJitterVal', suffix: 'mm' },
+                { id: 'wordSpacingJitter', valId: 'wordSpacingJitterVal', suffix: 'mm' },
+                { id: 'letterYOffset', valId: 'letterYOffsetVal', suffix: 'mm' },
+                { id: 'tableCol1Width', valId: 'tableCol1WidthVal', suffix: '%' },
+                { id: 'mathLineWobble', valId: 'mathLineWobbleVal', suffix: 'mm' },
+                { id: 'mathLineTilt', valId: 'mathLineTiltVal', suffix: 'mm' },
+                { id: 'mathLeftOffset', valId: 'mathLeftOffsetVal', suffix: 'mm' }
+            ];
+            sliders.forEach(s => {
+                const el = document.getElementById(s.id);
+                const valEl = document.getElementById(s.valId);
+                if (el && valEl) {
+                    const val = parseFloat(el.value);
+                    if (s.id === 'mathLeftOffset') {
+                        valEl.textContent = val === 0 ? "Centered" : val + "mm";
+                    } else {
+                        valEl.textContent = val + s.suffix;
+                    }
+                }
+            });
+        }
+
+        function loadCachedWebData() {
+            const raw = safeGetItem('plotter_cached_webdata');
+            if (!raw) {
+                applyProfile(profileSelect.value);
+                pagesText = [document.getElementById('textInput').value];
+                currentPageIdx = 0;
+                rebuildPageTabs();
+                rebuildCustomPromptCheckboxes();
+                return;
+            }
+            try {
+                const data = JSON.parse(raw);
+                if (data.pagesText !== undefined) {
+                    pagesText = data.pagesText;
+                } else if (data.text !== undefined) {
+                    pagesText = [data.text];
+                } else {
+                    pagesText = [document.getElementById('textInput').value];
+                }
+                if (data.currentPageIdx !== undefined) {
+                    currentPageIdx = data.currentPageIdx;
+                } else {
+                    currentPageIdx = 0;
+                }
+                
+                rebuildPageTabs();
+                if (pagesText[currentPageIdx] !== undefined) {
+                    document.getElementById('textInput').value = pagesText[currentPageIdx];
+                }
+                
+                if (data.geminiApiKey !== undefined) document.getElementById('geminiApiKey').value = data.geminiApiKey;
+                if (data.geminiModel !== undefined) document.getElementById('geminiModelSelect').value = data.geminiModel;
+                if (data.geminiInstruction !== undefined) document.getElementById('geminiInstruction').value = data.geminiInstruction;
+                if (data.geminiAllowTweaking !== undefined && document.getElementById('geminiAllowTweaking')) {
+                    document.getElementById('geminiAllowTweaking').checked = data.geminiAllowTweaking;
+                }
+                if (data.customPromptAddons !== undefined) {
+                    customPromptAddons = data.customPromptAddons;
+                }
+                
+                rebuildCustomPromptCheckboxes();
+                
+                if (data.promptAddonAsteriskChecked !== undefined && document.getElementById('promptAddonAsterisk')) {
+                    document.getElementById('promptAddonAsterisk').checked = data.promptAddonAsteriskChecked;
+                }
+                
+                if (data.charHeight !== undefined) document.getElementById('charHeight').value = data.charHeight;
+                if (data.charSpacing !== undefined) document.getElementById('charSpacing').value = data.charSpacing;
+                if (data.wordSpacing !== undefined) document.getElementById('wordSpacing').value = data.wordSpacing;
+                if (data.letterYOffset !== undefined) document.getElementById('letterYOffset').value = data.letterYOffset;
+                if (data.tableColWidths !== undefined && document.getElementById('tableColWidths')) {
+                    document.getElementById('tableColWidths').value = data.tableColWidths;
+                }
+                if (data.tableCol1Width !== undefined) document.getElementById('tableCol1Width').value = data.tableCol1Width;
+                if (data.mathLineWobble !== undefined) document.getElementById('mathLineWobble').value = data.mathLineWobble;
+                if (data.mathLineTilt !== undefined) document.getElementById('mathLineTilt').value = data.mathLineTilt;
+                if (data.mathLeftOffset !== undefined) document.getElementById('mathLeftOffset').value = data.mathLeftOffset;
+                
+                if (data.wobbleStrength !== undefined) document.getElementById('wobbleStrength').value = data.wobbleStrength;
+                if (data.baselineDrift !== undefined) document.getElementById('baselineDrift').value = data.baselineDrift;
+                if (data.slantJitter !== undefined) document.getElementById('slantJitter').value = data.slantJitter;
+                if (data.heightJitter !== undefined) document.getElementById('heightJitter').value = data.heightJitter;
+                if (data.lineSpacing !== undefined) document.getElementById('lineSpacing').value = data.lineSpacing;
+                if (data.topLineOffset !== undefined) document.getElementById('topLineOffset').value = data.topLineOffset;
+                if (data.leftMargin !== undefined) document.getElementById('leftMargin').value = data.leftMargin;
+                if (data.rightMargin !== undefined) document.getElementById('rightMargin').value = data.rightMargin;
+                
+                if (data.selectedProfile && document.getElementById('profileSelect')) {
+                    document.getElementById('profileSelect').value = data.selectedProfile;
+                }
+                
+                if (data.activeFontMode) {
+                    setFontMode(data.activeFontMode);
+                }
+                
+                if (data.enableCalibAutomation !== undefined && document.getElementById('enableCalibAutomation')) {
+                    document.getElementById('enableCalibAutomation').checked = data.enableCalibAutomation;
+                }
+                
+                triggerSliderValueBadgeUpdates();
+                
+            } catch(e) {
+                console.error("Error loading cached webdata: ", e);
+                rebuildCustomPromptCheckboxes();
+            }
+        }
+
+        function initAutoSaveListeners() {
+            const elTextInput = document.getElementById('textInput');
+            if (elTextInput) {
+                elTextInput.addEventListener('input', () => {
+                    pagesText[currentPageIdx] = elTextInput.value;
+                });
+            }
+            const ids = [
+                'textInput', 'geminiApiKey', 'geminiModelSelect', 'geminiInstruction', 'geminiAllowTweaking',
+                'charHeight', 'charSpacing', 'wordSpacing', 'letterYOffset', 'tableColWidths', 'tableCol1Width',
+                'mathLineWobble', 'mathLineTilt', 'mathLeftOffset', 'wobbleStrength', 'baselineDrift', 'slantJitter',
+                'heightJitter', 'lineSpacing', 'topLineOffset', 'leftMargin', 'rightMargin', 'profileSelect', 'enableCalibAutomation'
+            ];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', saveCachedWebData);
+                    el.addEventListener('change', saveCachedWebData);
+                }
+            });
+        }
+
+        // --- FDM BED LEVELING CALCULATOR LOGIC ---
+        function drawScrewTurnIndicator(canvasId, degrees) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            // Handle high DPI display backing store scaling for crisp vector canvas drawing
+            const dpr = window.devicePixelRatio || 1;
+            const width = 40;
+            const height = 40;
+            if (canvas.width !== width * dpr) {
+                canvas.width = width * dpr;
+                canvas.height = height * dpr;
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${height}px`;
+            }
+            ctx.resetTransform();
+            ctx.scale(dpr, dpr);
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const cx = width / 2;
+            const cy = height / 2;
+            const radius = 14;
+            
+            // Draw background dial circle
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+            
+            // If leveled (degrees is 0 or very tiny), draw a green checkmark
+            if (Math.abs(degrees) < 1.0) {
+                ctx.strokeStyle = '#10b981'; // Emerald
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(cx - 4, cy);
+                ctx.lineTo(cx - 1, cy + 3);
+                ctx.lineTo(cx + 5, cy - 3);
+                ctx.stroke();
+                return;
+            }
+            
+            const isCW = degrees > 0;
+            const color = isCW ? '#fbbf24' : '#f43f5e'; // Amber for CW (+), Rose for CCW (-)
+            
+            // Convert to radians (0 is right, start at -90 degrees / -Math.PI / 2 to make 12 o'clock the start)
+            const startRad = -Math.PI / 2.0;
+            const turnRad = (degrees * Math.PI) / 180.0;
+            const endRad = startRad + turnRad;
+            
+            // Draw start line reference (dotted)
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 1.0;
+            ctx.setLineDash([1.5, 1.5]);
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx, cy - radius);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw rotation arc
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, startRad, endRad, !isCW);
+            ctx.stroke();
+            
+            // Draw target line (solid pointer)
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + radius * Math.cos(endRad), cy + radius * Math.sin(endRad));
+            ctx.stroke();
+            
+            // Draw arrowhead at the end of the arc/pointer
+            const arrowAngle = endRad + (isCW ? -Math.PI / 6.0 : Math.PI / 6.0);
+            const arrowLength = 4.0;
+            const tipX = cx + radius * Math.cos(endRad);
+            const tipY = cy + radius * Math.sin(endRad);
+            
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(tipX, tipY);
+            ctx.lineTo(tipX - arrowLength * Math.cos(arrowAngle - Math.PI / 6.0), tipY - arrowLength * Math.sin(arrowAngle - Math.PI / 6.0));
+            ctx.lineTo(tipX - arrowLength * Math.cos(arrowAngle + Math.PI / 6.0), tipY - arrowLength * Math.sin(arrowAngle + Math.PI / 6.0));
+            ctx.closePath();
+            ctx.fill();
+            
+            // Draw center screw dot
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 2.5, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function calculateBedLeveling() {
+            const initialVal = parseFloat(document.getElementById('calibLevelingInitial').value) || 0.0;
+            const finalVal = parseFloat(document.getElementById('calibLevelingFinal').value) || 0.0;
+            
+            // Step 1: Thread Pitch Relation
+            const pitchTotal = finalVal - initialVal;
+            const pitchPerDegree = pitchTotal / 360.0;
+            
+            document.getElementById('levelingPitchTotal').innerText = `${pitchTotal.toFixed(3)} mm`;
+            document.getElementById('levelingPitchPerDegree').innerText = `${pitchPerDegree.toFixed(5)} mm`;
+            
+            // Step 2: 4-Corner Readings
+            const valFL = parseFloat(document.getElementById('cornerFLInput').value) || 0.0;
+            const valFR = parseFloat(document.getElementById('cornerFRInput').value) || 0.0;
+            const valBL = parseFloat(document.getElementById('cornerBLInput').value) || 0.0;
+            const valBR = parseFloat(document.getElementById('cornerBRInput').value) || 0.0;
+            
+            // Align all corners to their average (minimizes net turning of bed screws)
+            const avgVal = (valFL + valFR + valBL + valBR) / 4.0;
+            document.getElementById('levelingAvgVal').innerText = `${avgVal.toFixed(3)} mm`;
+            
+            const corners = [
+                { id: 'FL', current: valFL, label: 'Front-Left', card: document.getElementById('cardFL'), valEl: document.getElementById('lblFLVal'), instrEl: document.getElementById('lblFLInstruction'), canvasId: 'canvasFL' },
+                { id: 'FR', current: valFR, label: 'Front-Right', card: document.getElementById('cardFR'), valEl: document.getElementById('lblFRVal'), instrEl: document.getElementById('lblFRInstruction'), canvasId: 'canvasFR' },
+                { id: 'BL', current: valBL, label: 'Back-Left', card: document.getElementById('cardBL'), valEl: document.getElementById('lblBLVal'), instrEl: document.getElementById('lblBLInstruction'), canvasId: 'canvasBL' },
+                { id: 'BR', current: valBR, label: 'Back-Right', card: document.getElementById('cardBR'), valEl: document.getElementById('lblBRVal'), instrEl: document.getElementById('lblBRInstruction'), canvasId: 'canvasBR' }
+            ];
+            
+            corners.forEach(c => {
+                c.valEl.innerText = `${c.current.toFixed(2)} mm`;
+                
+                // ΔZ needed to reach target average height
+                const deltaZ = avgVal - c.current;
+                let degrees = 0;
+                
+                if (Math.abs(deltaZ) < 0.015) {
+                    c.instrEl.innerText = "Leveled (0°)";
+                    c.instrEl.className = "text-[10px] font-bold text-emerald-400";
+                    c.card.className = "w-[120px] bg-slate-950/80 border border-emerald-500/30 rounded-lg p-2 flex flex-col items-center text-center space-y-1 shadow-[0_0_10px_rgba(16,185,129,0.05)]";
+                } else {
+                    if (pitchPerDegree !== 0) {
+                        degrees = deltaZ / pitchPerDegree;
+                    }
+                    
+                    const sign = degrees > 0 ? "+" : "";
+                    const absDegrees = Math.abs(degrees);
+                    const fractionalTurns = (absDegrees / 360.0).toFixed(2);
+                    
+                    c.instrEl.innerText = `Rotate ${sign}${Math.round(degrees)}°\n(${fractionalTurns} turn ${degrees > 0 ? 'CW' : 'CCW'})`;
+                    
+                    if (degrees > 0) {
+                        c.instrEl.className = "text-[9.5px] font-extrabold text-amber-400 whitespace-pre-line";
+                        c.card.className = "w-[120px] bg-slate-950/80 border border-amber-500/20 rounded-lg p-2 flex flex-col items-center text-center space-y-1 shadow-[0_0_8px_rgba(245,158,11,0.03)]";
+                    } else {
+                        c.instrEl.className = "text-[9.5px] font-extrabold text-rose-400 whitespace-pre-line";
+                        c.card.className = "w-[120px] bg-slate-950/80 border border-rose-500/20 rounded-lg p-2 flex flex-col items-center text-center space-y-1 shadow-[0_0_8px_rgba(244,63,94,0.03)]";
+                    }
+                }
+                
+                drawScrewTurnIndicator(c.canvasId, degrees);
+            });
+        }
+
+        function initLevelingListeners() {
+            const inputs = [
+                'calibLevelingInitial', 'calibLevelingFinal',
+                'cornerBLInput', 'cornerBRInput', 'cornerFLInput', 'cornerFRInput'
+            ];
+            inputs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', calculateBedLeveling);
+                }
+            });
+            document.getElementById('btnCalculateLeveling').addEventListener('click', calculateBedLeveling);
+        }
+
         // --- INITIALIZATION ---
         // Load settings profiles dict
         loadProfiles();
-        applyProfile(profileSelect.value);
+        loadCachedWebData();
         loadCalibPointsFromLocalStorage();
         updateVirtualUI();
         initSlowStartTuningListeners();
         initNavigationToolbar();
         checkCalibrationStateConflict();
+        initAutoSaveListeners();
+        initLevelingListeners();
+        calculateBedLeveling();
         
         // Render initial view
         rebuildVariantSelectors();
