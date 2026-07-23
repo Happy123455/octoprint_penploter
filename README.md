@@ -54,6 +54,14 @@ graph TD
 * **Anti-Jitter Feedrate Control**: Tag and execute the first three words of a print job at **10% of standard feedrate** to prevent initial slippage.
 * **Real-Time USB Jogging**: Adjust Y-axis offset (`M290 Y0.10`) and Z-offset height (`M290 Z0.02`) on the fly using our real-time micro-stepping adjustment panel.
 
+### 6. 📐 FDM Bed Leveling & Screw Calculator
+
+![FDM Bed Leveling Infographic](bed_leveling_infographic.jpg)
+
+* **Thread Pitch Calibration**: Calculates your printer's height change per 1° degree of rotation based on user measurements.
+* **Rotational Adjustment Guides**: Takes 4-corner mesh height deviation readings (FL, FR, BL, BR) and computes the exact rotational angle and direction (Clockwise vs. Counter-Clockwise) needed for each leveling screw.
+* **Top-Down Visual Dials**: A vector dial gauge overlay renders target angles and arrows dynamically, with a green checkmark indicating when a corner is leveled (error < 0.015mm).
+
 ---
 
 ## 📦 Installation & Setup
