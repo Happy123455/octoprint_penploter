@@ -8,7 +8,12 @@ An advanced, high-precision OctoPrint plugin and standalone web workbench to gen
 
 Equipped with a **3/4-Point Rigid Transformation calibration engine**, a **centerline tracing font skeletonizer**, a **buttery smooth canvas editor**, and a **Gemini AI Layout Optimizer**, this utility turns standard G-code plotters into expert human scribes.
 
+<details>
+<summary><b>🎬 Click here to view the animated Plotter Handwriting Demonstration!</b></summary>
+
 <img src="./plotter_demonstration.gif" width="100%" alt="Plotter Handwriting Demonstration" />
+
+</details>
 
 ---
 
