@@ -6,7 +6,7 @@
 
 An advanced, high-precision OctoPrint plugin and standalone web workbench to generate organic, human-looking handwriting G-code for 3D printers, pen plotters, and drawing machines. 
 
-Equipped with a **3/4-Point Rigid Transformation calibration engine**, a **centerline tracing font skeletonizer**, a **buttery smooth canvas editor**, and a **Gemini AI Layout Optimizer**, this utility turns standard G-code plotters into expert human scribes.
+## Equipped with a **3/4-Point Rigid Transformation calibration engine**, a **centerline tracing font skeletonizer**, a **buttery smooth canvas editor**, and a **Gemini AI Layout Optimizer**, this utility turns standard G-code plotters into expert human scribes.
 
 <img src="./plotter_demonstration.gif" width="100%" alt="Plotter Handwriting Demonstration" />
 
