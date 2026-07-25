@@ -8,7 +8,7 @@ An advanced, high-precision OctoPrint plugin and standalone web workbench to gen
 
 Equipped with a **3/4-Point Rigid Transformation calibration engine**, a **centerline tracing font skeletonizer**, a **buttery smooth canvas editor**, and a **Gemini AI Layout Optimizer**, this utility turns standard G-code plotters into expert human scribes.
 
-![Plotter Handwriting Demonstration](plotter_demonstration.gif)
+<img src="./plotter_demonstration.gif" width="100%" alt="Plotter Handwriting Demonstration" />
 
 ---
 
@@ -20,13 +20,13 @@ Below is the visual infographic outlining the complete compiler data pipeline an
 
 ```mermaid
 graph TD
-    A["Raw Text Input & User Prompts"] --> B["Gemini AI Layout Optimizer"]
-    B -->|Analyzes Bed Capacity & Edits Text| C["Vector Glyph Translation Engine"]
-    C -->|Selects Procedural Alternate Glyphs| D["Jitter & Humanization Pipeline"]
-    D -->|Applies Tremor, Slant Jitter & Drift| E["Bilinear / Affine Translation Matrix"]
-    E -->|Maps Coordinates relative to sheet skew| F["G-Code Compiler"]
-    F -->|Injects Slow-Start 10% Feedrate| G["OctoPrint Serial Comm API"]
-    G -->|M290 Babystep Real-time Updates| H["Physical Pen Plotter Carriage"]
+    A["Raw Text Input & User Prompts"] -->|Gemini AI| B["Gemini AI Layout Optimizer"]
+    B -->|Optimize Layout| C["Vector Glyph Translation Engine"]
+    C -->|Procedural Alternates| D["Jitter & Humanization Pipeline"]
+    D -->|Humanize Path| E["Bilinear / Affine Translation Matrix"]
+    E -->|Bilinear Warp| F["G-Code Compiler"]
+    F -->|Slow Start| G["OctoPrint Serial Comm API"]
+    G -->|Babystepping| H["Physical Pen Plotter Carriage"]
 ```
 
 ---
