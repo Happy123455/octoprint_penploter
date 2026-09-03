@@ -211,13 +211,13 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
                 <!-- Font Type Selector -->
                 <div class="grid grid-cols-3 gap-1 mb-4">
-                    <button id="fontSelectStroke" class="py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all">
+                    <button id="fontSelectStroke" class="py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition-all">
                         🖊️ Built-In Single
                     </button>
                     <button id="fontSelectCustom" class="py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition-all">
                         📤 Upload TTF
                     </button>
-                    <button id="fontSelectDrawn" class="py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition-all font-bold">
+                    <button id="fontSelectDrawn" class="py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all font-bold">
                         ✍️ My Canvas Font
                     </button>
                 </div>
@@ -1656,10 +1656,12 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             }
             
             if (!isReallyEmpty) {
-                // If they have existing custom drawn letters, default to 'drawn' mode on startup
+                // If they have existing custom drawn letters, ensure 'drawn' mode is active by default
+                activeFontMode = 'drawn';
                 setTimeout(() => {
-                    if (typeof setFontMode === 'function') setFontMode('drawn');
-                }, 100);
+                    if (typeof setFontMode === 'function') setFontMode('drawn', false);
+                    triggerPreviewUpdate();
+                }, 50);
                 return;
             }
             
@@ -1682,13 +1684,12 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     rebuildVariantSelectors();
                     updateCharGridHighlights();
                     drawDesignerGrid();
+                    activeFontMode = 'drawn';
                     if (typeof setFontMode === 'function') {
-                        setFontMode('drawn');
-                    } else {
-                        activeFontMode = 'drawn';
-                        triggerPreviewUpdate();
+                        setFontMode('drawn', false);
                     }
-                    showToast("Pre-loaded 'Finlay Handwriting' font successfully!", "success");
+                    triggerPreviewUpdate();
+                    showToast("Loaded default 'Finlay Handwriting' font!", "success");
                 })
                 .catch(err => {
                     console.warn("Could not auto-load Finlay font:", err);
@@ -2551,11 +2552,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         const customFontUploadArea = document.getElementById('customFontUploadArea');
         const fontFileInput = document.getElementById('fontFileInput');
 
-        let activeFontMode = 'stroke'; // 'stroke', 'custom', or 'drawn'
+        let activeFontMode = 'drawn'; // Defaults to 'drawn' (Finlay Handwriting)
         let uploadedFont = null;
         let lastMissingChars = new Set();
 
-        function setFontMode(mode) {
+        function setFontMode(mode, switchTabs = false) {
             activeFontMode = mode;
             [fontSelectStroke, fontSelectCustom, fontSelectDrawn].forEach(btn => {
                 btn.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition-all";
@@ -2568,16 +2569,18 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 fontSelectCustom.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all";
                 customFontUploadArea.classList.remove('hidden');
             } else {
-                fontSelectDrawn.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all";
+                fontSelectDrawn.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all font-bold";
                 customFontUploadArea.classList.add('hidden');
-                switchTab(tabDesigner, contentDesigner); // Guide user automatically to drawing workspace
+                if (switchTabs) {
+                    switchTab(tabDesigner, contentDesigner);
+                }
             }
             triggerPreviewUpdate();
         }
 
-        fontSelectStroke.addEventListener('click', () => setFontMode('stroke'));
-        fontSelectCustom.addEventListener('click', () => setFontMode('custom'));
-        fontSelectDrawn.addEventListener('click', () => setFontMode('drawn'));
+        fontSelectStroke.addEventListener('click', () => setFontMode('stroke', false));
+        fontSelectCustom.addEventListener('click', () => setFontMode('custom', false));
+        fontSelectDrawn.addEventListener('click', () => setFontMode('drawn', false));
 
         fontFileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -8089,7 +8092,9 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 }
                 
                 if (data.activeFontMode) {
-                    setFontMode(data.activeFontMode);
+                    setFontMode(data.activeFontMode, false);
+                } else {
+                    setFontMode('drawn', false);
                 }
                 
                 if (data.enableCalibAutomation !== undefined && document.getElementById('enableCalibAutomation')) {
