@@ -559,13 +559,19 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         <input type="password" id="octoprintApiKey" value="" class="w-full bg-slate-950 border border-slate-800 rounded px-3 py-1.5 text-xs text-slate-200 font-mono" placeholder="Paste API Key here..." />
                     </div>
                     
-                    <div class="flex gap-2">
-                        <button id="btnOctoprintUpload" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center justify-center gap-1.5">
-                            📤 Upload G-Code
+                    <div class="flex flex-col gap-2">
+                        <button id="btnOctoGenerateAndPrint" class="w-full py-2.5 px-3 rounded-lg text-xs font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white shadow-lg transition flex items-center justify-center gap-2 border border-emerald-400/30 active:scale-95">
+                            ⚡ Generate & Print (1-Click)
+                            <span id="shortcutBadgeRight" class="text-[9px] font-mono bg-black/40 px-1.5 py-0.5 rounded border border-white/20 text-white/90">Cmd+Enter</span>
                         </button>
-                        <button id="btnOctoprintPrint" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow transition flex items-center justify-center gap-1.5">
-                            ▶️ Upload & Print
-                        </button>
+                        <div class="flex gap-2">
+                            <button id="btnOctoprintUpload" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center justify-center gap-1.5">
+                                📤 Upload G-Code
+                            </button>
+                            <button id="btnOctoprintPrint" class="flex-1 py-2 px-3 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow transition flex items-center justify-center gap-1.5">
+                                ▶️ Upload & Print
+                            </button>
+                        </div>
                     </div>
                     <div id="octoprintConnStatus" class="text-[10px] text-slate-500 text-center mt-1">Not Connected</div>
                     
@@ -632,6 +638,30 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         <button id="btnDismissSlowStartTuning" class="w-full py-1 mt-1 text-[9px] font-bold rounded bg-slate-900 hover:bg-slate-850 text-slate-400 transition border border-slate-800">
                             Dismiss / Tuning Complete
                         </button>
+                    </div>
+
+                    <!-- Post-Print Automation: Reset Calibration & Park -->
+                    <div class="pt-3 border-t border-slate-800/40 mt-2 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-300 cursor-pointer select-none">
+                                <input type="checkbox" id="enablePostPrintAuto" checked class="rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-0 cursor-pointer h-3.5 w-3.5" />
+                                <span>Auto Post-Print Reset & Park</span>
+                            </label>
+                            <button id="btnManualPark" type="button" class="text-[10px] text-indigo-400 hover:text-indigo-300 underline flex items-center gap-1">
+                                🏠 Park Now
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                            <div>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">Park X (mm)</label>
+                                <input type="number" id="postPrintParkX" value="-6.44" step="0.01" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono" />
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">Park Y (mm)</label>
+                                <input type="number" id="postPrintParkY" value="211.92" step="0.01" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono" />
+                            </div>
+                        </div>
+                        <span class="text-[9px] text-slate-500 block leading-tight">When print finishes: automatically resets calibration points, homes printer (G28), and travels to X: -6.44 Y: 211.92.</span>
                     </div>
                 </div>
             </div>
@@ -811,8 +841,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     Ruled Lines on Bed: Calculating...
                 </div>
 
-                <!-- Reset Buttons -->
+                <!-- Reset & FPS Calibration Buttons -->
                 <div class="flex flex-col gap-2 pt-1">
+                    <button id="btnStartFpsCalib" class="w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg border border-indigo-400/30 transition flex items-center justify-center gap-2 cursor-pointer">
+                        🎯 Real-Time FPS Mouse Calibration
+                    </button>
                     <button id="btnResetCalibPoints" class="w-full py-1.5 px-2 rounded-lg bg-red-950 hover:bg-red-900 border border-red-900/60 text-red-300 text-[10px] font-semibold transition">
                         🗑️ Reset Calibration Points
                     </button>
@@ -827,8 +860,24 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 <button id="generateVerifyAlignmentGCodeBtn" class="w-full py-2.5 px-4 rounded-xl font-medium text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition shadow-lg flex items-center justify-center gap-2 text-xs">
                     🔍 Run 10s Alignment Verification (Dry Run)
                 </button>
-                <button id="generateGCodeBtn" class="w-full py-4 px-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition shadow-lg flex items-center justify-center gap-2 text-lg">
-                    ⚡ Generate Plotter G-Code
+                
+                <!-- Unified Generate & Print Button -->
+                <button id="btnGenerateAndPrint" class="w-full py-4 px-4 rounded-xl font-black text-white bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 active:scale-95 transition shadow-2xl flex items-center justify-center gap-2 text-base sm:text-lg border border-emerald-400/30 cursor-pointer">
+                    ⚡ Generate & Print (1-Click)
+                    <span id="shortcutBadgeLeft" class="text-[10px] font-mono bg-black/40 px-2 py-0.5 rounded border border-white/20 text-white/90">Cmd+Enter</span>
+                </button>
+
+                <!-- Keyboard Shortcut Configurator -->
+                <div class="flex items-center justify-between text-[11px] text-slate-400 bg-slate-950/60 px-3 py-1.5 rounded-lg border border-slate-800/80 select-none">
+                    <span class="flex items-center gap-1.5">⌨️ Print Shortcut:</span>
+                    <div class="flex items-center gap-1.5">
+                        <kbd id="shortcutDisplay" class="px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-indigo-300 font-mono text-[10px] cursor-pointer" title="Click to change shortcut">Cmd+Enter</kbd>
+                        <button id="btnChangeShortcut" type="button" class="text-[10px] text-slate-400 hover:text-white underline cursor-pointer">Change</button>
+                    </div>
+                </div>
+
+                <button id="generateGCodeBtn" class="w-full py-2.5 px-4 rounded-xl font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 active:scale-95 transition border border-slate-700 flex items-center justify-center gap-2 text-xs">
+                    📄 Generate G-Code Only
                 </button>
             </div>
             
@@ -888,6 +937,16 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             </div>
                         </div>
 
+                        <!-- Click Mode: Move Pen vs Edit Font -->
+                        <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-lg p-0.5">
+                            <button id="topClickModeJog" type="button" class="px-2.5 py-1 text-[10.5px] font-bold rounded-lg bg-indigo-600 text-white shadow flex items-center gap-1 cursor-pointer" title="Click anywhere on canvas to move pen nozzle">
+                                ✈️ Move Pen
+                            </button>
+                            <button id="topClickModeEdit" type="button" class="px-2.5 py-1 text-[10.5px] font-medium rounded-lg text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer" title="Click letters to edit in Font Designer">
+                                ✍️ Edit Font
+                            </button>
+                        </div>
+
                         <!-- Grid Toggle -->
                         <div class="flex items-center gap-2">
                             <label class="flex items-center gap-1.5 cursor-pointer select-none text-[10.5px] font-semibold text-slate-400 hover:text-white transition">
@@ -905,6 +964,55 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         <div id="calibrationErrorBadge" class="hidden absolute top-6 right-6 bg-slate-900/90 border border-slate-800 rounded p-2 text-xs font-bold shadow z-10 flex flex-col items-end pointer-events-none select-none">
                             <span class="text-[9px] text-slate-500 uppercase tracking-wider">Calibration Accuracy</span>
                             <span id="calibrationErrorValue" class="text-sm font-mono text-emerald-400 font-bold">0.00mm</span>
+                        </div>
+
+                        <!-- FPS Real-Time Calibration HUD Overlay -->
+                        <div id="fpsCalibHud" class="hidden absolute inset-0 bg-slate-950/50 backdrop-blur-[2px] flex flex-col items-center justify-between p-6 z-30 select-none cursor-crosshair">
+                            <!-- Top HUD Bar -->
+                            <div class="bg-slate-900/95 border border-indigo-500/50 rounded-2xl px-6 py-3 shadow-2xl flex flex-wrap items-center justify-between gap-4 max-w-xl w-full">
+                                <div class="flex items-center gap-3">
+                                    <div class="relative flex h-3 w-3">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                    </div>
+                                    <div class="text-left">
+                                        <div class="text-sm font-extrabold text-white flex items-center gap-2" id="fpsHudTitle">
+                                            🎯 FPS Mode: Calibrating Point 1 (Top-Left)
+                                        </div>
+                                        <div class="text-[11px] text-slate-300 mt-0.5" id="fpsHudInstruction">
+                                            Move mouse to jog nozzle • <span class="text-amber-300 font-bold">Double-Click</span> to lock point • <span class="text-rose-400 font-bold">ESC</span> to exit
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="border-l border-slate-700/80 pl-4 text-right font-mono text-xs">
+                                    <div class="text-indigo-300 font-bold" id="fpsHudCoords">X: 0.00 | Y: 0.00</div>
+                                    <div class="text-[10px] text-emerald-400 font-semibold" id="fpsHudStatus">Tracking Active</div>
+                                </div>
+                            </div>
+
+                            <!-- Center Reticle / Crosshair Indicator -->
+                            <div class="relative pointer-events-none flex items-center justify-center my-auto">
+                                <div class="w-20 h-20 rounded-full border-2 border-dashed border-indigo-400/60 animate-spin" style="animation-duration: 12s;"></div>
+                                <div class="w-8 h-8 rounded-full border border-emerald-400/80 absolute"></div>
+                                <div class="w-2 h-2 rounded-full bg-emerald-400 absolute shadow-lg shadow-emerald-500/50"></div>
+                                <div class="w-28 h-0.5 bg-gradient-to-r from-transparent via-indigo-400/80 to-transparent absolute"></div>
+                                <div class="w-0.5 h-28 bg-gradient-to-b from-transparent via-indigo-400/80 to-transparent absolute"></div>
+                            </div>
+
+                            <!-- Bottom Control Bar -->
+                            <div class="bg-slate-900/95 border border-slate-800 rounded-xl px-5 py-2.5 text-xs text-slate-300 shadow-2xl flex flex-wrap items-center justify-between gap-4 max-w-xl w-full">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-[11px] text-slate-400 font-semibold">Jog Sensitivity:</span>
+                                    <input type="range" id="fpsSensitivityRange" min="0.005" max="0.25" step="0.005" value="0.05" class="w-24 accent-indigo-500 cursor-pointer" />
+                                    <span id="fpsSensitivityVal" class="font-mono text-[10px] text-indigo-300 font-bold">0.050 mm/px</span>
+                                    <span class="text-[9.5px] text-slate-400 bg-slate-800/90 px-2 py-0.5 rounded border border-slate-700">Keys: ◀ ▶ or &lt; &gt;</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button id="btnExitFpsCalib" type="button" class="px-3 py-1 bg-red-600/90 hover:bg-red-500 text-white font-bold rounded-lg text-[11px] transition shadow">
+                                        Exit FPS Mode (ESC)
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -4778,20 +4886,20 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         // --- G-CODE GENERATOR ENGINE ---
         let generatedGCode = "";
 
-        // Standard generator compiler
-        document.getElementById('generateGCodeBtn').addEventListener('click', () => {
+        // Standard generator compiler (standalone function for reuse)
+        function generatePlotterGCode(silent = false) {
             const settings = getSettings();
             const paths = computeHandwritingLayout(settings);
             
             if (paths.length === 0) {
                 showToast("Cannot generate G-code - text paths are empty", "error");
-                return;
+                return false;
             }
             
             const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
             if (settings.use3PointCalib && !calibMatrix) {
                 showToast("Calibration is active but the reference points are not configured properly!", "error");
-                return;
+                return false;
             }
             
             let gcode = [];
@@ -4877,15 +4985,31 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             // Ending sequence
             gcode.push("; --- END PLOT PATHS ---");
             gcode.push(`G0 Z${(settings.zUp + 15).toFixed(2)} F${settings.travelFeed} ; Raise pen high for safety`);
-            gcode.push("G28 X0 Y0 ; Move bed forward and hotend out of the way");
-            gcode.push("M84 ; Disable stepper motors");
+            
+            const autoPostPrint = document.getElementById('enablePostPrintAuto') ? document.getElementById('enablePostPrintAuto').checked : true;
+            if (autoPostPrint) {
+                const parkX = parseFloat(document.getElementById('postPrintParkX').value) || -6.44;
+                const parkY = parseFloat(document.getElementById('postPrintParkY').value) || 211.92;
+                gcode.push("; Post-Print Auto Park Sequence");
+                gcode.push("G28 ; Home Printer");
+                gcode.push(`G0 X${parkX.toFixed(2)} Y${parkY.toFixed(2)} F3600 ; Park at standby location`);
+                gcode.push("; Note: Stepper motors kept energized for immediate calibration");
+            } else {
+                gcode.push("G28 X0 Y0 ; Move bed forward and hotend out of the way");
+                gcode.push("M84 ; Disable stepper motors");
+            }
             gcode.push("");
             
             generatedGCode = gcode.join('\n');
             document.getElementById('gcodeOutput').textContent = generatedGCode;
-            switchTab(tabGcode, contentGcode);
-            showToast("Successfully generated G-code!", "success");
-        });
+            if (!silent) {
+                switchTab(tabGcode, contentGcode);
+                showToast("Successfully generated G-code!", "success");
+            }
+            return true;
+        }
+
+        document.getElementById('generateGCodeBtn').addEventListener('click', () => generatePlotterGCode(false));
 
         // Calibration G-code compiler (Draws boundary borders to align physical notebook lines)
         document.getElementById('generateCalibrationGCodeBtn').addEventListener('click', () => {
@@ -5399,6 +5523,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 if (startPrint) {
                     showToast("Successfully uploaded & started printing!", "success");
                     triggerSlowStartTuning(60);
+                    startJobCompletionMonitor();
                 } else {
                     showToast("Successfully uploaded to OctoPrint folder!", "success");
                 }
@@ -5408,8 +5533,191 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             });
         }
         
+        // Unified Generate and Print Action
+        function generateAndPrint() {
+            const success = generatePlotterGCode(true);
+            if (!success) return;
+            uploadToOctoprint(true);
+        }
+
         document.getElementById('btnOctoprintUpload').addEventListener('click', () => uploadToOctoprint(false));
         document.getElementById('btnOctoprintPrint').addEventListener('click', () => uploadToOctoprint(true));
+
+        const btnOctoGenPrint = document.getElementById('btnOctoGenerateAndPrint');
+        if (btnOctoGenPrint) btnOctoGenPrint.addEventListener('click', generateAndPrint);
+
+        const btnGenAndPrint = document.getElementById('btnGenerateAndPrint');
+        if (btnGenAndPrint) btnGenAndPrint.addEventListener('click', generateAndPrint);
+
+        // --- CUSTOMIZABLE PRINT SHORTCUT ENGINE ---
+        const isMacPlatform = typeof navigator !== 'undefined' && navigator.platform && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        let customPrintShortcut = {
+            ctrl: !isMacPlatform,
+            meta: isMacPlatform,
+            alt: false,
+            shift: false,
+            key: 'Enter',
+            code: 'Enter',
+            display: isMacPlatform ? 'Cmd+Enter' : 'Ctrl+Enter'
+        };
+
+        function loadPrintShortcut() {
+            const saved = safeGetItem('plotter_custom_print_shortcut');
+            if (saved) {
+                try {
+                    customPrintShortcut = JSON.parse(saved);
+                } catch(e) {}
+            }
+            updateShortcutBadges();
+        }
+
+        function updateShortcutBadges() {
+            const badgeLeft = document.getElementById('shortcutBadgeLeft');
+            const badgeRight = document.getElementById('shortcutBadgeRight');
+            const display = document.getElementById('shortcutDisplay');
+            if (badgeLeft) badgeLeft.textContent = customPrintShortcut.display;
+            if (badgeRight) badgeRight.textContent = customPrintShortcut.display;
+            if (display) {
+                display.textContent = customPrintShortcut.display;
+                display.className = 'px-2 py-0.5 bg-slate-800 border border-slate-700 rounded text-indigo-300 font-mono text-[10px] cursor-pointer';
+            }
+        }
+
+        let isRecordingShortcut = false;
+        function startRecordingShortcut() {
+            isRecordingShortcut = true;
+            const display = document.getElementById('shortcutDisplay');
+            if (display) {
+                display.textContent = 'Press keys...';
+                display.className = 'px-2 py-0.5 bg-amber-500/20 border border-amber-500 rounded text-amber-300 font-mono text-[10px] animate-pulse cursor-pointer';
+            }
+            showToast("Press any key combination (e.g. Cmd+Enter, Ctrl+P, F9)...", "info");
+        }
+
+        const btnChangeShortcut = document.getElementById('btnChangeShortcut');
+        if (btnChangeShortcut) btnChangeShortcut.addEventListener('click', startRecordingShortcut);
+        const shortcutDisplayEl = document.getElementById('shortcutDisplay');
+        if (shortcutDisplayEl) shortcutDisplayEl.addEventListener('click', startRecordingShortcut);
+
+        function matchesPrintShortcut(e) {
+            if (!customPrintShortcut) return false;
+            
+            const reqMeta = !!customPrintShortcut.meta;
+            const reqCtrl = !!customPrintShortcut.ctrl;
+            
+            let modMatch = false;
+            if (reqMeta || reqCtrl) {
+                modMatch = e.metaKey || e.ctrlKey;
+            } else {
+                modMatch = !e.metaKey && !e.ctrlKey;
+            }
+            
+            const altMatch = !!customPrintShortcut.alt === e.altKey;
+            const shiftMatch = !!customPrintShortcut.shift === e.shiftKey;
+            
+            const keyMatch = (e.key && e.key.toLowerCase() === (customPrintShortcut.key || '').toLowerCase()) ||
+                             (e.code && e.code === customPrintShortcut.code);
+                             
+            return modMatch && altMatch && shiftMatch && keyMatch;
+        }
+
+        // --- POST-PRINT AUTOMATION & JOB MONITOR ---
+        let jobPollingInterval = null;
+        let isCurrentlyPrinting = false;
+
+        function startJobCompletionMonitor() {
+            if (jobPollingInterval) clearInterval(jobPollingInterval);
+            isCurrentlyPrinting = true;
+            
+            jobPollingInterval = setInterval(() => {
+                const url = getCleanOctoprintUrl();
+                const apiKey = octoprintApiKeyInput.value.trim();
+                if (!url) return;
+                
+                fetch(`${url}/api/job`, {
+                    headers: { 'X-Api-Key': apiKey }
+                })
+                .then(res => {
+                    if (res.ok) return res.json();
+                    throw new Error("HTTP " + res.status);
+                })
+                .then(data => {
+                    const state = data.state;
+                    const completion = (data.progress && typeof data.progress.completion === 'number') ? data.progress.completion : 0;
+                    
+                    if (state === "Printing") {
+                        isCurrentlyPrinting = true;
+                    } else if (isCurrentlyPrinting && (state === "Operational" || state === "Finishing" || completion >= 100)) {
+                        isCurrentlyPrinting = false;
+                        clearInterval(jobPollingInterval);
+                        jobPollingInterval = null;
+                        // Hardware already parked via G-code end sequence; do not send G28 twice!
+                        executePostPrintAutomation(false);
+                    }
+                })
+                .catch(() => {});
+            }, 1800);
+        }
+
+        function executePostPrintAutomation(sendHardwareCommands = false) {
+            const autoEnabled = document.getElementById('enablePostPrintAuto') ? document.getElementById('enablePostPrintAuto').checked : true;
+            if (!autoEnabled) return;
+
+            const parkX = parseFloat(document.getElementById('postPrintParkX').value) || -6.44;
+            const parkY = parseFloat(document.getElementById('postPrintParkY').value) || 211.92;
+
+            // 1. Reset calibration points in UI
+            if (typeof resetCalibrationPointsUI === 'function') {
+                resetCalibrationPointsUI();
+            }
+
+            // 2. Send physical G28 and travel ONLY if requested (e.g. manual park button)
+            // (During print completion, the generated G-code already homes and parks the printer once)
+            if (sendHardwareCommands) {
+                const url = getCleanOctoprintUrl();
+                const apiKey = octoprintApiKeyInput.value.trim();
+                if (url) {
+                    fetch(`${url}/api/printer/command`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Api-Key': apiKey
+                        },
+                        body: JSON.stringify({
+                            commands: [
+                                "G91",
+                                "G0 Z10 F3000",
+                                "G90",
+                                "G28",
+                                `G0 X${parkX.toFixed(2)} Y${parkY.toFixed(2)} F3600`
+                            ]
+                        })
+                    }).catch(() => {});
+                }
+            }
+
+            // 3. Update virtual coordinates & UI
+            jogVirtualX = parkX;
+            jogVirtualY = parkY;
+            updateVirtualUI();
+            triggerPreviewUpdate();
+
+            showToast(`✅ Print completed! Reset points & parked at X: ${parkX}, Y: ${parkY}`, "success");
+
+            // 4. Automatically trigger Real-Time FPS Mouse Calibration mode!
+            setTimeout(() => {
+                if (typeof enterFpsCalibMode === 'function') {
+                    enterFpsCalibMode();
+                }
+            }, 600);
+        }
+
+        const btnManualPark = document.getElementById('btnManualPark');
+        if (btnManualPark) {
+            btnManualPark.addEventListener('click', () => {
+                executePostPrintAutomation(true);
+            });
+        }
 
         // Helper to send direct commands (e.g. M290 Babystepping) to OctoPrint printer
         function sendOctoprintGCodeCommand(cmd) {
@@ -5671,16 +5979,22 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             });
         }
 
-        // Travel to specific saved point
+        // Travel to specific point on the bed
         function travelToPoint(x, y) {
             if (isNaN(x) || isNaN(y)) {
                 showToast("Point coordinates not set!", "warning");
                 return;
             }
-            jogVirtualX = x;
-            jogVirtualY = y;
+            const clampedX = Math.max(-16.6, Math.min(220.0, x));
+            const clampedY = Math.max(0.0, Math.min(220.0, y));
+            
+            jogVirtualX = clampedX;
+            jogVirtualY = clampedY;
             updateVirtualUI();
-            sendJogGCodeCommands(["G90", `G0 X${x.toFixed(2)} Y${y.toFixed(2)} F3000`]);
+            if (typeof renderPreview === 'function') renderPreview();
+            
+            showToast(`✈️ Moving pen to X: ${clampedX.toFixed(2)}, Y: ${clampedY.toFixed(2)}`, "info");
+            sendJogGCodeCommands(["G90", `G0 X${clampedX.toFixed(2)} Y${clampedY.toFixed(2)} F3000`]);
         }
 
         document.getElementById('btnJogHome').addEventListener('click', homePrinter);
@@ -5813,14 +6127,23 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         });
 
 
-        document.getElementById('btnResetCalibPoints').addEventListener('click', () => {
+        function resetCalibrationPointsUI() {
             calibInputs.forEach(id => {
-                document.getElementById(id).value = "";
+                const el = document.getElementById(id);
+                if (el) el.value = "";
             });
-            document.getElementById('use3PointCalib').checked = false;
+            const use3p = document.getElementById('use3PointCalib');
+            if (use3p) use3p.checked = false;
             updateCalibLabels();
             saveCalibPointsToLocalStorage();
             triggerPreviewUpdate();
+            if (typeof updateFpsCalibButtonState === 'function') {
+                updateFpsCalibButtonState();
+            }
+        }
+
+        document.getElementById('btnResetCalibPoints').addEventListener('click', () => {
+            resetCalibrationPointsUI();
             showToast("Calibration points reset", "info");
         });
 
@@ -5892,7 +6215,271 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             }
             updateCalibrationErrorBadge();
             checkCalibrationStateConflict();
+            updateFpsCalibButtonState();
         }
+
+        // --- FPS REAL-TIME MOUSE CALIBRATION ENGINE ---
+        let isFpsCalibMode = false;
+        let fpsActivePointIndex = 1;
+        let fpsSensitivity = 0.05; // mm per mouse pixel
+        let fpsLastJogTime = 0;
+        let fpsIsSendingJog = false;
+        let fpsPendingCoords = null;
+        let fpsIsAutomatingJump = false;
+
+        function updateFpsCalibButtonState() {
+            const btn = document.getElementById('btnStartFpsCalib');
+            if (!btn) return;
+            const p1 = getLiveCalibPoint(1);
+            const p2 = getLiveCalibPoint(2);
+            const p3 = getLiveCalibPoint(3);
+            const p4 = getLiveCalibPoint(4);
+            if (p1 && p2 && p3 && p4) {
+                btn.disabled = true;
+                btn.className = "w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed flex items-center justify-center gap-2";
+                btn.title = "All 4 points calibrated. Reset points first to recalibrate.";
+            } else {
+                btn.disabled = false;
+                btn.className = "w-full py-2.5 px-3 rounded-xl font-bold text-xs bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg border border-indigo-400/30 transition flex items-center justify-center gap-2 cursor-pointer";
+                btn.title = "Start real-time FPS mouse calibration";
+            }
+        }
+
+        function getNextUnsetCalibPointIndex() {
+            if (!getLiveCalibPoint(1)) return 1;
+            if (!getLiveCalibPoint(2)) return 2;
+            if (!getLiveCalibPoint(3)) return 3;
+            if (!getLiveCalibPoint(4)) return 4;
+            return null;
+        }
+
+        const pointNames = {
+            1: "Point 1 of 4 (Top-Left)",
+            2: "Point 2 of 4 (Top-Right)",
+            3: "Point 3 of 4 (Bottom-Left)",
+            4: "Point 4 of 4 (Bottom-Right)"
+        };
+
+        function updateFpsHud() {
+            const title = document.getElementById('fpsHudTitle');
+            const instruction = document.getElementById('fpsHudInstruction');
+            const status = document.getElementById('fpsHudStatus');
+            const coords = document.getElementById('fpsHudCoords');
+            
+            if (title) title.textContent = `🎯 FPS Mode: Calibrating ${pointNames[fpsActivePointIndex] || 'Point ' + fpsActivePointIndex}`;
+            if (instruction) {
+                if (fpsIsAutomatingJump) {
+                    instruction.innerHTML = `<span class="text-amber-400 font-bold animate-pulse">Running automated jump travel...</span>`;
+                } else {
+                    instruction.innerHTML = `Move mouse to jog nozzle • <span class="text-amber-300 font-bold">Double-Click</span> to lock point • <span class="text-sky-300 font-bold">◀ ▶ or &lt; &gt;</span> sensitivity (${fpsSensitivity.toFixed(3)}) • <span class="text-rose-400 font-bold">ESC</span> to exit`;
+                }
+            }
+            if (status) {
+                if (fpsIsAutomatingJump) {
+                    status.textContent = "Auto Traveling";
+                    status.className = "text-[10px] text-amber-400 font-semibold";
+                } else if (document.pointerLockElement === previewCanvas) {
+                    status.textContent = "Tracking Active";
+                    status.className = "text-[10px] text-emerald-400 font-semibold";
+                } else {
+                    status.textContent = "Click to Resume";
+                    status.className = "text-[10px] text-amber-300 font-semibold animate-pulse";
+                }
+            }
+            if (coords) coords.textContent = `X: ${jogVirtualX.toFixed(2)} | Y: ${jogVirtualY.toFixed(2)}`;
+        }
+
+        function enterFpsCalibMode() {
+            const nextIdx = getNextUnsetCalibPointIndex();
+            if (nextIdx === null) {
+                showToast("All 4 calibration points are already set! Reset them first to calibrate.", "warning");
+                return;
+            }
+            
+            // Switch to Layout preview tab so canvas is active
+            if (typeof switchTab === 'function' && typeof tabCanvas !== 'undefined' && typeof contentCanvas !== 'undefined') {
+                switchTab(tabCanvas, contentCanvas);
+            }
+            
+            fpsActivePointIndex = nextIdx;
+            isFpsCalibMode = true;
+            fpsIsAutomatingJump = false;
+            
+            const hud = document.getElementById('fpsCalibHud');
+            if (hud) hud.classList.remove('hidden');
+            
+            updateFpsHud();
+            
+            try {
+                previewCanvas.requestPointerLock();
+            } catch(e) {}
+            
+            showToast(`🎯 FPS Calibration Mode: Aiming ${pointNames[fpsActivePointIndex]}. Double-click to lock point.`, "info");
+        }
+
+        function exitFpsCalibMode(completed = false) {
+            isFpsCalibMode = false;
+            fpsIsAutomatingJump = false;
+            
+            const hud = document.getElementById('fpsCalibHud');
+            if (hud) hud.classList.add('hidden');
+            
+            if (document.exitPointerLock) {
+                try {
+                    document.exitPointerLock();
+                } catch(e) {}
+            }
+            
+            updateFpsCalibButtonState();
+            
+            if (completed) {
+                showToast("🎉 All 4 calibration points marked! Calibration complete.", "success");
+            } else {
+                showToast("Exited FPS calibration mode.", "info");
+            }
+        }
+
+        function lockFpsPoint() {
+            if (!isFpsCalibMode || fpsIsAutomatingJump) return;
+            
+            const currentIdx = fpsActivePointIndex;
+            captureCalibPoint(currentIdx);
+            
+            if (currentIdx === 4) {
+                setTimeout(() => {
+                    exitFpsCalibMode(true);
+                }, 300);
+                return;
+            }
+            
+            fpsIsAutomatingJump = true;
+            updateFpsHud();
+            
+            const autoEnabled = document.getElementById('enableCalibAutomation') ? document.getElementById('enableCalibAutomation').checked : true;
+            let jumpDelay = 800;
+            if (currentIdx === 2) jumpDelay = 1200;
+            if (!autoEnabled) jumpDelay = 200;
+            
+            setTimeout(() => {
+                fpsIsAutomatingJump = false;
+                fpsActivePointIndex = currentIdx + 1;
+                updateFpsHud();
+                
+                if (document.pointerLockElement !== previewCanvas) {
+                    try {
+                        previewCanvas.requestPointerLock();
+                    } catch(e) {}
+                }
+                showToast(`Point ${currentIdx} locked! Aiming ${pointNames[fpsActivePointIndex]}. Double-click when ready.`, "info");
+            }, jumpDelay + 400);
+        }
+
+        function scheduleFpsThrottledJog(x, y) {
+            fpsPendingCoords = { x, y };
+            if (fpsIsSendingJog) return;
+            
+            const now = performance.now();
+            if (now - fpsLastJogTime < 70) {
+                return;
+            }
+            dispatchFpsJog();
+        }
+
+        function dispatchFpsJog() {
+            if (!fpsPendingCoords) return;
+            const target = fpsPendingCoords;
+            fpsPendingCoords = null;
+            fpsLastJogTime = performance.now();
+            fpsIsSendingJog = true;
+            
+            const url = getCleanOctoprintUrl();
+            const apiKey = octoprintApiKeyInput.value.trim();
+            if (!url) {
+                fpsIsSendingJog = false;
+                return;
+            }
+            
+            fetch(`${url}/api/printer/command`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Api-Key': apiKey
+                },
+                body: JSON.stringify({
+                    commands: [
+                        "G90",
+                        `G0 X${target.x.toFixed(2)} Y${target.y.toFixed(2)} F3000`
+                    ]
+                })
+            })
+            .catch(() => {})
+            .finally(() => {
+                fpsIsSendingJog = false;
+                if (fpsPendingCoords) {
+                    setTimeout(dispatchFpsJog, 40);
+                }
+            });
+        }
+
+        // Sensitivity control (via slider, arrow keys, < >, [ ], + -)
+        const fpsSensSlider = document.getElementById('fpsSensitivityRange');
+        const fpsSensVal = document.getElementById('fpsSensitivityVal');
+
+        function updateFpsSensitivityDisplay(silent = false) {
+            if (fpsSensSlider) fpsSensSlider.value = fpsSensitivity;
+            if (fpsSensVal) fpsSensVal.textContent = `${fpsSensitivity.toFixed(3)} mm/px`;
+            safeSetItem('plotter_fps_sensitivity', fpsSensitivity.toString());
+            if (!silent && isFpsCalibMode) {
+                updateFpsHud();
+                showToast(`🎯 Jog Sensitivity: ${fpsSensitivity.toFixed(3)} mm/px`, "info");
+            }
+        }
+
+        function adjustFpsSensitivity(delta) {
+            fpsSensitivity = Math.max(0.005, Math.min(0.25, parseFloat((fpsSensitivity + delta).toFixed(3))));
+            updateFpsSensitivityDisplay(false);
+        }
+
+        if (fpsSensSlider) {
+            const savedSens = parseFloat(safeGetItem('plotter_fps_sensitivity'));
+            if (!isNaN(savedSens) && savedSens >= 0.005) {
+                fpsSensitivity = savedSens;
+            }
+            updateFpsSensitivityDisplay(true);
+            fpsSensSlider.addEventListener('input', () => {
+                fpsSensitivity = parseFloat(fpsSensSlider.value) || 0.05;
+                updateFpsSensitivityDisplay(false);
+            });
+        }
+
+        // HUD click to re-lock
+        const fpsHudOverlay = document.getElementById('fpsCalibHud');
+        if (fpsHudOverlay) {
+            fpsHudOverlay.addEventListener('click', (e) => {
+                if (e.target.id === 'btnExitFpsCalib' || e.target.closest('#btnExitFpsCalib') || e.target === fpsSensSlider) return;
+                if (isFpsCalibMode && document.pointerLockElement !== previewCanvas) {
+                    try {
+                        previewCanvas.requestPointerLock();
+                    } catch(err) {}
+                }
+            });
+        }
+
+        const btnExitFpsEl = document.getElementById('btnExitFpsCalib');
+        if (btnExitFpsEl) {
+            btnExitFpsEl.addEventListener('click', () => exitFpsCalibMode(false));
+        }
+
+        const btnStartFpsEl = document.getElementById('btnStartFpsCalib');
+        if (btnStartFpsEl) {
+            btnStartFpsEl.addEventListener('click', enterFpsCalibMode);
+        }
+
+        document.addEventListener('pointerlockchange', () => {
+            if (isFpsCalibMode) {
+                updateFpsHud();
+            }
+        });
 
         // --- PROFILE MANAGEMENT SYSTEM ---
         const profileSelect = document.getElementById('profileSelect');
@@ -6193,22 +6780,51 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             showToast(`Editing character '${textTargetChar}' (Variant 1) in Designer`, "info");
         });
 
-        // Canvas Click Mode Toggle Logic
-        let canvasClickMode = 'edit';
+        // Canvas Click Mode Toggle Logic (Defaults to 'jog' so normal tap moves the pen)
+        let canvasClickMode = 'jog';
         const btnClickModeEdit = document.getElementById('clickModeEdit');
         const btnClickModeJog = document.getElementById('clickModeJog');
+        const topClickModeJog = document.getElementById('topClickModeJog');
+        const topClickModeEdit = document.getElementById('topClickModeEdit');
         
-        btnClickModeEdit.addEventListener('click', () => {
-            canvasClickMode = 'edit';
-            btnClickModeEdit.className = "px-2 py-0.5 text-[8.5px] font-bold rounded bg-indigo-950 text-indigo-300 border border-indigo-900";
-            btnClickModeJog.className = "px-2 py-0.5 text-[8.5px] font-bold rounded text-slate-400 border border-transparent";
-        });
+        function setCanvasClickMode(mode, silent = false) {
+            canvasClickMode = mode;
+            if (btnClickModeJog) {
+                btnClickModeJog.className = mode === 'jog' 
+                    ? "px-2 py-0.5 text-[8.5px] font-bold rounded bg-indigo-600 text-white shadow" 
+                    : "px-2 py-0.5 text-[8.5px] font-bold rounded text-slate-400 border border-transparent hover:text-white";
+            }
+            if (btnClickModeEdit) {
+                btnClickModeEdit.className = mode === 'edit' 
+                    ? "px-2 py-0.5 text-[8.5px] font-bold rounded bg-indigo-600 text-white shadow" 
+                    : "px-2 py-0.5 text-[8.5px] font-bold rounded text-slate-400 border border-transparent hover:text-white";
+            }
+            if (topClickModeJog) {
+                topClickModeJog.className = mode === 'jog'
+                    ? "px-2.5 py-1 text-[10.5px] font-bold rounded-lg bg-indigo-600 text-white shadow flex items-center gap-1 cursor-pointer"
+                    : "px-2.5 py-1 text-[10.5px] font-medium rounded-lg text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer";
+            }
+            if (topClickModeEdit) {
+                topClickModeEdit.className = mode === 'edit'
+                    ? "px-2.5 py-1 text-[10.5px] font-bold rounded-lg bg-indigo-600 text-white shadow flex items-center gap-1 cursor-pointer"
+                    : "px-2.5 py-1 text-[10.5px] font-medium rounded-lg text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer";
+            }
+            if (!silent) {
+                if (mode === 'jog') {
+                    showToast("Canvas click mode: ✈️ Move Pen (Tap anywhere on canvas to move pen)", "info");
+                } else {
+                    showToast("Canvas click mode: ✍️ Edit Font (Click characters to edit in Designer)", "info");
+                }
+            }
+        }
+
+        if (btnClickModeEdit) btnClickModeEdit.addEventListener('click', () => setCanvasClickMode('edit'));
+        if (btnClickModeJog) btnClickModeJog.addEventListener('click', () => setCanvasClickMode('jog'));
+        if (topClickModeEdit) topClickModeEdit.addEventListener('click', () => setCanvasClickMode('edit'));
+        if (topClickModeJog) topClickModeJog.addEventListener('click', () => setCanvasClickMode('jog'));
         
-        btnClickModeJog.addEventListener('click', () => {
-            canvasClickMode = 'jog';
-            btnClickModeJog.className = "px-2 py-0.5 text-[8.5px] font-bold rounded bg-indigo-950 text-indigo-300 border border-indigo-900";
-            btnClickModeEdit.className = "px-2 py-0.5 text-[8.5px] font-bold rounded text-slate-400 border border-transparent";
-        });
+        // Initialize with 'jog' (Move Pen) active
+        setCanvasClickMode('jog', true);
 
         // --- INTERACTIVE LIVE CALIBRATION AND JOG CONTROLS ---
         let isDraggingPoint = false;
@@ -6779,6 +7395,22 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
 
         // Mouse move listener to update dragging, panning, or hover coordinates
         previewCanvas.addEventListener('mousemove', (e) => {
+            if (isFpsCalibMode && document.pointerLockElement === previewCanvas) {
+                if (fpsIsAutomatingJump) return;
+                
+                const dx = e.movementX * fpsSensitivity;
+                const dy = -e.movementY * fpsSensitivity; // mouse up is +Y
+                
+                jogVirtualX = Math.max(-16.6, Math.min(220.0, jogVirtualX + dx));
+                jogVirtualY = Math.max(0.0, Math.min(220.0, jogVirtualY + dy));
+                
+                updateVirtualUI();
+                updateFpsHud();
+                renderPreview();
+                scheduleFpsThrottledJog(jogVirtualX, jogVirtualY);
+                return;
+            }
+
             const rect = previewCanvas.getBoundingClientRect();
             
             if (isPanning) {
@@ -6846,21 +7478,34 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             const coords = screenToBedCoords(e.clientX, e.clientY, rect);
             const targetBedX = coords.bedX;
             const targetBedY = coords.bedY;
-            
+
+            // If in FPS calibration mode: double-click / fast 2 clicks locks the active calibration point
+            if (isFpsCalibMode) {
+                const now = performance.now();
+                if (now - lastCanvasClickTime <= 350) {
+                    lastCanvasClickTime = 0;
+                    lockFpsPoint();
+                } else {
+                    lastCanvasClickTime = now;
+                }
+                e.preventDefault();
+                return;
+            }
+
+            // Shift+Click: Lock calibration point
             if (e.shiftKey) {
                 lockNextCalibrationPoint(targetBedX, targetBedY);
                 e.preventDefault();
                 return;
             }
             
+            // Move Pen mode: Normal tap/click ALWAYS jogs the pen to the tapped point!
             if (canvasClickMode === 'jog') {
-                if (targetBedX >= -16.6 && targetBedX <= 220 && targetBedY >= 0 && targetBedY <= 220) {
-                    travelToPoint(targetBedX, targetBedY);
-                    renderPreview();
-                } else {
-                    showToast("Click is outside physical bed limits (-16.6 to 220mm)!", "warning");
-                }
+                travelToPoint(targetBedX, targetBedY);
+                e.preventDefault();
+                return;
             } else {
+                // Edit Font mode: click character to edit in Designer
                 const settings = getSettings();
                 const mmX = coords.bedX - settings.paperXShift;
                 const mmY = settings.paperYShift + 297.0 - targetBedY;
@@ -6921,16 +7566,96 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             e.preventDefault();
         });
 
-        // Double-click to reset zoom & pan (Transitioned smoothly)
+        // Double-click on canvas: Lock next calibration point (or jog in Move Pen mode)
         previewCanvas.addEventListener('dblclick', (e) => {
-            targetZoomScale = 1.0;
-            targetPanOffsetX = 0.0;
-            targetPanOffsetY = 0.0;
-            startAnimationLoop();
+            e.preventDefault();
+            if (isFpsCalibMode) {
+                lockFpsPoint();
+                return;
+            }
+            const rect = previewCanvas.getBoundingClientRect();
+            const coords = screenToBedCoords(e.clientX, e.clientY, rect);
+            if (canvasClickMode === 'jog') {
+                travelToPoint(coords.bedX, coords.bedY);
+            } else {
+                lockNextCalibrationPoint(coords.bedX, coords.bedY);
+            }
         });
 
-        // Keyboard Arrow Keys to Pan the Camera smoothly
+        // Touch support for iPad / mobile / trackpad tap in Safari
+        previewCanvas.addEventListener('touchend', (e) => {
+            if (e.touches && e.touches.length > 1) return;
+            if (!e.changedTouches || e.changedTouches.length === 0) return;
+            const touch = e.changedTouches[0];
+            const rect = previewCanvas.getBoundingClientRect();
+            const coords = screenToBedCoords(touch.clientX, touch.clientY, rect);
+            if (canvasClickMode === 'jog') {
+                travelToPoint(coords.bedX, coords.bedY);
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // Keyboard Event Handler: Pan, Shortcuts, and Automations
         window.addEventListener('keydown', (e) => {
+            // Check shortcut recording first
+            if (isRecordingShortcut) {
+                e.preventDefault();
+                if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) return;
+                
+                const parts = [];
+                if (e.metaKey) parts.push(isMacPlatform ? 'Cmd' : 'Win');
+                if (e.ctrlKey) parts.push('Ctrl');
+                if (e.altKey) parts.push('Alt');
+                if (e.shiftKey) parts.push('Shift');
+                
+                let keyName = e.key;
+                if (keyName === ' ') keyName = 'Space';
+                else if (keyName.length === 1) keyName = keyName.toUpperCase();
+                parts.push(keyName);
+                
+                customPrintShortcut = {
+                    ctrl: e.ctrlKey,
+                    meta: e.metaKey,
+                    alt: e.altKey,
+                    shift: e.shiftKey,
+                    key: e.key,
+                    code: e.code,
+                    display: parts.join('+')
+                };
+                
+                safeSetItem('plotter_custom_print_shortcut', JSON.stringify(customPrintShortcut));
+                isRecordingShortcut = false;
+                updateShortcutBadges();
+                showToast(`Print shortcut updated to: ${customPrintShortcut.display}`, "success");
+                return;
+            }
+
+            // Check customizable print shortcut (works everywhere, even inside text inputs!)
+            if (typeof matchesPrintShortcut === 'function' && matchesPrintShortcut(e)) {
+                e.preventDefault();
+                generateAndPrint();
+                return;
+            }
+
+            // Escape key exits FPS mode
+            if (e.key === 'Escape' && isFpsCalibMode) {
+                exitFpsCalibMode(false);
+                e.preventDefault();
+                return;
+            }
+
+            // Keyboard sensitivity adjustments while in FPS Calibration mode (Arrow keys, < >, [ ], + -)
+            if (isFpsCalibMode) {
+                const isIncrease = (e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === '>' || e.key === '.' || e.key === ']' || e.key === '+' || e.key === '=');
+                const isDecrease = (e.key === 'ArrowLeft' || e.key === 'ArrowDown' || e.key === '<' || e.key === ',' || e.key === '[' || e.key === '-');
+                if (isIncrease || isDecrease) {
+                    const step = e.shiftKey ? 0.01 : 0.005;
+                    adjustFpsSensitivity(isIncrease ? step : -step);
+                    e.preventDefault();
+                    return;
+                }
+            }
+
             // Ignore if active element is a form input to avoid breaking text navigation
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
                 return;
@@ -7576,11 +8301,45 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             document.getElementById('btnCalculateLeveling').addEventListener('click', calculateBedLeveling);
         }
 
+        function savePostPrintSettingsToLocalStorage() {
+            const enabled = document.getElementById('enablePostPrintAuto') ? document.getElementById('enablePostPrintAuto').checked : true;
+            const x = document.getElementById('postPrintParkX') ? document.getElementById('postPrintParkX').value : "-6.44";
+            const y = document.getElementById('postPrintParkY') ? document.getElementById('postPrintParkY').value : "211.92";
+            safeSetItem('plotter_post_print_auto', enabled ? 'true' : 'false');
+            safeSetItem('plotter_post_print_park_x', x);
+            safeSetItem('plotter_post_print_park_y', y);
+        }
+
+        function loadPostPrintSettingsFromLocalStorage() {
+            const savedEnabled = safeGetItem('plotter_post_print_auto');
+            const savedX = safeGetItem('plotter_post_print_park_x');
+            const savedY = safeGetItem('plotter_post_print_park_y');
+            if (savedEnabled !== null && document.getElementById('enablePostPrintAuto')) {
+                document.getElementById('enablePostPrintAuto').checked = (savedEnabled === 'true');
+            }
+            if (savedX !== null && document.getElementById('postPrintParkX')) {
+                document.getElementById('postPrintParkX').value = savedX;
+            }
+            if (savedY !== null && document.getElementById('postPrintParkY')) {
+                document.getElementById('postPrintParkY').value = savedY;
+            }
+        }
+
+        const autoPostPrintCheck = document.getElementById('enablePostPrintAuto');
+        if (autoPostPrintCheck) autoPostPrintCheck.addEventListener('change', savePostPrintSettingsToLocalStorage);
+        const parkXInp = document.getElementById('postPrintParkX');
+        if (parkXInp) parkXInp.addEventListener('change', savePostPrintSettingsToLocalStorage);
+        const parkYInp = document.getElementById('postPrintParkY');
+        if (parkYInp) parkYInp.addEventListener('change', savePostPrintSettingsToLocalStorage);
+
         // --- INITIALIZATION ---
         // Load settings profiles dict
         loadProfiles();
         loadCachedWebData();
         loadCalibPointsFromLocalStorage();
+        loadPostPrintSettingsFromLocalStorage();
+        loadPrintShortcut();
+        updateFpsCalibButtonState();
         updateVirtualUI();
         initSlowStartTuningListeners();
         initNavigationToolbar();
