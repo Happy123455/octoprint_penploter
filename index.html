@@ -518,6 +518,17 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 </div>
 
                 <div id="graphOverlayControls" class="space-y-3 hidden pt-3 border-t border-slate-800/80">
+                    <button id="btnOpenPhotoCalibStudio" type="button" class="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-emerald-950/50 flex items-center justify-center gap-2 transition cursor-pointer">
+                        <span>📐</span> Calibrate 4 Photo Corners (Studio)
+                    </button>
+                    <div class="flex items-center justify-between text-[10.5px] bg-slate-950 p-2 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 font-medium">Target Mapping:</span>
+                        <select id="selPhotoTargetMode" class="bg-slate-900 border border-slate-700 text-slate-200 text-[10.5px] font-semibold rounded px-2 py-1 cursor-pointer focus:ring-1 focus:ring-emerald-500">
+                            <option value="graph200">1cm Graph (200x200mm)</option>
+                            <option value="bedCalib">Printer Bed Calib (P1-P4)</option>
+                            <option value="custom">Custom Canvas Pins</option>
+                        </select>
+                    </div>
                     <div>
                         <div class="flex items-center justify-between text-[10.5px] mb-1">
                             <span class="text-slate-300">Photo Opacity (Press <kbd class="px-1 py-0.5 bg-slate-800 rounded font-mono text-emerald-400 font-bold">O</kbd> to cycle):</span>
@@ -1543,6 +1554,134 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             <div class="flex justify-end gap-3">
                 <button id="btnConfirmCancel" class="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">Cancel</button>
                 <button id="btnConfirmOk" class="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Corner Alignment Studio Modal -->
+    <div id="photoCalibModal" class="hidden fixed inset-0 z-[250] flex items-center justify-center p-2 sm:p-5 bg-slate-950/85 backdrop-blur-md">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden relative">
+            <!-- Header -->
+            <div class="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-950/70">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-xl">📐</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                            Photo Corner Alignment Studio
+                            <span class="text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 px-2 py-0.5 rounded-full font-semibold">10×10 Bilinear Homography</span>
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Drag the 4 colored pins onto the 4 corners of the graph paper in your photo. Use the loupe magnifier for pixel precision.</p>
+                    </div>
+                </div>
+                <button id="btnClosePhotoCalibModal" class="text-slate-400 hover:text-white text-xl font-bold p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer">&times;</button>
+            </div>
+
+            <!-- Body: Canvas on left, Controls on right -->
+            <div class="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+                <!-- Interactive Canvas Container -->
+                <div class="flex-1 relative bg-slate-950 flex items-center justify-center p-3 overflow-hidden select-none">
+                    <canvas id="photoCalibCanvas" class="max-w-full max-h-full rounded-lg shadow-xl border border-slate-800 cursor-crosshair"></canvas>
+                    
+                    <!-- Floating Magnifier Loupe -->
+                    <div id="photoLoupeContainer" class="absolute top-4 left-4 bg-slate-900/95 border border-slate-700 rounded-xl p-2 shadow-2xl pointer-events-none hidden flex flex-col items-center">
+                        <div class="text-[9px] font-bold text-slate-400 mb-1 flex items-center gap-1">
+                            <span>🔍</span> 4× Loupe Magnifier
+                        </div>
+                        <canvas id="photoLoupeCanvas" width="120" height="120" class="rounded border border-slate-800"></canvas>
+                        <span id="photoLoupeCoord" class="text-[9.5px] font-mono text-emerald-400 font-bold mt-1">X:0 Y:0</span>
+                    </div>
+                </div>
+
+                <!-- Right Control Panel -->
+                <div class="w-full md:w-80 bg-slate-900/95 border-t md:border-t-0 md:border-l border-slate-800 p-4 flex flex-col justify-between space-y-4 overflow-y-auto">
+                    <div class="space-y-3">
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">📍 4 Photo Alignment Pins</label>
+                        <p class="text-[10.5px] text-slate-400 leading-snug">Click a pin to activate it, then click or drag directly on the photo:</p>
+                        
+                        <div class="grid grid-cols-2 gap-2">
+                            <!-- Pin 1 -->
+                            <button id="btnPinSelectP1" type="button" class="p-2.5 rounded-lg border border-emerald-500/50 bg-emerald-950/40 hover:bg-emerald-900/50 text-left transition flex flex-col cursor-pointer">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                                    <span class="text-[11px] font-bold text-white">1. Top-Left</span>
+                                </div>
+                                <span id="lblPhotoPinP1" class="text-[10px] font-mono text-emerald-300 mt-0.5">X: 0, Y: 0</span>
+                            </button>
+
+                            <!-- Pin 2 -->
+                            <button id="btnPinSelectP2" type="button" class="p-2.5 rounded-lg border border-sky-500/50 bg-sky-950/40 hover:bg-sky-900/50 text-left transition flex flex-col cursor-pointer">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                                    <span class="text-[11px] font-bold text-white">2. Top-Right</span>
+                                </div>
+                                <span id="lblPhotoPinP2" class="text-[10px] font-mono text-sky-300 mt-0.5">X: 0, Y: 0</span>
+                            </button>
+
+                            <!-- Pin 3 -->
+                            <button id="btnPinSelectP3" type="button" class="p-2.5 rounded-lg border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/50 text-left transition flex flex-col cursor-pointer">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                                    <span class="text-[11px] font-bold text-white">3. Bottom-Left</span>
+                                </div>
+                                <span id="lblPhotoPinP3" class="text-[10px] font-mono text-amber-300 mt-0.5">X: 0, Y: 0</span>
+                            </button>
+
+                            <!-- Pin 4 -->
+                            <button id="btnPinSelectP4" type="button" class="p-2.5 rounded-lg border border-rose-500/50 bg-rose-950/40 hover:bg-rose-900/50 text-left transition flex flex-col cursor-pointer">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span>
+                                    <span class="text-[11px] font-bold text-white">4. Bottom-Right</span>
+                                </div>
+                                <span id="lblPhotoPinP4" class="text-[10px] font-mono text-rose-300 mt-0.5">X: 0, Y: 0</span>
+                            </button>
+                        </div>
+
+                        <!-- Target Mapping Section -->
+                        <div class="pt-2 border-t border-slate-800 space-y-2">
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">🎯 Map Photo Points Onto:</label>
+                            <div class="space-y-1.5 text-xs">
+                                <label class="flex items-start gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
+                                    <input type="radio" name="radPhotoTargetMode" value="graph200" checked class="mt-0.5 text-emerald-500 focus:ring-emerald-500" />
+                                    <div>
+                                        <div class="font-semibold text-slate-200 text-[11px]">1cm Graph Grid (200 × 200 mm)</div>
+                                        <div class="text-[10px] text-slate-400">Maps photo to (0,0) → (200,200)mm on graph paper</div>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
+                                    <input type="radio" name="radPhotoTargetMode" value="bedCalib" class="mt-0.5 text-emerald-500 focus:ring-emerald-500" />
+                                    <div>
+                                        <div class="font-semibold text-slate-200 text-[11px]">Printer Bed 4-Point Calib (P1-P4)</div>
+                                        <div class="text-[10px] text-slate-400">Maps photo corners to printer calibration coordinates</div>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
+                                    <input type="radio" name="radPhotoTargetMode" value="custom" class="mt-0.5 text-emerald-500 focus:ring-emerald-500" />
+                                    <div>
+                                        <div class="font-semibold text-slate-200 text-[11px]">Custom Preview Pins</div>
+                                        <div class="text-[10px] text-slate-400">Freely nudge the 4 target pins on the preview canvas</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Reset Button -->
+                        <div>
+                            <button id="btnResetPhotoModalPins" type="button" class="w-full py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                🔄 Reset Pins to Image Corners
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Action Buttons -->
+                    <div class="pt-3 border-t border-slate-800 flex gap-2">
+                        <button id="btnCancelPhotoCalib" type="button" class="flex-1 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition cursor-pointer">
+                            Cancel
+                        </button>
+                        <button id="btnApplyPhotoCalib" type="button" class="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white shadow-lg shadow-emerald-950/50 transition flex items-center justify-center gap-1 cursor-pointer">
+                            ✨ Apply & Warp
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -4650,11 +4789,44 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             return Math.abs(dy * pt.x - dx * pt.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x) / mag;
         }
 
-        // Projective 4-point quadrilateral affine warping for friend's graph photo
-        function drawWarpedQuad(ctx, img, p1, p2, p3, p4) {
+        // Projective 4-point quadrilateral homography via 10x10 bilinear subdivision mesh (200 micro-triangles)
+        function drawWarpedQuad(ctx, img, srcPts, dstPts) {
             const w = img.width;
             const h = img.height;
             if (!w || !h) return;
+            
+            // Support either object inputs or legacy 6-argument call
+            let sTL, sTR, sBL, sBR, dTL, dTR, dBL, dBR;
+            if (arguments.length >= 6) {
+                sTL = { x: 0, y: 0 };
+                sTR = { x: w, y: 0 };
+                sBL = { x: 0, y: h };
+                sBR = { x: w, y: h };
+                dTL = arguments[2];
+                dTR = arguments[3];
+                dBL = arguments[4];
+                dBR = arguments[5];
+            } else {
+                sTL = srcPts.p1;
+                sTR = srcPts.p2;
+                sBL = srcPts.p3;
+                sBR = srcPts.p4;
+                dTL = dstPts.p1;
+                dTR = dstPts.p2;
+                dBL = dstPts.p3;
+                dBR = dstPts.p4;
+            }
+            if (!sTL || !sTR || !sBL || !sBR || !dTL || !dTR || !dBL || !dBR) return;
+
+            function lerpPt(pA, pB, t) {
+                return { x: pA.x + (pB.x - pA.x) * t, y: pA.y + (pB.y - pA.y) * t };
+            }
+
+            function bilerp(pTL, pTR, pBL, pBR, u, v) {
+                const top = lerpPt(pTL, pTR, u);
+                const bot = lerpPt(pBL, pBR, u);
+                return lerpPt(top, bot, v);
+            }
 
             function drawTriangle(u0, v0, u1, v1, u2, v2, x0, y0, x1, y1, x2, y2) {
                 ctx.save();
@@ -4682,10 +4854,30 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 ctx.restore();
             }
 
-            // Triangle 1: Top-Left (p1), Top-Right (p2), Bottom-Left (p3)
-            drawTriangle(0, 0, w, 0, 0, h, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
-            // Triangle 2: Top-Right (p2), Bottom-Right (p4), Bottom-Left (p3)
-            drawTriangle(w, 0, w, h, 0, h, p2.x, p2.y, p4.x, p4.y, p3.x, p3.y);
+            const SUBDIV = 10;
+            for (let r = 0; r < SUBDIV; r++) {
+                const v0 = r / SUBDIV;
+                const v1 = (r + 1) / SUBDIV;
+                for (let c = 0; c < SUBDIV; c++) {
+                    const u0 = c / SUBDIV;
+                    const u1 = (c + 1) / SUBDIV;
+
+                    const s00 = bilerp(sTL, sTR, sBL, sBR, u0, v0);
+                    const s10 = bilerp(sTL, sTR, sBL, sBR, u1, v0);
+                    const s01 = bilerp(sTL, sTR, sBL, sBR, u0, v1);
+                    const s11 = bilerp(sTL, sTR, sBL, sBR, u1, v1);
+
+                    const d00 = bilerp(dTL, dTR, dBL, dBR, u0, v0);
+                    const d10 = bilerp(dTL, dTR, dBL, dBR, u1, v0);
+                    const d01 = bilerp(dTL, dTR, dBL, dBR, u0, v1);
+                    const d11 = bilerp(dTL, dTR, dBL, dBR, u1, v1);
+
+                    // Triangle 1: TL, TR, BL
+                    drawTriangle(s00.x, s00.y, s10.x, s10.y, s01.x, s01.y, d00.x, d00.y, d10.x, d10.y, d01.x, d01.y);
+                    // Triangle 2: TR, BR, BL
+                    drawTriangle(s10.x, s10.y, s11.x, s11.y, s01.x, s01.y, d10.x, d10.y, d11.x, d11.y, d01.x, d01.y);
+                }
+            }
         }
 
         // ==========================================
@@ -4994,7 +5186,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
 
         // ==========================================
-        // --- COMPONENT: GRAPH PHOTO OVERLAY ---
+        // --- COMPONENT: GRAPH PHOTO OVERLAY & STUDIO ---
         // ==========================================
         let graphOverlayImg = null;
         let graphOverlayOpacity = 0.6;
@@ -5006,6 +5198,28 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         };
         let draggingGraphPin = null;
 
+        let photoCalibration = {
+            photoPoints: {
+                p1: { x: 0.05, y: 0.05 },
+                p2: { x: 0.95, y: 0.05 },
+                p3: { x: 0.05, y: 0.95 },
+                p4: { x: 0.95, y: 0.95 }
+            },
+            targetMode: 'graph200' // 'graph200' | 'bedCalib' | 'custom'
+        };
+
+        const savedPhotoCalib = safeGetItem('plotter_photo_calib');
+        if (savedPhotoCalib) {
+            try {
+                const parsed = JSON.parse(savedPhotoCalib);
+                if (parsed && parsed.photoPoints && parsed.photoPoints.p1) {
+                    photoCalibration = parsed;
+                }
+            } catch(e) {
+                console.warn("Failed to load saved photo calibration", e);
+            }
+        }
+
         const graphPhotoInput = document.getElementById('graphPhotoInput');
         const graphOverlayControls = document.getElementById('graphOverlayControls');
         const graphOpacityRange = document.getElementById('graphOpacityRange');
@@ -5014,6 +5228,39 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         const btnTopCycleOpacity = document.getElementById('btnTopCycleOpacity');
         const btnResetGraphAlignment = document.getElementById('btnResetGraphAlignment');
         const btnClearGraphPhoto = document.getElementById('btnClearGraphPhoto');
+        const btnOpenPhotoCalibStudio = document.getElementById('btnOpenPhotoCalibStudio');
+        const selPhotoTargetMode = document.getElementById('selPhotoTargetMode');
+
+        // Studio Modal Elements
+        const photoCalibModal = document.getElementById('photoCalibModal');
+        const btnClosePhotoCalibModal = document.getElementById('btnClosePhotoCalibModal');
+        const btnCancelPhotoCalib = document.getElementById('btnCancelPhotoCalib');
+        const btnApplyPhotoCalib = document.getElementById('btnApplyPhotoCalib');
+        const btnResetPhotoModalPins = document.getElementById('btnResetPhotoModalPins');
+        const photoCalibCanvas = document.getElementById('photoCalibCanvas');
+        const photoLoupeContainer = document.getElementById('photoLoupeContainer');
+        const photoLoupeCanvas = document.getElementById('photoLoupeCanvas');
+        const photoLoupeCoord = document.getElementById('photoLoupeCoord');
+
+        const btnPinSelectP1 = document.getElementById('btnPinSelectP1');
+        const btnPinSelectP2 = document.getElementById('btnPinSelectP2');
+        const btnPinSelectP3 = document.getElementById('btnPinSelectP3');
+        const btnPinSelectP4 = document.getElementById('btnPinSelectP4');
+        const lblPhotoPinP1 = document.getElementById('lblPhotoPinP1');
+        const lblPhotoPinP2 = document.getElementById('lblPhotoPinP2');
+        const lblPhotoPinP3 = document.getElementById('lblPhotoPinP3');
+        const lblPhotoPinP4 = document.getElementById('lblPhotoPinP4');
+
+        let tempPhotoPoints = JSON.parse(JSON.stringify(photoCalibration.photoPoints));
+        let activePhotoPin = 'p1';
+        let draggingPhotoPin = null;
+
+        const pinColors = {
+            p1: { fill: '#10b981', ring: 'ring-emerald-500', border: 'border-emerald-500', name: '1. Top-Left' },
+            p2: { fill: '#0ea5e9', ring: 'ring-sky-500', border: 'border-sky-500', name: '2. Top-Right' },
+            p3: { fill: '#f59e0b', ring: 'ring-amber-500', border: 'border-amber-500', name: '3. Bottom-Left' },
+            p4: { fill: '#f43f5e', ring: 'ring-rose-500', border: 'border-rose-500', name: '4. Bottom-Right' }
+        };
 
         function cycleGraphOverlayOpacity() {
             if (!graphOverlayImg) {
@@ -5067,6 +5314,343 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 showToast("Removed reference photo", "info");
             });
         }
+
+        // --- Photo Calibration Studio Controller ---
+        function openPhotoCalibStudio() {
+            if (!graphOverlayImg) {
+                showToast("Please upload a graph photo first", "info");
+                return;
+            }
+            tempPhotoPoints = JSON.parse(JSON.stringify(photoCalibration.photoPoints));
+            
+            // Sync radio buttons
+            const rads = document.querySelectorAll('input[name="radPhotoTargetMode"]');
+            rads.forEach(r => {
+                r.checked = (r.value === photoCalibration.targetMode);
+            });
+            if (selPhotoTargetMode) {
+                selPhotoTargetMode.value = photoCalibration.targetMode;
+            }
+            
+            activePhotoPin = 'p1';
+            updatePinSelectionUI();
+            
+            if (photoCalibModal) photoCalibModal.classList.remove('hidden');
+            
+            requestAnimationFrame(() => {
+                resizeAndRenderPhotoCanvas();
+            });
+        }
+
+        function resizeAndRenderPhotoCanvas() {
+            if (!photoCalibCanvas || !graphOverlayImg) return;
+            const container = photoCalibCanvas.parentElement;
+            if (!container) return;
+            const maxW = Math.max(300, container.clientWidth - 24);
+            const maxH = Math.max(300, container.clientHeight - 24);
+            
+            const imgAspect = (graphOverlayImg.width || 1) / (graphOverlayImg.height || 1);
+            let canvasW = maxW;
+            let canvasH = maxW / imgAspect;
+            if (canvasH > maxH) {
+                canvasH = maxH;
+                canvasW = maxH * imgAspect;
+            }
+            photoCalibCanvas.width = Math.round(canvasW);
+            photoCalibCanvas.height = Math.round(canvasH);
+            
+            renderPhotoCalibCanvas();
+        }
+
+        function renderPhotoCalibCanvas() {
+            if (!photoCalibCanvas || !graphOverlayImg) return;
+            const ctx = photoCalibCanvas.getContext('2d');
+            const cw = photoCalibCanvas.width;
+            const ch = photoCalibCanvas.height;
+            
+            ctx.clearRect(0, 0, cw, ch);
+            ctx.drawImage(graphOverlayImg, 0, 0, cw, ch);
+            
+            const p1 = { x: tempPhotoPoints.p1.x * cw, y: tempPhotoPoints.p1.y * ch };
+            const p2 = { x: tempPhotoPoints.p2.x * cw, y: tempPhotoPoints.p2.y * ch };
+            const p3 = { x: tempPhotoPoints.p3.x * cw, y: tempPhotoPoints.p3.y * ch };
+            const p4 = { x: tempPhotoPoints.p4.x * cw, y: tempPhotoPoints.p4.y * ch };
+            
+            // Draw connecting quad with transparent tint
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.lineTo(p4.x, p4.y);
+            ctx.lineTo(p3.x, p3.y);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+            ctx.fill();
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.restore();
+            
+            // Draw pins
+            const pins = [
+                { id: 'p1', pt: p1, label: '1', name: 'TL' },
+                { id: 'p2', pt: p2, label: '2', name: 'TR' },
+                { id: 'p3', pt: p3, label: '3', name: 'BL' },
+                { id: 'p4', pt: p4, label: '4', name: 'BR' }
+            ];
+            
+            for (let pin of pins) {
+                const isAct = (pin.id === activePhotoPin);
+                const col = pinColors[pin.id];
+                
+                ctx.save();
+                if (isAct) {
+                    ctx.beginPath();
+                    ctx.arc(pin.pt.x, pin.pt.y, 20, 0, Math.PI * 2);
+                    ctx.fillStyle = col.fill + '40';
+                    ctx.fill();
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = col.fill;
+                    ctx.setLineDash([3, 3]);
+                    ctx.stroke();
+                }
+                
+                ctx.beginPath();
+                ctx.arc(pin.pt.x, pin.pt.y, 13, 0, Math.PI * 2);
+                ctx.fillStyle = col.fill;
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetY = 2;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
+                
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(pin.label, pin.pt.x, pin.pt.y);
+                
+                ctx.fillStyle = '#0f172a';
+                ctx.font = 'bold 9px sans-serif';
+                const tagW = ctx.measureText(pin.name).width + 6;
+                ctx.fillRect(pin.pt.x - tagW/2, pin.pt.y + 16, tagW, 13);
+                ctx.fillStyle = col.fill;
+                ctx.fillText(pin.name, pin.pt.x, pin.pt.y + 23);
+                
+                ctx.restore();
+            }
+            
+            updatePinCoordinateLabels();
+        }
+
+        function updateLoupe(canvasX, canvasY) {
+            if (!photoLoupeContainer || !photoLoupeCanvas || !graphOverlayImg || !photoCalibCanvas) return;
+            const ctx = photoLoupeCanvas.getContext('2d');
+            const cw = photoCalibCanvas.width;
+            const ch = photoCalibCanvas.height;
+            const iw = graphOverlayImg.width;
+            const ih = graphOverlayImg.height;
+            
+            const nx = Math.max(0, Math.min(1, canvasX / cw));
+            const ny = Math.max(0, Math.min(1, canvasY / ch));
+            const ix = nx * iw;
+            const iy = ny * ih;
+            
+            const lSize = 120;
+            const sampleSize = 30;
+            const sx = Math.max(0, Math.min(iw - sampleSize, ix - sampleSize / 2));
+            const sy = Math.max(0, Math.min(ih - sampleSize, iy - sampleSize / 2));
+            
+            ctx.imageSmoothingEnabled = false;
+            ctx.clearRect(0, 0, lSize, lSize);
+            ctx.drawImage(graphOverlayImg, sx, sy, sampleSize, sampleSize, 0, 0, lSize, lSize);
+            
+            // Center crosshairs
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(lSize / 2, 0);
+            ctx.lineTo(lSize / 2, lSize);
+            ctx.moveTo(0, lSize / 2);
+            ctx.lineTo(lSize, lSize / 2);
+            ctx.stroke();
+            
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(lSize / 2, lSize / 2, 8, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            if (photoLoupeCoord) {
+                photoLoupeCoord.textContent = `X: ${Math.round(ix)}, Y: ${Math.round(iy)}`;
+            }
+            
+            if (canvasX < cw * 0.4 && canvasY < ch * 0.4) {
+                photoLoupeContainer.style.left = 'auto';
+                photoLoupeContainer.style.right = '16px';
+            } else {
+                photoLoupeContainer.style.left = '16px';
+                photoLoupeContainer.style.right = 'auto';
+            }
+            photoLoupeContainer.classList.remove('hidden');
+        }
+
+        function updatePinSelectionUI() {
+            const pins = [
+                { id: 'p1', btn: btnPinSelectP1, activeCls: 'border-emerald-500 bg-emerald-950/60 ring-2 ring-emerald-500' },
+                { id: 'p2', btn: btnPinSelectP2, activeCls: 'border-sky-500 bg-sky-950/60 ring-2 ring-sky-500' },
+                { id: 'p3', btn: btnPinSelectP3, activeCls: 'border-amber-500 bg-amber-950/60 ring-2 ring-amber-500' },
+                { id: 'p4', btn: btnPinSelectP4, activeCls: 'border-rose-500 bg-rose-950/60 ring-2 ring-rose-500' }
+            ];
+            for (let p of pins) {
+                if (!p.btn) continue;
+                if (p.id === activePhotoPin) {
+                    p.btn.className = `p-2.5 rounded-lg border text-left transition flex flex-col cursor-pointer ${p.activeCls}`;
+                } else {
+                    p.btn.className = `p-2.5 rounded-lg border border-slate-800 bg-slate-950/40 hover:bg-slate-800/60 text-left transition flex flex-col cursor-pointer`;
+                }
+            }
+        }
+
+        function updatePinCoordinateLabels() {
+            if (!graphOverlayImg) return;
+            const iw = graphOverlayImg.width;
+            const ih = graphOverlayImg.height;
+            if (lblPhotoPinP1) lblPhotoPinP1.textContent = `X:${Math.round(tempPhotoPoints.p1.x * iw)} Y:${Math.round(tempPhotoPoints.p1.y * ih)}`;
+            if (lblPhotoPinP2) lblPhotoPinP2.textContent = `X:${Math.round(tempPhotoPoints.p2.x * iw)} Y:${Math.round(tempPhotoPoints.p2.y * ih)}`;
+            if (lblPhotoPinP3) lblPhotoPinP3.textContent = `X:${Math.round(tempPhotoPoints.p3.x * iw)} Y:${Math.round(tempPhotoPoints.p3.y * ih)}`;
+            if (lblPhotoPinP4) lblPhotoPinP4.textContent = `X:${Math.round(tempPhotoPoints.p4.x * iw)} Y:${Math.round(tempPhotoPoints.p4.y * ih)}`;
+        }
+
+        if (photoCalibCanvas) {
+            photoCalibCanvas.addEventListener('mousedown', (e) => {
+                const rect = photoCalibCanvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                const cw = photoCalibCanvas.width;
+                const ch = photoCalibCanvas.height;
+                
+                const pins = ['p1', 'p2', 'p3', 'p4'];
+                let clickedPin = null;
+                let minDist = 24;
+                for (let pid of pins) {
+                    const px = tempPhotoPoints[pid].x * cw;
+                    const py = tempPhotoPoints[pid].y * ch;
+                    const d = Math.hypot(mx - px, my - py);
+                    if (d < minDist) {
+                        minDist = d;
+                        clickedPin = pid;
+                    }
+                }
+                
+                if (clickedPin) {
+                    activePhotoPin = clickedPin;
+                    draggingPhotoPin = clickedPin;
+                } else {
+                    draggingPhotoPin = activePhotoPin;
+                    tempPhotoPoints[activePhotoPin].x = Math.max(0, Math.min(1, mx / cw));
+                    tempPhotoPoints[activePhotoPin].y = Math.max(0, Math.min(1, my / ch));
+                }
+                updatePinSelectionUI();
+                renderPhotoCalibCanvas();
+                updateLoupe(mx, my);
+            });
+            
+            photoCalibCanvas.addEventListener('mousemove', (e) => {
+                const rect = photoCalibCanvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                const cw = photoCalibCanvas.width;
+                const ch = photoCalibCanvas.height;
+                
+                if (draggingPhotoPin && tempPhotoPoints[draggingPhotoPin]) {
+                    tempPhotoPoints[draggingPhotoPin].x = Math.max(0, Math.min(1, mx / cw));
+                    tempPhotoPoints[draggingPhotoPin].y = Math.max(0, Math.min(1, my / ch));
+                    renderPhotoCalibCanvas();
+                }
+                updateLoupe(mx, my);
+            });
+            
+            window.addEventListener('mouseup', () => {
+                if (draggingPhotoPin) {
+                    draggingPhotoPin = null;
+                }
+            });
+            
+            photoCalibCanvas.addEventListener('mouseleave', () => {
+                if (!draggingPhotoPin && photoLoupeContainer) {
+                    photoLoupeContainer.classList.add('hidden');
+                }
+            });
+        }
+
+        if (btnPinSelectP1) btnPinSelectP1.addEventListener('click', () => { activePhotoPin = 'p1'; updatePinSelectionUI(); renderPhotoCalibCanvas(); });
+        if (btnPinSelectP2) btnPinSelectP2.addEventListener('click', () => { activePhotoPin = 'p2'; updatePinSelectionUI(); renderPhotoCalibCanvas(); });
+        if (btnPinSelectP3) btnPinSelectP3.addEventListener('click', () => { activePhotoPin = 'p3'; updatePinSelectionUI(); renderPhotoCalibCanvas(); });
+        if (btnPinSelectP4) btnPinSelectP4.addEventListener('click', () => { activePhotoPin = 'p4'; updatePinSelectionUI(); renderPhotoCalibCanvas(); });
+
+        if (btnResetPhotoModalPins) {
+            btnResetPhotoModalPins.addEventListener('click', () => {
+                tempPhotoPoints = {
+                    p1: { x: 0.05, y: 0.05 },
+                    p2: { x: 0.95, y: 0.05 },
+                    p3: { x: 0.05, y: 0.95 },
+                    p4: { x: 0.95, y: 0.95 }
+                };
+                renderPhotoCalibCanvas();
+                showToast("Reset 4 pins to image corners", "info");
+            });
+        }
+
+        if (btnApplyPhotoCalib) {
+            btnApplyPhotoCalib.addEventListener('click', () => {
+                photoCalibration.photoPoints = JSON.parse(JSON.stringify(tempPhotoPoints));
+                
+                const selectedRad = document.querySelector('input[name="radPhotoTargetMode"]:checked');
+                if (selectedRad) photoCalibration.targetMode = selectedRad.value;
+                if (selPhotoTargetMode) selPhotoTargetMode.value = photoCalibration.targetMode;
+                
+                safeSetItem('plotter_photo_calib', JSON.stringify(photoCalibration));
+                
+                if (photoCalibModal) photoCalibModal.classList.add('hidden');
+                triggerPreviewUpdate();
+                showToast("✨ Photo calibrated & perspective warped to graph!", "success");
+            });
+        }
+
+        if (btnClosePhotoCalibModal) {
+            btnClosePhotoCalibModal.addEventListener('click', () => {
+                if (photoCalibModal) photoCalibModal.classList.add('hidden');
+            });
+        }
+        if (btnCancelPhotoCalib) {
+            btnCancelPhotoCalib.addEventListener('click', () => {
+                if (photoCalibModal) photoCalibModal.classList.add('hidden');
+            });
+        }
+        if (btnOpenPhotoCalibStudio) {
+            btnOpenPhotoCalibStudio.addEventListener('click', openPhotoCalibStudio);
+        }
+        if (selPhotoTargetMode) {
+            selPhotoTargetMode.addEventListener('change', (e) => {
+                photoCalibration.targetMode = e.target.value;
+                safeSetItem('plotter_photo_calib', JSON.stringify(photoCalibration));
+                triggerPreviewUpdate();
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            if (photoCalibModal && !photoCalibModal.classList.contains('hidden')) {
+                resizeAndRenderPhotoCanvas();
+            }
+        });
+
         if (graphPhotoInput) {
             graphPhotoInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
@@ -5080,7 +5664,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         if (topOpacityContainer) topOpacityContainer.classList.remove('hidden');
                         updateGraphOpacityUI();
                         triggerPreviewUpdate();
-                        showToast("Loaded graph photo! Drag the 4 pins to align corners.", "success");
+                        showToast("Loaded graph photo! Opening Photo Alignment Studio...", "success");
+                        setTimeout(openPhotoCalibStudio, 300);
                     };
                     img.src = evt.target.result;
                 };
@@ -5209,48 +5794,86 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                 return { x: paperX + pt.x * mmToPx, y: paperY + pt.y * mmToPx };
                             }
                         };
-                        const q1 = toPx(graphAlignmentPins.p1);
-                        const q2 = toPx(graphAlignmentPins.p2);
-                        const q3 = toPx(graphAlignmentPins.p3);
-                        const q4 = toPx(graphAlignmentPins.p4);
-                        
-                        drawWarpedQuad(pCtx, graphOverlayImg, q1, q2, q3, q4);
-                        pCtx.restore();
-                    }
 
-                    // If in Graph Alignment Pins mode, draw the 4 interactive pins
-                    if (canvasClickMode === 'graphPins') {
-                        const pinEntries = [
-                            { id: 'p1', label: '1 (TL)', pt: graphAlignmentPins.p1 },
-                            { id: 'p2', label: '2 (TR)', pt: graphAlignmentPins.p2 },
-                            { id: 'p3', label: '3 (BL)', pt: graphAlignmentPins.p3 },
-                            { id: 'p4', label: '4 (BR)', pt: graphAlignmentPins.p4 }
-                        ];
-                        for (let entry of pinEntries) {
-                            let px, py;
-                            if (calibMatrix) {
-                                const b = mapDesignToBed(entry.pt.x, entry.pt.y, calibMatrix);
-                                px = b.x * mmToPx;
-                                py = (220 - b.y) * mmToPx;
-                            } else {
-                                px = paperX + entry.pt.x * mmToPx;
-                                py = paperY + entry.pt.y * mmToPx;
+                        let dstPts = null;
+                        if (photoCalibration.targetMode === 'bedCalib') {
+                            const p1x = parseFloat(document.getElementById('calibP1X').value);
+                            const p1y = parseFloat(document.getElementById('calibP1Y').value);
+                            const p2x = parseFloat(document.getElementById('calibP2X').value);
+                            const p2y = parseFloat(document.getElementById('calibP2Y').value);
+                            const p3x = parseFloat(document.getElementById('calibP3X').value);
+                            const p3y = parseFloat(document.getElementById('calibP3Y').value);
+                            const p4x = parseFloat(document.getElementById('calibP4X').value);
+                            const p4y = parseFloat(document.getElementById('calibP4Y').value);
+                            if (!isNaN(p1x) && !isNaN(p1y) && !isNaN(p2x) && !isNaN(p2y) && !isNaN(p3x) && !isNaN(p3y) && !isNaN(p4x) && !isNaN(p4y)) {
+                                dstPts = {
+                                    p1: { x: p1x * mmToPx, y: (220 - p1y) * mmToPx },
+                                    p2: { x: p2x * mmToPx, y: (220 - p2y) * mmToPx },
+                                    p3: { x: p3x * mmToPx, y: (220 - p3y) * mmToPx },
+                                    p4: { x: p4x * mmToPx, y: (220 - p4y) * mmToPx }
+                                };
                             }
-                            // Pin circle
-                            pCtx.beginPath();
-                            pCtx.arc(px, py, 12, 0, Math.PI * 2);
-                            pCtx.fillStyle = '#10b981';
-                            pCtx.fill();
-                            pCtx.strokeStyle = '#ffffff';
-                            pCtx.lineWidth = 3;
-                            pCtx.stroke();
-                            
-                            // Label
-                            pCtx.fillStyle = '#ffffff';
-                            pCtx.font = 'bold 12px sans-serif';
-                            pCtx.textAlign = 'center';
-                            pCtx.textBaseline = 'middle';
-                            pCtx.fillText(entry.label, px, py - 18);
+                        } else if (photoCalibration.targetMode === 'custom') {
+                            dstPts = {
+                                p1: toPx(graphAlignmentPins.p1),
+                                p2: toPx(graphAlignmentPins.p2),
+                                p3: toPx(graphAlignmentPins.p3),
+                                p4: toPx(graphAlignmentPins.p4)
+                            };
+                        }
+                        
+                        if (!dstPts) {
+                            // Default 'graph200': 1cm grid 200x200mm
+                            dstPts = {
+                                p1: toPx({ x: 0.0, y: 0.0 }),
+                                p2: toPx({ x: 200.0, y: 0.0 }),
+                                p3: toPx({ x: 0.0, y: 200.0 }),
+                                p4: toPx({ x: 200.0, y: 200.0 })
+                            };
+                        }
+
+                        const sW = graphOverlayImg.width;
+                        const sH = graphOverlayImg.height;
+                        const srcPts = {
+                            p1: { x: photoCalibration.photoPoints.p1.x * sW, y: photoCalibration.photoPoints.p1.y * sH },
+                            p2: { x: photoCalibration.photoPoints.p2.x * sW, y: photoCalibration.photoPoints.p2.y * sH },
+                            p3: { x: photoCalibration.photoPoints.p3.x * sW, y: photoCalibration.photoPoints.p3.y * sH },
+                            p4: { x: photoCalibration.photoPoints.p4.x * sW, y: photoCalibration.photoPoints.p4.y * sH }
+                        };
+                        
+                        drawWarpedQuad(pCtx, graphOverlayImg, srcPts, dstPts);
+                        pCtx.restore();
+
+                        // If in Graph Alignment Pins mode, draw the 4 interactive pins
+                        if (canvasClickMode === 'graphPins') {
+                            const targetPins = [
+                                { id: 'p1', label: '1 (TL)', pt: dstPts.p1, col: '#10b981' },
+                                { id: 'p2', label: '2 (TR)', pt: dstPts.p2, col: '#0ea5e9' },
+                                { id: 'p3', label: '3 (BL)', pt: dstPts.p3, col: '#f59e0b' },
+                                { id: 'p4', label: '4 (BR)', pt: dstPts.p4, col: '#f43f5e' }
+                            ];
+                            for (let entry of targetPins) {
+                                const px = entry.pt.x;
+                                const py = entry.pt.y;
+                                pCtx.save();
+                                pCtx.beginPath();
+                                pCtx.arc(px, py, 13, 0, Math.PI * 2);
+                                pCtx.fillStyle = entry.col;
+                                pCtx.shadowColor = 'rgba(0,0,0,0.6)';
+                                pCtx.shadowBlur = 6;
+                                pCtx.fill();
+                                pCtx.shadowBlur = 0;
+                                pCtx.strokeStyle = '#ffffff';
+                                pCtx.lineWidth = 2.5;
+                                pCtx.stroke();
+                                
+                                pCtx.fillStyle = '#ffffff';
+                                pCtx.font = 'bold 11px sans-serif';
+                                pCtx.textAlign = 'center';
+                                pCtx.textBaseline = 'middle';
+                                pCtx.fillText(entry.label, px, py - 18);
+                                pCtx.restore();
+                            }
                         }
                     }
 
@@ -8723,8 +9346,49 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 }
             }
 
+            // If Photo Calibration Studio is open:
+            if (photoCalibModal && !photoCalibModal.classList.contains('hidden')) {
+                if (e.key === 'Escape') {
+                    photoCalibModal.classList.add('hidden');
+                    e.preventDefault();
+                    return;
+                }
+                if (e.key === 'Enter') {
+                    if (btnApplyPhotoCalib) btnApplyPhotoCalib.click();
+                    e.preventDefault();
+                    return;
+                }
+                if (['1', '2', '3', '4'].includes(e.key)) {
+                    activePhotoPin = 'p' + e.key;
+                    updatePinSelectionUI();
+                    renderPhotoCalibCanvas();
+                    e.preventDefault();
+                    return;
+                }
+                if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+                    const step = e.shiftKey ? 5 : 1;
+                    const iw = graphOverlayImg ? graphOverlayImg.width : 1000;
+                    const ih = graphOverlayImg ? graphOverlayImg.height : 1000;
+                    const cur = tempPhotoPoints[activePhotoPin];
+                    if (e.key === 'ArrowLeft') cur.x = Math.max(0, cur.x - step / iw);
+                    if (e.key === 'ArrowRight') cur.x = Math.min(1, cur.x + step / iw);
+                    if (e.key === 'ArrowUp') cur.y = Math.max(0, cur.y - step / ih);
+                    if (e.key === 'ArrowDown') cur.y = Math.min(1, cur.y + step / ih);
+                    renderPhotoCalibCanvas();
+                    e.preventDefault();
+                    return;
+                }
+            }
+
             // Ignore if active element is a form input to avoid breaking text navigation
             if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                return;
+            }
+
+            // 'O' key quick toggle to cycle photo overlay opacity
+            if (e.key === 'o' || e.key === 'O') {
+                cycleGraphOverlayOpacity();
+                e.preventDefault();
                 return;
             }
 
