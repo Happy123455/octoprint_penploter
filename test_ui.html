@@ -402,6 +402,141 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 </div>
             </div>
 
+            <!-- Step 3.5: Paper Type & Margins (Real vs Imaginary) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+                <div class="flex items-center justify-between">
+                    <label class="block text-sm font-semibold text-slate-200">3. Paper Type & Margins</label>
+                    <span id="paperTypeBadge" class="text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/25 px-2 py-0.5 rounded-full font-semibold">Ruled Notebook</span>
+                </div>
+
+                <!-- Paper Type Switcher -->
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="btnPaperModeRuled" type="button" class="py-2 px-3 rounded-lg text-xs font-bold border bg-indigo-600 border-indigo-500 text-white shadow transition flex items-center justify-center gap-1.5 cursor-pointer">
+                        📄 Ruled Notebook
+                    </button>
+                    <button id="btnPaperModeGraph" type="button" class="py-2 px-3 rounded-lg text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5 cursor-pointer">
+                        📈 1cm Graph Paper
+                    </button>
+                </div>
+
+                <!-- Margin Sliders with real vs imaginary dotted lines -->
+                <div class="p-3 bg-slate-950/60 border border-slate-800/80 rounded-lg space-y-3">
+                    <div class="flex items-center justify-between text-[11px]">
+                        <span class="font-bold text-slate-300">Text Boundaries (Dotted Lines)</span>
+                        <span class="text-[9.5px] text-rose-400 font-medium">Real Red Margin: 32mm</span>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+                            <span>Left Margin (Writing Start):</span>
+                            <span id="lblLeftMargin" class="font-mono text-cyan-300 font-bold">32.0 mm</span>
+                        </div>
+                        <input type="range" id="sliderLeftMargin" min="5" max="90" step="0.5" value="32" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400" />
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+                            <span>Right Margin (Writing Wrap):</span>
+                            <span id="lblRightMargin" class="font-mono text-cyan-300 font-bold">10.0 mm</span>
+                        </div>
+                        <input type="range" id="sliderRightMargin" min="5" max="80" step="0.5" value="10" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image & Diagram Block (Vectorize & Canvas Placement) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-3">
+                <div class="flex items-center justify-between">
+                    <label class="block text-sm font-semibold text-slate-200">🖼️ Image & Diagram Block</label>
+                    <span id="imageBlockStatus" class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-mono">No Image</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Upload a black & white diagram, sketch, or drawing. It is automatically vectorized into clean single-stroke plotter lines and plotted alongside your handwriting.
+                </p>
+                <input type="file" id="imageBlockFileInput" accept="image/*" class="block w-full text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10.5px] file:font-semibold file:bg-indigo-600/20 file:text-indigo-400 hover:file:bg-indigo-600/30 cursor-pointer" />
+                
+                <div id="imageBlockControls" class="space-y-3 hidden pt-3 border-t border-slate-800/80">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+                                <span>Line Sensitivity:</span>
+                                <span id="lblImgThreshold" class="font-mono text-indigo-300 font-bold">128</span>
+                            </div>
+                            <input type="range" id="imgThresholdRange" min="30" max="230" step="2" value="128" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500" />
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[10px] text-slate-400 mb-1">
+                                <span>Line Style:</span>
+                                <span id="lblImgDensity" class="font-mono text-indigo-300 font-bold">Outlines</span>
+                            </div>
+                            <select id="imgDensitySelect" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[10px] text-slate-200">
+                                <option value="contours" selected>Contours & Outlines</option>
+                                <option value="detailed">Fine Detailed Strokes</option>
+                                <option value="hatch">Contours + Hatch Shading</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-0.5">Pos X (mm)</label>
+                            <input type="number" id="imgPosX" value="35.0" step="1" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-0.5">Pos Y (mm)</label>
+                            <input type="number" id="imgPosY" value="50.0" step="1" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-400 mb-0.5">Width (mm)</label>
+                            <input type="number" id="imgWidth" value="65.0" step="1" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono" />
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1">
+                        <label class="flex items-center gap-1.5 text-[10.5px] text-slate-300 cursor-pointer select-none">
+                            <input type="checkbox" id="imgInvertColors" class="rounded border-slate-800 text-indigo-600 bg-slate-950 h-3.5 w-3.5" />
+                            Invert (White lines on black)
+                        </label>
+                        <button id="btnClearImageBlock" type="button" class="px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 rounded text-[10px] font-bold transition">
+                            🗑️ Remove Image
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graph Paper Photo Overlay Section (Visible when in Graph mode) -->
+            <div id="graphModeSection" class="bg-slate-900 border border-emerald-900/50 rounded-xl p-5 shadow-lg space-y-3 hidden">
+                <div class="flex items-center justify-between">
+                    <label class="block text-sm font-bold uppercase tracking-wider text-emerald-400">📈 Graph Photo Overlay</label>
+                    <span class="text-[10px] bg-emerald-950 border border-emerald-800 text-emerald-300 px-2 py-0.5 rounded-full font-semibold">1cm Grid (20cm Travel)</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    Overlay a tilted smartphone photo of your friend's graph. Use the 4 corner alignment pins on the canvas to stretch and untilt it so it lines up with the 1cm bed grid.
+                </p>
+                
+                <div>
+                    <label class="block text-[10px] font-semibold text-slate-300 mb-1">📷 Upload Friend's Graph Photo</label>
+                    <input type="file" id="graphPhotoInput" accept="image/*" class="block w-full text-xs text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-[10.5px] file:font-semibold file:bg-emerald-600/20 file:text-emerald-400 hover:file:bg-emerald-600/30 cursor-pointer" />
+                </div>
+
+                <div id="graphOverlayControls" class="space-y-3 hidden pt-3 border-t border-slate-800/80">
+                    <div>
+                        <div class="flex items-center justify-between text-[10.5px] mb-1">
+                            <span class="text-slate-300">Photo Opacity (Press <kbd class="px-1 py-0.5 bg-slate-800 rounded font-mono text-emerald-400 font-bold">O</kbd> to cycle):</span>
+                            <span id="lblGraphOpacity" class="font-mono text-emerald-300 font-bold">60%</span>
+                        </div>
+                        <input type="range" id="graphOpacityRange" min="0" max="100" step="5" value="60" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500" />
+                    </div>
+                    
+                    <div class="flex items-center gap-2 pt-1">
+                        <button id="btnResetGraphAlignment" type="button" class="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10.5px] font-semibold transition">
+                            🔄 Reset 4 Alignment Pins
+                        </button>
+                        <button id="btnClearGraphPhoto" type="button" class="py-1.5 px-2.5 bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 rounded text-[10.5px] font-semibold transition">
+                            🗑️ Remove Photo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Step 4: Ruled Paper & Bed Calibration -->
             <div id="ruledPaperCalibWizardContainer" class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4 transition-all duration-300">
                 <div class="flex items-center justify-between">
@@ -937,13 +1072,26 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             </div>
                         </div>
 
-                        <!-- Click Mode: Move Pen vs Edit Font -->
-                        <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-lg p-0.5">
-                            <button id="topClickModeJog" type="button" class="px-2.5 py-1 text-[10.5px] font-bold rounded-lg bg-indigo-600 text-white shadow flex items-center gap-1 cursor-pointer" title="Click anywhere on canvas to move pen nozzle">
+                        <!-- Click Mode: Move Pen vs Edit Font vs Move Image vs Align Graph -->
+                        <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-0.5">
+                            <button id="topClickModeJog" type="button" class="px-2 py-1 text-[10.5px] font-bold rounded-lg bg-indigo-600 text-white shadow flex items-center gap-1 cursor-pointer" title="Click anywhere on canvas to move pen nozzle">
                                 ✈️ Move Pen
                             </button>
-                            <button id="topClickModeEdit" type="button" class="px-2.5 py-1 text-[10.5px] font-medium rounded-lg text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer" title="Click letters to edit in Font Designer">
+                            <button id="topClickModeEdit" type="button" class="px-2 py-1 text-[10.5px] font-medium rounded-lg text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer" title="Click letters to edit in Font Designer">
                                 ✍️ Edit Font
+                            </button>
+                            <button id="topClickModeImage" type="button" class="px-2 py-1 text-[10.5px] font-medium rounded-lg text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer" title="Drag and reposition image block on canvas">
+                                🖼️ Move Image
+                            </button>
+                            <button id="topClickModeGraphPins" type="button" class="hidden px-2 py-1 text-[10.5px] font-medium rounded-lg text-emerald-400 hover:text-white flex items-center gap-1 cursor-pointer" title="Drag 4 corner alignment pins to align friend's photo">
+                                📌 Align Graph Photo
+                            </button>
+                        </div>
+
+                        <!-- Graph Photo Opacity Quick Toggle -->
+                        <div id="topOpacityContainer" class="hidden flex items-center gap-1 bg-emerald-950/60 border border-emerald-800/80 rounded-lg px-2 py-1">
+                            <button id="btnTopCycleOpacity" type="button" class="text-[10px] font-mono font-bold text-emerald-300 hover:text-white flex items-center gap-1" title="Cycle photo opacity (Press 'O')">
+                                👁️ Photo: <span id="topOpacityBadge">60%</span> (<span class="underline">O</span>)
                             </button>
                         </div>
 
@@ -4307,6 +4455,29 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             return { x: xPhysical, y: yPhysical };
         }
 
+        function mapBedToDesign(bx, by, mapping) {
+            if (!mapping) {
+                const settings = getSettings();
+                return {
+                    x: bx - settings.paperXShift,
+                    y: (settings.paperYShift + 297.0) - by
+                };
+            }
+            const rx_rot = bx - mapping.p1.x;
+            const ry_rot = by - mapping.p1.y;
+            
+            const cosT = Math.cos(mapping.theta);
+            const sinT = Math.sin(mapping.theta);
+            
+            const rx = rx_rot * cosT + ry_rot * sinT;
+            const ry = -rx_rot * sinT + ry_rot * cosT;
+            
+            const x = rx + mapping.d1_f.x;
+            const y_f = ry + mapping.d1_f.y;
+            const y = 297.0 - y_f;
+            return { x, y };
+        }
+
         function updateMissingCharsUI(missingSet) {
             const warningEl = document.getElementById('missingCharsWarning');
             const listEl = document.getElementById('missingCharsList');
@@ -4331,6 +4502,476 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             } else {
                 warningEl.classList.add('hidden');
             }
+        }
+
+        // ==========================================
+        // --- COMPONENT: RDP SIMPLIFIER & WARPED QUAD ---
+        // ==========================================
+        function rdpSimplify(points, epsilon) {
+            if (points.length <= 2) return points;
+            let dmax = 0;
+            let index = 0;
+            const end = points.length - 1;
+            for (let i = 1; i < end; i++) {
+                const d = perpendicularDistance(points[i], points[0], points[end]);
+                if (d > dmax) {
+                    index = i;
+                    dmax = d;
+                }
+            }
+            if (dmax > epsilon) {
+                const r1 = rdpSimplify(points.slice(0, index + 1), epsilon);
+                const r2 = rdpSimplify(points.slice(index), epsilon);
+                return r1.slice(0, r1.length - 1).concat(r2);
+            } else {
+                return [points[0], points[end]];
+            }
+        }
+
+        function perpendicularDistance(pt, lineStart, lineEnd) {
+            const dx = lineEnd.x - lineStart.x;
+            const dy = lineEnd.y - lineStart.y;
+            const mag = Math.hypot(dx, dy);
+            if (mag < 1e-6) return Math.hypot(pt.x - lineStart.x, pt.y - lineStart.y);
+            return Math.abs(dy * pt.x - dx * pt.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x) / mag;
+        }
+
+        // Projective 4-point quadrilateral affine warping for friend's graph photo
+        function drawWarpedQuad(ctx, img, p1, p2, p3, p4) {
+            const w = img.width;
+            const h = img.height;
+            if (!w || !h) return;
+
+            function drawTriangle(u0, v0, u1, v1, u2, v2, x0, y0, x1, y1, x2, y2) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(x0, y0);
+                ctx.lineTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.closePath();
+                ctx.clip();
+
+                const delta = u0 * (v1 - v2) + u1 * (v2 - v0) + u2 * (v0 - v1);
+                if (Math.abs(delta) < 1e-6) {
+                    ctx.restore();
+                    return;
+                }
+                const a = (x0 * (v1 - v2) + x1 * (v2 - v0) + x2 * (v0 - v1)) / delta;
+                const b = (y0 * (v1 - v2) + y1 * (v2 - v0) + y2 * (v0 - v1)) / delta;
+                const c = (x0 * (u2 - u1) + x1 * (u0 - u2) + x2 * (u1 - u0)) / delta;
+                const d = (y0 * (u2 - u1) + y1 * (u0 - u2) + y2 * (u1 - u0)) / delta;
+                const e = (x0 * (u1 * v2 - u2 * v1) + x1 * (u2 * v0 - u0 * v2) + x2 * (u0 * v1 - u1 * v0)) / delta;
+                const f = (y0 * (u1 * v2 - u2 * v1) + y1 * (u2 * v0 - u0 * v2) + y2 * (u0 * v1 - u1 * v0)) / delta;
+
+                ctx.transform(a, b, c, d, e, f);
+                ctx.drawImage(img, 0, 0);
+                ctx.restore();
+            }
+
+            // Triangle 1: Top-Left (p1), Top-Right (p2), Bottom-Left (p3)
+            drawTriangle(0, 0, w, 0, 0, h, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y);
+            // Triangle 2: Top-Right (p2), Bottom-Right (p4), Bottom-Left (p3)
+            drawTriangle(w, 0, w, h, 0, h, p2.x, p2.y, p4.x, p4.y, p3.x, p3.y);
+        }
+
+        // ==========================================
+        // --- COMPONENT: PAPER TYPE & MARGINS ---
+        // ==========================================
+        let currentPaperType = 'ruled'; // 'ruled' or 'graph'
+        const PHYSICAL_RULED_MARGIN_X = 32.0; // Real printed red margin line on notebook paper
+
+        const btnPaperModeRuled = document.getElementById('btnPaperModeRuled');
+        const btnPaperModeGraph = document.getElementById('btnPaperModeGraph');
+        const paperTypeBadge = document.getElementById('paperTypeBadge');
+        const graphModeSection = document.getElementById('graphModeSection');
+        const topClickModeGraphPins = document.getElementById('topClickModeGraphPins');
+        const topOpacityContainer = document.getElementById('topOpacityContainer');
+
+        const sliderLeftMargin = document.getElementById('sliderLeftMargin');
+        const sliderRightMargin = document.getElementById('sliderRightMargin');
+        const lblLeftMargin = document.getElementById('lblLeftMargin');
+        const lblRightMargin = document.getElementById('lblRightMargin');
+
+        function setPaperType(type) {
+            currentPaperType = type;
+            const jumpYInput = document.getElementById('jumpYDistanceInput');
+            
+            if (type === 'graph') {
+                if (btnPaperModeGraph) btnPaperModeGraph.className = "py-2 px-3 rounded-lg text-xs font-bold border bg-emerald-600 border-emerald-500 text-white shadow transition flex items-center justify-center gap-1.5 cursor-pointer";
+                if (btnPaperModeRuled) btnPaperModeRuled.className = "py-2 px-3 rounded-lg text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5 cursor-pointer";
+                if (paperTypeBadge) {
+                    paperTypeBadge.textContent = "1cm Graph Paper";
+                    paperTypeBadge.className = "text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 px-2 py-0.5 rounded-full font-semibold";
+                }
+                if (graphModeSection) graphModeSection.classList.remove('hidden');
+                if (topClickModeGraphPins) topClickModeGraphPins.classList.remove('hidden');
+                if (topOpacityContainer && graphOverlayImg) topOpacityContainer.classList.remove('hidden');
+                
+                // Jump Y Down value is tuned to exactly 200mm (20cm) for Graph paper!
+                if (jumpYInput) jumpYInput.value = "200.00";
+                showToast("📈 1cm Graph Mode: 20cm Travel active (Jump Y set to 200mm)", "info");
+            } else {
+                if (btnPaperModeRuled) btnPaperModeRuled.className = "py-2 px-3 rounded-lg text-xs font-bold border bg-indigo-600 border-indigo-500 text-white shadow transition flex items-center justify-center gap-1.5 cursor-pointer";
+                if (btnPaperModeGraph) btnPaperModeGraph.className = "py-2 px-3 rounded-lg text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition flex items-center justify-center gap-1.5 cursor-pointer";
+                if (paperTypeBadge) {
+                    paperTypeBadge.textContent = "Ruled Notebook";
+                    paperTypeBadge.className = "text-[10px] bg-indigo-500/10 text-indigo-300 border border-indigo-500/25 px-2 py-0.5 rounded-full font-semibold";
+                }
+                if (graphModeSection) graphModeSection.classList.add('hidden');
+                if (topClickModeGraphPins) topClickModeGraphPins.classList.add('hidden');
+                if (topOpacityContainer) topOpacityContainer.classList.add('hidden');
+                
+                // Restore Jump Y Down to standard notebook spacing (146mm)
+                if (jumpYInput) jumpYInput.value = "146.00";
+                showToast("📄 Ruled Notebook Mode active (Jump Y set to 146mm)", "info");
+            }
+            safeSetItem('plotter_paper_type', currentPaperType);
+            triggerPreviewUpdate();
+        }
+
+        if (btnPaperModeRuled) btnPaperModeRuled.addEventListener('click', () => setPaperType('ruled'));
+        if (btnPaperModeGraph) btnPaperModeGraph.addEventListener('click', () => setPaperType('graph'));
+
+        if (sliderLeftMargin) {
+            sliderLeftMargin.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                if (lblLeftMargin) lblLeftMargin.textContent = `${val.toFixed(1)} mm`;
+                const inp = document.getElementById('leftMargin');
+                if (inp) inp.value = val;
+                window.handwritingLayoutDirty = true;
+                triggerPreviewUpdate();
+            });
+        }
+
+        if (sliderRightMargin) {
+            sliderRightMargin.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                if (lblRightMargin) lblRightMargin.textContent = `${val.toFixed(1)} mm`;
+                const inp = document.getElementById('rightMargin');
+                if (inp) inp.value = val;
+                window.handwritingLayoutDirty = true;
+                triggerPreviewUpdate();
+            });
+        }
+
+        // ==========================================
+        // --- COMPONENT: IMAGE BLOCK VECTORIZER ---
+        // ==========================================
+        let imageBlock = {
+            img: null,
+            x: 35.0,
+            y: 50.0,
+            width: 65.0,
+            height: 65.0,
+            threshold: 128,
+            style: 'contours',
+            invert: false,
+            strokes: []
+        };
+        let isDraggingImage = false;
+        let imageDragOffset = { x: 0, y: 0 };
+
+        const imageBlockFileInput = document.getElementById('imageBlockFileInput');
+        const imageBlockControls = document.getElementById('imageBlockControls');
+        const imageBlockStatus = document.getElementById('imageBlockStatus');
+        const imgThresholdRange = document.getElementById('imgThresholdRange');
+        const lblImgThreshold = document.getElementById('lblImgThreshold');
+        const imgDensitySelect = document.getElementById('imgDensitySelect');
+        const imgPosX = document.getElementById('imgPosX');
+        const imgPosY = document.getElementById('imgPosY');
+        const imgWidth = document.getElementById('imgWidth');
+        const imgInvertColors = document.getElementById('imgInvertColors');
+        const btnClearImageBlock = document.getElementById('btnClearImageBlock');
+        const topClickModeImage = document.getElementById('topClickModeImage');
+
+        function vectorizeImageBlock() {
+            if (!imageBlock.img) {
+                imageBlock.strokes = [];
+                triggerPreviewUpdate();
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            const maxDim = 320;
+            let w = imageBlock.img.width;
+            let h = imageBlock.img.height;
+            if (w > maxDim || h > maxDim) {
+                const ratio = Math.min(maxDim / w, maxDim / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imageBlock.img, 0, 0, w, h);
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+
+            const bin = new Uint8Array(w * h);
+            const thresh = imageBlock.threshold;
+            const inv = imageBlock.invert;
+            for (let i = 0; i < data.length; i += 4) {
+                const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+                bin[i / 4] = (inv ? lum > thresh : lum < thresh) ? 1 : 0;
+            }
+
+            const rawStrokes = [];
+            const visited = new Uint8Array(w * h);
+
+            // Extract edge contours
+            for (let y = 1; y < h - 1; y++) {
+                for (let x = 1; x < w - 1; x++) {
+                    const idx = y * w + x;
+                    if (bin[idx] === 1 && !visited[idx]) {
+                        const isEdge = bin[idx - 1] === 0 || bin[idx + 1] === 0 ||
+                                       bin[idx - w] === 0 || bin[idx + w] === 0;
+                        if (isEdge) {
+                            const contour = [];
+                            let cx = x, cy = y;
+                            while (cx > 0 && cx < w - 1 && cy > 0 && cy < h - 1) {
+                                const cIdx = cy * w + cx;
+                                if (visited[cIdx] || bin[cIdx] === 0) break;
+                                visited[cIdx] = 1;
+                                contour.push({ x: cx, y: cy });
+                                
+                                const neighbors = [
+                                    { dx: 1, dy: 0 }, { dx: 1, dy: 1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 1 },
+                                    { dx: -1, dy: 0 }, { dx: -1, dy: -1 }, { dx: 0, dy: -1 }, { dx: 1, dy: -1 }
+                                ];
+                                let found = false;
+                                for (let n of neighbors) {
+                                    const nx = cx + n.dx, ny = cy + n.dy;
+                                    const nIdx = ny * w + nx;
+                                    if (nx > 0 && nx < w - 1 && ny > 0 && ny < h - 1 && bin[nIdx] === 1 && !visited[nIdx]) {
+                                        cx = nx; cy = ny;
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                if (!found) break;
+                            }
+                            if (contour.length >= 3) {
+                                rawStrokes.push(contour);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Hatch shading if detailed or hatch style selected
+            if (imageBlock.style === 'hatch' || imageBlock.style === 'detailed') {
+                const step = imageBlock.style === 'detailed' ? 3 : 5;
+                for (let y = 0; y < h; y += step) {
+                    let inRun = false;
+                    let runStart = 0;
+                    for (let x = 0; x < w; x++) {
+                        const val = bin[y * w + x];
+                        if (val === 1 && !inRun) {
+                            inRun = true;
+                            runStart = x;
+                        } else if (val === 0 && inRun) {
+                            inRun = false;
+                            if (x - runStart >= 3) {
+                                rawStrokes.push([ { x: runStart, y }, { x: x - 1, y } ]);
+                            }
+                        }
+                    }
+                    if (inRun && w - runStart >= 3) {
+                        rawStrokes.push([ { x: runStart, y }, { x: w - 1, y } ]);
+                    }
+                }
+            }
+
+            const scaleX = imageBlock.width / w;
+            const scaleY = imageBlock.height / h;
+            const mmStrokes = [];
+            for (let stroke of rawStrokes) {
+                const simplified = rdpSimplify(stroke, 0.7);
+                if (simplified.length < 2) continue;
+                mmStrokes.push(simplified.map(pt => ({
+                    x: imageBlock.x + pt.x * scaleX,
+                    y: imageBlock.y + pt.y * scaleY
+                })));
+            }
+
+            imageBlock.strokes = mmStrokes;
+            if (imageBlockStatus) {
+                imageBlockStatus.textContent = `${mmStrokes.length} vectors`;
+                imageBlockStatus.className = "text-[10px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/25 px-2 py-0.5 rounded-full font-mono";
+            }
+            triggerPreviewUpdate();
+        }
+
+        if (imageBlockFileInput) {
+            imageBlockFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        imageBlock.img = img;
+                        const aspect = img.width / img.height;
+                        imageBlock.height = parseFloat((imageBlock.width / aspect).toFixed(1));
+                        if (imageBlockControls) imageBlockControls.classList.remove('hidden');
+                        vectorizeImageBlock();
+                        showToast("Vectorized image diagram successfully!", "success");
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        if (imgThresholdRange) {
+            imgThresholdRange.addEventListener('input', (e) => {
+                imageBlock.threshold = parseInt(e.target.value);
+                if (lblImgThreshold) lblImgThreshold.textContent = imageBlock.threshold;
+                vectorizeImageBlock();
+            });
+        }
+        if (imgDensitySelect) {
+            imgDensitySelect.addEventListener('change', (e) => {
+                imageBlock.style = e.target.value;
+                vectorizeImageBlock();
+            });
+        }
+        if (imgPosX) {
+            imgPosX.addEventListener('input', (e) => {
+                imageBlock.x = parseFloat(e.target.value) || 35.0;
+                vectorizeImageBlock();
+            });
+        }
+        if (imgPosY) {
+            imgPosY.addEventListener('input', (e) => {
+                imageBlock.y = parseFloat(e.target.value) || 50.0;
+                vectorizeImageBlock();
+            });
+        }
+        if (imgWidth) {
+            imgWidth.addEventListener('input', (e) => {
+                imageBlock.width = parseFloat(e.target.value) || 65.0;
+                if (imageBlock.img) {
+                    const aspect = imageBlock.img.width / imageBlock.img.height;
+                    imageBlock.height = parseFloat((imageBlock.width / aspect).toFixed(1));
+                }
+                vectorizeImageBlock();
+            });
+        }
+        if (imgInvertColors) {
+            imgInvertColors.addEventListener('change', (e) => {
+                imageBlock.invert = e.target.checked;
+                vectorizeImageBlock();
+            });
+        }
+        if (btnClearImageBlock) {
+            btnClearImageBlock.addEventListener('click', () => {
+                imageBlock.img = null;
+                imageBlock.strokes = [];
+                if (imageBlockControls) imageBlockControls.classList.add('hidden');
+                if (imageBlockStatus) {
+                    imageBlockStatus.textContent = "No Image";
+                    imageBlockStatus.className = "text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-mono";
+                }
+                if (imageBlockFileInput) imageBlockFileInput.value = "";
+                triggerPreviewUpdate();
+                showToast("Image removed", "info");
+            });
+        }
+
+        // ==========================================
+        // --- COMPONENT: GRAPH PHOTO OVERLAY ---
+        // ==========================================
+        let graphOverlayImg = null;
+        let graphOverlayOpacity = 0.6;
+        let graphAlignmentPins = {
+            p1: { x: 10.0, y: 10.0 },   // Top-Left
+            p2: { x: 190.0, y: 10.0 },  // Top-Right
+            p3: { x: 10.0, y: 190.0 },  // Bottom-Left
+            p4: { x: 190.0, y: 190.0 }  // Bottom-Right
+        };
+        let draggingGraphPin = null;
+
+        const graphPhotoInput = document.getElementById('graphPhotoInput');
+        const graphOverlayControls = document.getElementById('graphOverlayControls');
+        const graphOpacityRange = document.getElementById('graphOpacityRange');
+        const lblGraphOpacity = document.getElementById('lblGraphOpacity');
+        const topOpacityBadge = document.getElementById('topOpacityBadge');
+        const btnTopCycleOpacity = document.getElementById('btnTopCycleOpacity');
+        const btnResetGraphAlignment = document.getElementById('btnResetGraphAlignment');
+        const btnClearGraphPhoto = document.getElementById('btnClearGraphPhoto');
+
+        function cycleGraphOverlayOpacity() {
+            if (!graphOverlayImg) {
+                showToast("Upload a graph photo first to adjust opacity", "info");
+                return;
+            }
+            if (graphOverlayOpacity >= 0.9) graphOverlayOpacity = 0.6;
+            else if (graphOverlayOpacity >= 0.5) graphOverlayOpacity = 0.3;
+            else if (graphOverlayOpacity >= 0.2) graphOverlayOpacity = 0.0;
+            else graphOverlayOpacity = 1.0;
+            
+            updateGraphOpacityUI();
+            triggerPreviewUpdate();
+            showToast(`📷 Photo Overlay Opacity: ${Math.round(graphOverlayOpacity * 100)}%`, "info");
+        }
+
+        function updateGraphOpacityUI() {
+            const pct = Math.round(graphOverlayOpacity * 100);
+            if (graphOpacityRange) graphOpacityRange.value = pct;
+            if (lblGraphOpacity) lblGraphOpacity.textContent = `${pct}%`;
+            if (topOpacityBadge) topOpacityBadge.textContent = `${pct}%`;
+        }
+
+        if (btnTopCycleOpacity) btnTopCycleOpacity.addEventListener('click', cycleGraphOverlayOpacity);
+        if (graphOpacityRange) {
+            graphOpacityRange.addEventListener('input', (e) => {
+                graphOverlayOpacity = parseInt(e.target.value) / 100.0;
+                updateGraphOpacityUI();
+                triggerPreviewUpdate();
+            });
+        }
+        if (btnResetGraphAlignment) {
+            btnResetGraphAlignment.addEventListener('click', () => {
+                graphAlignmentPins = {
+                    p1: { x: 10.0, y: 10.0 },
+                    p2: { x: 190.0, y: 10.0 },
+                    p3: { x: 10.0, y: 190.0 },
+                    p4: { x: 190.0, y: 190.0 }
+                };
+                triggerPreviewUpdate();
+                showToast("Reset 4 alignment pins", "info");
+            });
+        }
+        if (btnClearGraphPhoto) {
+            btnClearGraphPhoto.addEventListener('click', () => {
+                graphOverlayImg = null;
+                if (graphOverlayControls) graphOverlayControls.classList.add('hidden');
+                if (topOpacityContainer) topOpacityContainer.classList.add('hidden');
+                if (graphPhotoInput) graphPhotoInput.value = "";
+                triggerPreviewUpdate();
+                showToast("Removed reference photo", "info");
+            });
+        }
+        if (graphPhotoInput) {
+            graphPhotoInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        graphOverlayImg = img;
+                        if (graphOverlayControls) graphOverlayControls.classList.remove('hidden');
+                        if (topOpacityContainer) topOpacityContainer.classList.remove('hidden');
+                        updateGraphOpacityUI();
+                        triggerPreviewUpdate();
+                        showToast("Loaded graph photo! Drag the 4 pins to align corners.", "success");
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
         }
 
         // Draw preview grid on right panel Canvas
@@ -4365,81 +5006,234 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             const paperY = (220.0 - settings.paperYShift - 297.0) * mmToPx;
             const paperHeightPx = 297.0 * mmToPx;
             
-            // Draw Indian Ruled Paper blue lines and red margin bounds (if Show Grid is active)
+            // Draw paper sheet and grid
             if (showBedGrid) {
-                pCtx.strokeStyle = 'rgba(59, 130, 246, 0.25)'; // Blue lines
-                pCtx.lineWidth = 2.0;
-            
-            let ruleLinesCount = 0;
-            let printableLines = [];
-            
-            // Draw 60 lines (from index -10 to 50 relative to topLineOffset) to cover the infinite workspace
-            for (let i = -10; i <= 50; i++) {
-                const lineY = settings.topLineOffset + i * settings.lineSpacing;
-                pCtx.beginPath();
-                if (calibMatrix) {
-                    // Extend line X coordinates from -150 to 350 to ensure they cross the entire bed frame
-                    const ptStart = mapDesignToBed(-150, lineY, calibMatrix);
-                    const ptEnd = mapDesignToBed(350, lineY, calibMatrix);
-                    pCtx.moveTo(ptStart.x * mmToPx, (220 - ptStart.y) * mmToPx);
-                    pCtx.lineTo(ptEnd.x * mmToPx, (220 - ptEnd.y) * mmToPx);
-                } else {
-                    const yPx = paperY + lineY * mmToPx;
-                    pCtx.moveTo(paperX - 150 * mmToPx, yPx);
-                    pCtx.lineTo(paperX + (210 + 150) * mmToPx, yPx);
-                }
-                pCtx.stroke();
-                
-                // Check if this line lies within the reachable Y bed bounds
-                const yBedVal = calibMatrix ? mapDesignToBed(settings.leftMargin, lineY, calibMatrix).y : (220 - settings.paperYShift - lineY);
-                if (yBedVal >= 0 && yBedVal <= 220) {
-                    ruleLinesCount++;
-                    if (i >= 0) {
-                        printableLines.push(i + 1);
+                if (currentPaperType === 'graph') {
+                    // --- 1CM ENGINEERING GRAPH PAPER MODE ---
+                    // Draw 1cm major grid lines and 2mm minor grid lines
+                    // 20cm height = 200mm = 20 major lines
+                    pCtx.save();
+                    
+                    // Minor grid (2mm)
+                    pCtx.strokeStyle = 'rgba(16, 185, 129, 0.16)';
+                    pCtx.lineWidth = 0.8;
+                    for (let x = 0; x <= 200; x += 2) {
+                        if (x % 10 === 0) continue;
+                        pCtx.beginPath();
+                        if (calibMatrix) {
+                            const pA = mapDesignToBed(x, 0, calibMatrix);
+                            const pB = mapDesignToBed(x, 200, calibMatrix);
+                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
+                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
+                        } else {
+                            pCtx.moveTo(paperX + x * mmToPx, paperY);
+                            pCtx.lineTo(paperX + x * mmToPx, paperY + 200 * mmToPx);
+                        }
+                        pCtx.stroke();
                     }
-                }
-            }
-            
-            const indicatorEl = document.getElementById('printableLinesIndicator');
-            if (indicatorEl) {
-                if (printableLines.length > 0) {
-                    indicatorEl.textContent = `Ruled Lines on Bed: ${ruleLinesCount} lines (Lines ${printableLines[0]} to ${printableLines[printableLines.length-1]} of 31)`;
+                    for (let y = 0; y <= 200; y += 2) {
+                        if (y % 10 === 0) continue;
+                        pCtx.beginPath();
+                        if (calibMatrix) {
+                            const pA = mapDesignToBed(0, y, calibMatrix);
+                            const pB = mapDesignToBed(200, y, calibMatrix);
+                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
+                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
+                        } else {
+                            pCtx.moveTo(paperX, paperY + y * mmToPx);
+                            pCtx.lineTo(paperX + 200 * mmToPx, paperY + y * mmToPx);
+                        }
+                        pCtx.stroke();
+                    }
+
+                    // Major grid (10mm = 1cm)
+                    pCtx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
+                    pCtx.lineWidth = 1.8;
+                    for (let x = 0; x <= 200; x += 10) {
+                        pCtx.beginPath();
+                        if (calibMatrix) {
+                            const pA = mapDesignToBed(x, 0, calibMatrix);
+                            const pB = mapDesignToBed(x, 200, calibMatrix);
+                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
+                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
+                        } else {
+                            pCtx.moveTo(paperX + x * mmToPx, paperY);
+                            pCtx.lineTo(paperX + x * mmToPx, paperY + 200 * mmToPx);
+                        }
+                        pCtx.stroke();
+                    }
+                    for (let y = 0; y <= 200; y += 10) {
+                        pCtx.beginPath();
+                        if (calibMatrix) {
+                            const pA = mapDesignToBed(0, y, calibMatrix);
+                            const pB = mapDesignToBed(200, y, calibMatrix);
+                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
+                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
+                        } else {
+                            pCtx.moveTo(paperX, paperY + y * mmToPx);
+                            pCtx.lineTo(paperX + 200 * mmToPx, paperY + y * mmToPx);
+                        }
+                        pCtx.stroke();
+                    }
+                    pCtx.restore();
+
+                    const indicatorEl = document.getElementById('printableLinesIndicator');
+                    if (indicatorEl) {
+                        indicatorEl.textContent = `1cm Graph Paper: 20cm Travel Active (20 Major Lines)`;
+                    }
+
+                    // Render Friend's Photo Overlay if present
+                    if (graphOverlayImg && graphOverlayOpacity > 0) {
+                        pCtx.save();
+                        pCtx.globalAlpha = graphOverlayOpacity;
+                        
+                        const toPx = (pt) => {
+                            if (calibMatrix) {
+                                const b = mapDesignToBed(pt.x, pt.y, calibMatrix);
+                                return { x: b.x * mmToPx, y: (220 - b.y) * mmToPx };
+                            } else {
+                                return { x: paperX + pt.x * mmToPx, y: paperY + pt.y * mmToPx };
+                            }
+                        };
+                        const q1 = toPx(graphAlignmentPins.p1);
+                        const q2 = toPx(graphAlignmentPins.p2);
+                        const q3 = toPx(graphAlignmentPins.p3);
+                        const q4 = toPx(graphAlignmentPins.p4);
+                        
+                        drawWarpedQuad(pCtx, graphOverlayImg, q1, q2, q3, q4);
+                        pCtx.restore();
+                    }
+
+                    // If in Graph Alignment Pins mode, draw the 4 interactive pins
+                    if (canvasClickMode === 'graphPins') {
+                        const pinEntries = [
+                            { id: 'p1', label: '1 (TL)', pt: graphAlignmentPins.p1 },
+                            { id: 'p2', label: '2 (TR)', pt: graphAlignmentPins.p2 },
+                            { id: 'p3', label: '3 (BL)', pt: graphAlignmentPins.p3 },
+                            { id: 'p4', label: '4 (BR)', pt: graphAlignmentPins.p4 }
+                        ];
+                        for (let entry of pinEntries) {
+                            let px, py;
+                            if (calibMatrix) {
+                                const b = mapDesignToBed(entry.pt.x, entry.pt.y, calibMatrix);
+                                px = b.x * mmToPx;
+                                py = (220 - b.y) * mmToPx;
+                            } else {
+                                px = paperX + entry.pt.x * mmToPx;
+                                py = paperY + entry.pt.y * mmToPx;
+                            }
+                            // Pin circle
+                            pCtx.beginPath();
+                            pCtx.arc(px, py, 12, 0, Math.PI * 2);
+                            pCtx.fillStyle = '#10b981';
+                            pCtx.fill();
+                            pCtx.strokeStyle = '#ffffff';
+                            pCtx.lineWidth = 3;
+                            pCtx.stroke();
+                            
+                            // Label
+                            pCtx.fillStyle = '#ffffff';
+                            pCtx.font = 'bold 12px sans-serif';
+                            pCtx.textAlign = 'center';
+                            pCtx.textBaseline = 'middle';
+                            pCtx.fillText(entry.label, px, py - 18);
+                        }
+                    }
+
                 } else {
-                    indicatorEl.textContent = "Ruled Lines on Bed: 0 lines";
+                    // --- RULED NOTEBOOK PAPER MODE ---
+                    pCtx.strokeStyle = 'rgba(59, 130, 246, 0.25)'; // Blue lines
+                    pCtx.lineWidth = 2.0;
+                
+                    let ruleLinesCount = 0;
+                    let printableLines = [];
+                    
+                    for (let i = -10; i <= 50; i++) {
+                        const lineY = settings.topLineOffset + i * settings.lineSpacing;
+                        pCtx.beginPath();
+                        if (calibMatrix) {
+                            const ptStart = mapDesignToBed(-150, lineY, calibMatrix);
+                            const ptEnd = mapDesignToBed(350, lineY, calibMatrix);
+                            pCtx.moveTo(ptStart.x * mmToPx, (220 - ptStart.y) * mmToPx);
+                            pCtx.lineTo(ptEnd.x * mmToPx, (220 - ptEnd.y) * mmToPx);
+                        } else {
+                            const yPx = paperY + lineY * mmToPx;
+                            pCtx.moveTo(paperX - 150 * mmToPx, yPx);
+                            pCtx.lineTo(paperX + (210 + 150) * mmToPx, yPx);
+                        }
+                        pCtx.stroke();
+                        
+                        const yBedVal = calibMatrix ? mapDesignToBed(settings.leftMargin, lineY, calibMatrix).y : (220 - settings.paperYShift - lineY);
+                        if (yBedVal >= 0 && yBedVal <= 220) {
+                            ruleLinesCount++;
+                            if (i >= 0) {
+                                printableLines.push(i + 1);
+                            }
+                        }
+                    }
+                    
+                    const indicatorEl = document.getElementById('printableLinesIndicator');
+                    if (indicatorEl) {
+                        if (printableLines.length > 0) {
+                            indicatorEl.textContent = `Ruled Lines on Bed: ${ruleLinesCount} lines (Lines ${printableLines[0]} to ${printableLines[printableLines.length-1]} of 31)`;
+                        } else {
+                            indicatorEl.textContent = "Ruled Lines on Bed: 0 lines";
+                        }
+                    }
+                    
+                    // 1. REAL Physical Red Margin Line: Thick solid red line
+                    pCtx.save();
+                    pCtx.setLineDash([]);
+                    pCtx.strokeStyle = 'rgba(239, 68, 68, 0.75)'; // Real solid red margin
+                    pCtx.lineWidth = 3.2;
+                    pCtx.beginPath();
+                    if (calibMatrix) {
+                        const ptRealMarginTop = mapDesignToBed(PHYSICAL_RULED_MARGIN_X, -150, calibMatrix);
+                        const ptRealMarginBottom = mapDesignToBed(PHYSICAL_RULED_MARGIN_X, 450, calibMatrix);
+                        pCtx.moveTo(ptRealMarginTop.x * mmToPx, (220 - ptRealMarginTop.y) * mmToPx);
+                        pCtx.lineTo(ptRealMarginBottom.x * mmToPx, (220 - ptRealMarginBottom.y) * mmToPx);
+                    } else {
+                        const realMarginXPx = paperX + PHYSICAL_RULED_MARGIN_X * mmToPx;
+                        pCtx.moveTo(realMarginXPx, paperY - 150 * mmToPx);
+                        pCtx.lineTo(realMarginXPx, paperY + paperHeightPx + 150 * mmToPx);
+                    }
+                    pCtx.stroke();
+                    
+                    // 2. IMAGINARY Left & Right Text Margins: Dotted lines
+                    pCtx.setLineDash([7, 7]);
+                    pCtx.strokeStyle = 'rgba(6, 182, 212, 0.8)'; // Cyan dotted text boundary
+                    pCtx.lineWidth = 2.0;
+                    
+                    // Left Text Boundary
+                    pCtx.beginPath();
+                    if (calibMatrix) {
+                        const ptMarginTop = mapDesignToBed(settings.leftMargin, -150, calibMatrix);
+                        const ptMarginBottom = mapDesignToBed(settings.leftMargin, 450, calibMatrix);
+                        pCtx.moveTo(ptMarginTop.x * mmToPx, (220 - ptMarginTop.y) * mmToPx);
+                        pCtx.lineTo(ptMarginBottom.x * mmToPx, (220 - ptMarginBottom.y) * mmToPx);
+                    } else {
+                        const marginXPx = paperX + settings.leftMargin * mmToPx;
+                        pCtx.moveTo(marginXPx, paperY - 150 * mmToPx);
+                        pCtx.lineTo(marginXPx, paperY + paperHeightPx + 150 * mmToPx);
+                    }
+                    pCtx.stroke();
+                    
+                    // Right Text Boundary
+                    pCtx.beginPath();
+                    if (calibMatrix) {
+                        const ptRightMarginTop = mapDesignToBed(210 - settings.rightMargin, -150, calibMatrix);
+                        const ptRightMarginBottom = mapDesignToBed(210 - settings.rightMargin, 450, calibMatrix);
+                        pCtx.moveTo(ptRightMarginTop.x * mmToPx, (220 - ptRightMarginTop.y) * mmToPx);
+                        pCtx.lineTo(ptRightMarginBottom.x * mmToPx, (220 - ptRightMarginBottom.y) * mmToPx);
+                    } else {
+                        const rightMarginXPx = paperX + (210 - settings.rightMargin) * mmToPx;
+                        pCtx.moveTo(rightMarginXPx, paperY - 150 * mmToPx);
+                        pCtx.lineTo(rightMarginXPx, paperY + paperHeightPx + 150 * mmToPx);
+                    }
+                    pCtx.stroke();
+                    pCtx.restore();
                 }
             }
-            
-            // Draw red margin vertical lines (Left and Right)
-            pCtx.strokeStyle = 'rgba(239, 68, 68, 0.45)'; // Red margin
-            pCtx.lineWidth = 3.0;
-            
-            pCtx.beginPath();
-            if (calibMatrix) {
-                // Extend vertical red margin line from Y=-150 to 450 to span infinitely
-                const ptMarginTop = mapDesignToBed(settings.leftMargin, -150, calibMatrix);
-                const ptMarginBottom = mapDesignToBed(settings.leftMargin, 450, calibMatrix);
-                pCtx.moveTo(ptMarginTop.x * mmToPx, (220 - ptMarginTop.y) * mmToPx);
-                pCtx.lineTo(ptMarginBottom.x * mmToPx, (220 - ptMarginBottom.y) * mmToPx);
-            } else {
-                const marginXPx = paperX + settings.leftMargin * mmToPx;
-                pCtx.moveTo(marginXPx, paperY - 150 * mmToPx);
-                pCtx.lineTo(marginXPx, paperY + paperHeightPx + 150 * mmToPx);
-            }
-            pCtx.stroke();
-            
-            pCtx.beginPath();
-            if (calibMatrix) {
-                const ptRightMarginTop = mapDesignToBed(210 - settings.rightMargin, -150, calibMatrix);
-                const ptRightMarginBottom = mapDesignToBed(210 - settings.rightMargin, 450, calibMatrix);
-                pCtx.moveTo(ptRightMarginTop.x * mmToPx, (220 - ptRightMarginTop.y) * mmToPx);
-                pCtx.lineTo(ptRightMarginBottom.x * mmToPx, (220 - ptRightMarginBottom.y) * mmToPx);
-            } else {
-                const rightMarginXPx = paperX + (210 - settings.rightMargin) * mmToPx;
-                pCtx.moveTo(rightMarginXPx, paperY - 150 * mmToPx);
-                pCtx.lineTo(rightMarginXPx, paperY + paperHeightPx + 150 * mmToPx);
-            }
-            pCtx.stroke();
-        }
             
         // Compile text handwriting paths
             if (window.handwritingLayoutDirty || !window.cachedHandwritingPaths) {
@@ -4482,7 +5276,59 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     }
                     pCtx.lineTo(ptX, ptY);
                 }
-                pCtx.stroke();
+            }
+
+            // Draw Image Block Vector Strokes (if loaded)
+            if (imageBlock && imageBlock.strokes && imageBlock.strokes.length > 0) {
+                pCtx.save();
+                pCtx.strokeStyle = '#0f172a'; // Deep charcoal/black ink for diagram
+                pCtx.lineWidth = 3.0;
+                pCtx.lineCap = 'round';
+                pCtx.lineJoin = 'round';
+                for (let stroke of imageBlock.strokes) {
+                    if (!stroke || stroke.length < 2) continue;
+                    pCtx.beginPath();
+                    for (let i = 0; i < stroke.length; i++) {
+                        let sx, sy;
+                        if (calibMatrix) {
+                            const pt = mapDesignToBed(stroke[i].x, stroke[i].y, calibMatrix);
+                            sx = pt.x * mmToPx;
+                            sy = (220 - pt.y) * mmToPx;
+                        } else {
+                            sx = paperX + stroke[i].x * mmToPx;
+                            sy = paperY + stroke[i].y * mmToPx;
+                        }
+                        if (i === 0) pCtx.moveTo(sx, sy);
+                        else pCtx.lineTo(sx, sy);
+                    }
+                    pCtx.stroke();
+                }
+
+                // If in Move Image Mode, draw interactive bounding box
+                if (canvasClickMode === 'image') {
+                    pCtx.setLineDash([6, 6]);
+                    pCtx.strokeStyle = '#6366f1';
+                    pCtx.lineWidth = 2.5;
+                    const bX = paperX + imageBlock.x * mmToPx;
+                    const bY = paperY + imageBlock.y * mmToPx;
+                    const bW = imageBlock.width * mmToPx;
+                    const bH = imageBlock.height * mmToPx;
+                    pCtx.strokeRect(bX, bY, bW, bH);
+                    
+                    // Corner resize handle
+                    pCtx.fillStyle = '#6366f1';
+                    pCtx.fillRect(bX + bW - 8, bY + bH - 8, 16, 16);
+
+                    // Label badge
+                    pCtx.fillStyle = '#4338ca';
+                    pCtx.fillRect(bX, bY - 24, 195, 22);
+                    pCtx.fillStyle = '#ffffff';
+                    pCtx.font = 'bold 11px sans-serif';
+                    pCtx.textAlign = 'left';
+                    pCtx.textBaseline = 'middle';
+                    pCtx.fillText(`🖼️ Image (${imageBlock.width}x${imageBlock.height.toFixed(0)}mm) [Drag to Move]`, bX + 6, bY - 13);
+                }
+                pCtx.restore();
             }
             
             // Draw a subtle bed boundary frame on top of the paper (Dashed green line) for positioning reference
@@ -4892,10 +5738,14 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         // Standard generator compiler (standalone function for reuse)
         function generatePlotterGCode(silent = false) {
             const settings = getSettings();
-            const paths = computeHandwritingLayout(settings);
+            const textPaths = computeHandwritingLayout(settings);
+            const paths = [...textPaths];
+            if (imageBlock && imageBlock.strokes && imageBlock.strokes.length > 0) {
+                paths.push(...imageBlock.strokes);
+            }
             
             if (paths.length === 0) {
-                showToast("Cannot generate G-code - text paths are empty", "error");
+                showToast("Cannot generate G-code - paths are empty", "error");
                 return false;
             }
             
@@ -6812,11 +7662,27 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                     ? "px-2.5 py-1 text-[10.5px] font-bold rounded-lg bg-indigo-600 text-white shadow flex items-center gap-1 cursor-pointer"
                     : "px-2.5 py-1 text-[10.5px] font-medium rounded-lg text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer";
             }
+            if (topClickModeImage) {
+                topClickModeImage.className = mode === 'image'
+                    ? "px-2.5 py-1 text-[10.5px] font-bold rounded-lg bg-indigo-600 text-white shadow flex items-center gap-1 cursor-pointer"
+                    : "px-2.5 py-1 text-[10.5px] font-medium rounded-lg text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer";
+            }
+            if (topClickModeGraphPins) {
+                const isGraph = currentPaperType === 'graph';
+                topClickModeGraphPins.className = (isGraph ? "" : "hidden ") + (mode === 'graphPins'
+                    ? "px-2.5 py-1 text-[10.5px] font-bold rounded-lg bg-emerald-600 text-white shadow flex items-center gap-1 cursor-pointer"
+                    : "px-2.5 py-1 text-[10.5px] font-medium rounded-lg text-emerald-400 hover:text-white flex items-center gap-1 cursor-pointer");
+            }
+            renderPreview();
             if (!silent) {
                 if (mode === 'jog') {
                     showToast("Canvas click mode: ✈️ Move Pen (Tap anywhere on canvas to move pen)", "info");
-                } else {
+                } else if (mode === 'edit') {
                     showToast("Canvas click mode: ✍️ Edit Font (Click characters to edit in Designer)", "info");
+                } else if (mode === 'image') {
+                    showToast("Canvas click mode: 🖼️ Move Image (Drag image diagram on canvas)", "info");
+                } else if (mode === 'graphPins') {
+                    showToast("Canvas click mode: 📌 Align Graph Photo (Drag 4 corner pins to align photo)", "info");
                 }
             }
         }
@@ -6825,6 +7691,8 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         if (btnClickModeJog) btnClickModeJog.addEventListener('click', () => setCanvasClickMode('jog'));
         if (topClickModeEdit) topClickModeEdit.addEventListener('click', () => setCanvasClickMode('edit'));
         if (topClickModeJog) topClickModeJog.addEventListener('click', () => setCanvasClickMode('jog'));
+        if (topClickModeImage) topClickModeImage.addEventListener('click', () => setCanvasClickMode('image'));
+        if (topClickModeGraphPins) topClickModeGraphPins.addEventListener('click', () => setCanvasClickMode('graphPins'));
         
         // Initialize with 'jog' (Move Pen) active
         setCanvasClickMode('jog', true);
@@ -7394,6 +8262,42 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                     }
                 }
             }
+
+            // If in Move Image Mode:
+            if (canvasClickMode === 'image' && imageBlock && imageBlock.img) {
+                const settings = getSettings();
+                const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
+                const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
+                if (dPt.x >= imageBlock.x && dPt.x <= imageBlock.x + imageBlock.width &&
+                    dPt.y >= imageBlock.y && dPt.y <= imageBlock.y + imageBlock.height) {
+                    isDraggingImage = true;
+                    imageDragOffset = { x: dPt.x - imageBlock.x, y: dPt.y - imageBlock.y };
+                    e.preventDefault();
+                    return;
+                }
+            }
+
+            // If in Align Graph Photo Mode:
+            if (canvasClickMode === 'graphPins' && graphOverlayImg && currentPaperType === 'graph') {
+                const settings = getSettings();
+                const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
+                const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
+                const threshold = 18.0 / zoomScale;
+                const pins = [
+                    { id: 'p1', pt: graphAlignmentPins.p1 },
+                    { id: 'p2', pt: graphAlignmentPins.p2 },
+                    { id: 'p3', pt: graphAlignmentPins.p3 },
+                    { id: 'p4', pt: graphAlignmentPins.p4 }
+                ];
+                for (let pin of pins) {
+                    const dist = Math.hypot(dPt.x - pin.pt.x, dPt.y - pin.pt.y);
+                    if (dist <= threshold) {
+                        draggingGraphPin = pin.id;
+                        e.preventDefault();
+                        return;
+                    }
+                }
+            }
         });
 
         // Mouse move listener to update dragging, panning, or hover coordinates
@@ -7438,6 +8342,29 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             
             hoverBedX = targetBedX;
             hoverBedY = targetBedY;
+
+            if (isDraggingImage && imageBlock && imageBlock.img) {
+                const settings = getSettings();
+                const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
+                const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
+                imageBlock.x = Math.max(0, Math.min(210 - imageBlock.width, parseFloat((dPt.x - imageDragOffset.x).toFixed(1))));
+                imageBlock.y = Math.max(0, Math.min(297 - imageBlock.height, parseFloat((dPt.y - imageDragOffset.y).toFixed(1))));
+                if (imgPosX) imgPosX.value = imageBlock.x;
+                if (imgPosY) imgPosY.value = imageBlock.y;
+                vectorizeImageBlock();
+                renderPreview();
+                return;
+            }
+
+            if (draggingGraphPin && graphAlignmentPins[draggingGraphPin]) {
+                const settings = getSettings();
+                const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
+                const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
+                graphAlignmentPins[draggingGraphPin].x = Math.max(0, Math.min(210, parseFloat(dPt.x.toFixed(1))));
+                graphAlignmentPins[draggingGraphPin].y = Math.max(0, Math.min(297, parseFloat(dPt.y.toFixed(1))));
+                renderPreview();
+                return;
+            }
             
             if (isDraggingPoint && draggingPointIdx !== -1) {
                 let constrainedX = targetBedX;
@@ -7470,6 +8397,20 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 isDraggingPoint = false;
                 draggingPointIdx = -1;
                 showToast("Calibration point updated!", "success");
+                e.preventDefault();
+                return;
+            }
+
+            if (isDraggingImage) {
+                isDraggingImage = false;
+                showToast(`Image positioned at (${imageBlock.x.toFixed(1)}, ${imageBlock.y.toFixed(1)}) mm`, "info");
+                e.preventDefault();
+                return;
+            }
+
+            if (draggingGraphPin) {
+                draggingGraphPin = null;
+                showToast("Graph alignment pin set!", "info");
                 e.preventDefault();
                 return;
             }
@@ -7507,7 +8448,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 travelToPoint(targetBedX, targetBedY);
                 e.preventDefault();
                 return;
-            } else {
+            } else if (canvasClickMode === 'edit') {
                 // Edit Font mode: click character to edit in Designer
                 const settings = getSettings();
                 const mmX = coords.bedX - settings.paperXShift;
@@ -7679,6 +8620,13 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             }
             if (e.key === 'c' || e.key === 'C') {
                 performJumpXRight();
+                e.preventDefault();
+                return;
+            }
+
+            // 'o' or 'O' to cycle friend's graph photo overlay opacity
+            if (e.key === 'o' || e.key === 'O') {
+                cycleGraphOverlayOpacity();
                 e.preventDefault();
                 return;
             }
