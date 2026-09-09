@@ -1578,16 +1578,31 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
             <!-- Body: Canvas on left, Controls on right -->
             <div class="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
-                <!-- Interactive Canvas Container -->
-                <div class="flex-1 relative bg-slate-950 flex items-center justify-center p-3 overflow-hidden select-none">
-                    <canvas id="photoCalibCanvas" class="max-w-full max-h-full rounded-lg shadow-xl border border-slate-800 cursor-crosshair"></canvas>
+                <!-- Interactive Canvas Container with Zoom/Pan & High-DPI Support -->
+                <div id="photoCalibCanvasContainer" class="flex-1 relative bg-slate-950 flex items-center justify-center p-2 overflow-hidden select-none">
+                    <canvas id="photoCalibCanvas" class="w-full h-full rounded-lg shadow-xl border border-slate-800 cursor-crosshair"></canvas>
                     
+                    <!-- Top Floating Studio Toolbar (Zoom & Navigation Controls) -->
+                    <div class="absolute top-4 right-4 z-10 flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-xl px-2.5 py-1.5 shadow-2xl backdrop-blur-sm">
+                        <button id="btnPhotoStudioZoomOut" type="button" class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer" title="Zoom Out (or Scroll Wheel Down)">➖</button>
+                        <span id="lblPhotoStudioZoom" class="font-mono text-[11px] font-bold text-emerald-400 min-w-[46px] text-center">100%</span>
+                        <button id="btnPhotoStudioZoomIn" type="button" class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer" title="Zoom In (or Scroll Wheel Up)">➕</button>
+                        <div class="h-4 w-[1px] bg-slate-700 mx-0.5"></div>
+                        <button id="btnPhotoStudioFit" type="button" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10.5px] font-semibold text-slate-300 transition cursor-pointer" title="Reset view and fit entire photo">🔄 Fit Photo</button>
+                        <button id="btnPhotoStudio100" type="button" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-[10.5px] font-semibold text-slate-300 transition cursor-pointer" title="View at 100% actual raw camera pixel resolution">1:1 Actual</button>
+                    </div>
+
+                    <!-- Bottom Floating Navigation Hint Banner -->
+                    <div class="absolute bottom-4 left-4 z-10 bg-slate-900/85 border border-slate-800 rounded-lg px-3 py-1.5 text-[10.5px] text-slate-300 pointer-events-none shadow-xl backdrop-blur-sm flex items-center gap-2">
+                        <span>🔍 <b class="text-emerald-400">Scroll wheel</b> to zoom • <b class="text-emerald-400">Drag</b> to pan/move • <b class="text-emerald-400">Drag pins</b> onto graph corners</span>
+                    </div>
+
                     <!-- Floating Magnifier Loupe -->
-                    <div id="photoLoupeContainer" class="absolute top-4 left-4 bg-slate-900/95 border border-slate-700 rounded-xl p-2 shadow-2xl pointer-events-none hidden flex flex-col items-center">
+                    <div id="photoLoupeContainer" class="absolute top-4 left-4 bg-slate-900/95 border border-slate-700 rounded-xl p-2 shadow-2xl pointer-events-none hidden flex flex-col items-center z-20 backdrop-blur-sm">
                         <div class="text-[9px] font-bold text-slate-400 mb-1 flex items-center gap-1">
-                            <span>🔍</span> 4× Loupe Magnifier
+                            <span>🔍</span> 8× Loupe Magnifier
                         </div>
-                        <canvas id="photoLoupeCanvas" width="120" height="120" class="rounded border border-slate-800"></canvas>
+                        <canvas id="photoLoupeCanvas" width="130" height="130" class="rounded border border-slate-800"></canvas>
                         <span id="photoLoupeCoord" class="text-[9.5px] font-mono text-emerald-400 font-bold mt-1">X:0 Y:0</span>
                     </div>
                 </div>
@@ -5241,6 +5256,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         const photoLoupeContainer = document.getElementById('photoLoupeContainer');
         const photoLoupeCanvas = document.getElementById('photoLoupeCanvas');
         const photoLoupeCoord = document.getElementById('photoLoupeCoord');
+        const btnPhotoStudioZoomIn = document.getElementById('btnPhotoStudioZoomIn');
+        const btnPhotoStudioZoomOut = document.getElementById('btnPhotoStudioZoomOut');
+        const lblPhotoStudioZoom = document.getElementById('lblPhotoStudioZoom');
+        const btnPhotoStudioFit = document.getElementById('btnPhotoStudioFit');
+        const btnPhotoStudio100 = document.getElementById('btnPhotoStudio100');
 
         const btnPinSelectP1 = document.getElementById('btnPinSelectP1');
         const btnPinSelectP2 = document.getElementById('btnPinSelectP2');
@@ -5254,6 +5274,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         let tempPhotoPoints = JSON.parse(JSON.stringify(photoCalibration.photoPoints));
         let activePhotoPin = 'p1';
         let draggingPhotoPin = null;
+
+        // Zoom & Pan navigation state for Photo Studio
+        let photoStudioZoom = 1.0;
+        let photoStudioPanX = 0.0;
+        let photoStudioPanY = 0.0;
+        let photoStudioFitScale = 1.0;
+        let isPhotoStudioPanning = false;
+        let photoStudioPanStart = { x: 0, y: 0 };
+        let photoStudioMouseDownPos = { x: 0, y: 0 };
 
         const pinColors = {
             p1: { fill: '#10b981', ring: 'ring-emerald-500', border: 'border-emerald-500', name: '1. Top-Left' },
@@ -5315,7 +5344,52 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             });
         }
 
-        // --- Photo Calibration Studio Controller ---
+        // --- Photo Calibration Studio Controller (High-DPI Zoom & Pan Engine) ---
+        function fitPhotoInStudio() {
+            if (!photoCalibCanvas || !graphOverlayImg) return;
+            const cw = photoCalibCanvas.clientWidth || 800;
+            const ch = photoCalibCanvas.clientHeight || 600;
+            const iw = graphOverlayImg.width || 1000;
+            const ih = graphOverlayImg.height || 1000;
+            
+            const availW = Math.max(100, cw - 40);
+            const availH = Math.max(100, ch - 40);
+            photoStudioFitScale = Math.min(availW / iw, availH / ih);
+            photoStudioZoom = photoStudioFitScale;
+            
+            photoStudioPanX = Math.round((cw - iw * photoStudioZoom) / 2);
+            photoStudioPanY = Math.round((ch - ih * photoStudioZoom) / 2);
+            
+            updatePhotoStudioZoomUI();
+            renderPhotoCalibCanvas();
+        }
+
+        function setPhotoStudioZoom(targetZoom, pivotX, pivotY) {
+            if (!photoCalibCanvas || !graphOverlayImg) return;
+            const cw = photoCalibCanvas.clientWidth || 800;
+            const ch = photoCalibCanvas.clientHeight || 600;
+            const px = (pivotX !== undefined) ? pivotX : cw / 2;
+            const py = (pivotY !== undefined) ? pivotY : ch / 2;
+            
+            const minZoom = (photoStudioFitScale || 0.1) * 0.4;
+            const maxZoom = Math.max(10.0, (photoStudioFitScale || 0.1) * 35.0);
+            const clampedZoom = Math.max(minZoom, Math.min(maxZoom, targetZoom));
+            
+            // Zoom centered on pivot coordinate
+            photoStudioPanX = px - (px - photoStudioPanX) * (clampedZoom / photoStudioZoom);
+            photoStudioPanY = py - (py - photoStudioPanY) * (clampedZoom / photoStudioZoom);
+            photoStudioZoom = clampedZoom;
+            
+            updatePhotoStudioZoomUI();
+            renderPhotoCalibCanvas();
+        }
+
+        function updatePhotoStudioZoomUI() {
+            if (!lblPhotoStudioZoom) return;
+            const pct = Math.round((photoStudioZoom / (photoStudioFitScale || 1.0)) * 100);
+            lblPhotoStudioZoom.textContent = `${pct}%`;
+        }
+
         function openPhotoCalibStudio() {
             if (!graphOverlayImg) {
                 showToast("Please upload a graph photo first", "info");
@@ -5339,6 +5413,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             
             requestAnimationFrame(() => {
                 resizeAndRenderPhotoCanvas();
+                fitPhotoInStudio();
             });
         }
 
@@ -5346,18 +5421,14 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             if (!photoCalibCanvas || !graphOverlayImg) return;
             const container = photoCalibCanvas.parentElement;
             if (!container) return;
-            const maxW = Math.max(300, container.clientWidth - 24);
-            const maxH = Math.max(300, container.clientHeight - 24);
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+            const dpr = Math.max(2, window.devicePixelRatio || 1);
             
-            const imgAspect = (graphOverlayImg.width || 1) / (graphOverlayImg.height || 1);
-            let canvasW = maxW;
-            let canvasH = maxW / imgAspect;
-            if (canvasH > maxH) {
-                canvasH = maxH;
-                canvasW = maxH * imgAspect;
-            }
-            photoCalibCanvas.width = Math.round(canvasW);
-            photoCalibCanvas.height = Math.round(canvasH);
+            photoCalibCanvas.width = Math.round(cw * dpr);
+            photoCalibCanvas.height = Math.round(ch * dpr);
+            photoCalibCanvas.style.width = cw + 'px';
+            photoCalibCanvas.style.height = ch + 'px';
             
             renderPhotoCalibCanvas();
         }
@@ -5365,18 +5436,37 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         function renderPhotoCalibCanvas() {
             if (!photoCalibCanvas || !graphOverlayImg) return;
             const ctx = photoCalibCanvas.getContext('2d');
-            const cw = photoCalibCanvas.width;
-            const ch = photoCalibCanvas.height;
+            const cw = photoCalibCanvas.clientWidth;
+            const ch = photoCalibCanvas.clientHeight;
+            if (!cw || !ch) return;
+            const dpr = Math.max(2, window.devicePixelRatio || 1);
             
+            if (photoCalibCanvas.width !== Math.round(cw * dpr) || photoCalibCanvas.height !== Math.round(ch * dpr)) {
+                photoCalibCanvas.width = Math.round(cw * dpr);
+                photoCalibCanvas.height = Math.round(ch * dpr);
+            }
+            
+            ctx.save();
+            ctx.scale(dpr, dpr);
             ctx.clearRect(0, 0, cw, ch);
-            ctx.drawImage(graphOverlayImg, 0, 0, cw, ch);
             
-            const p1 = { x: tempPhotoPoints.p1.x * cw, y: tempPhotoPoints.p1.y * ch };
-            const p2 = { x: tempPhotoPoints.p2.x * cw, y: tempPhotoPoints.p2.y * ch };
-            const p3 = { x: tempPhotoPoints.p3.x * cw, y: tempPhotoPoints.p3.y * ch };
-            const p4 = { x: tempPhotoPoints.p4.x * cw, y: tempPhotoPoints.p4.y * ch };
+            const iw = graphOverlayImg.width;
+            const ih = graphOverlayImg.height;
             
-            // Draw connecting quad with transparent tint
+            // High quality image smoothing
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            // Draw image with current pan and zoom
+            ctx.drawImage(graphOverlayImg, photoStudioPanX, photoStudioPanY, iw * photoStudioZoom, ih * photoStudioZoom);
+            
+            // Screen coordinates of the 4 points
+            const p1 = { x: photoStudioPanX + tempPhotoPoints.p1.x * iw * photoStudioZoom, y: photoStudioPanY + tempPhotoPoints.p1.y * ih * photoStudioZoom };
+            const p2 = { x: photoStudioPanX + tempPhotoPoints.p2.x * iw * photoStudioZoom, y: photoStudioPanY + tempPhotoPoints.p2.y * ih * photoStudioZoom };
+            const p3 = { x: photoStudioPanX + tempPhotoPoints.p3.x * iw * photoStudioZoom, y: photoStudioPanY + tempPhotoPoints.p3.y * ih * photoStudioZoom };
+            const p4 = { x: photoStudioPanX + tempPhotoPoints.p4.x * iw * photoStudioZoom, y: photoStudioPanY + tempPhotoPoints.p4.y * ih * photoStudioZoom };
+            
+            // Connecting quad with transparent green tint
             ctx.save();
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
@@ -5384,11 +5474,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             ctx.lineTo(p4.x, p4.y);
             ctx.lineTo(p3.x, p3.y);
             ctx.closePath();
-            ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.18)';
             ctx.fill();
             ctx.strokeStyle = '#10b981';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([6, 6]);
             ctx.stroke();
             ctx.restore();
             
@@ -5407,20 +5497,20 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 ctx.save();
                 if (isAct) {
                     ctx.beginPath();
-                    ctx.arc(pin.pt.x, pin.pt.y, 20, 0, Math.PI * 2);
+                    ctx.arc(pin.pt.x, pin.pt.y, 22, 0, Math.PI * 2);
                     ctx.fillStyle = col.fill + '40';
                     ctx.fill();
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 2.5;
                     ctx.strokeStyle = col.fill;
-                    ctx.setLineDash([3, 3]);
+                    ctx.setLineDash([4, 4]);
                     ctx.stroke();
                 }
                 
                 ctx.beginPath();
-                ctx.arc(pin.pt.x, pin.pt.y, 13, 0, Math.PI * 2);
+                ctx.arc(pin.pt.x, pin.pt.y, 14, 0, Math.PI * 2);
                 ctx.fillStyle = col.fill;
-                ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                ctx.shadowBlur = 6;
+                ctx.shadowColor = 'rgba(0,0,0,0.6)';
+                ctx.shadowBlur = 8;
                 ctx.shadowOffsetY = 2;
                 ctx.fill();
                 ctx.shadowBlur = 0;
@@ -5437,61 +5527,70 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 ctx.fillText(pin.label, pin.pt.x, pin.pt.y);
                 
                 ctx.fillStyle = '#0f172a';
-                ctx.font = 'bold 9px sans-serif';
-                const tagW = ctx.measureText(pin.name).width + 6;
-                ctx.fillRect(pin.pt.x - tagW/2, pin.pt.y + 16, tagW, 13);
+                ctx.font = 'bold 9.5px sans-serif';
+                const tagW = ctx.measureText(pin.name).width + 8;
+                ctx.fillRect(pin.pt.x - tagW/2, pin.pt.y + 17, tagW, 14);
                 ctx.fillStyle = col.fill;
-                ctx.fillText(pin.name, pin.pt.x, pin.pt.y + 23);
+                ctx.fillText(pin.name, pin.pt.x, pin.pt.y + 24);
                 
                 ctx.restore();
             }
             
+            ctx.restore();
             updatePinCoordinateLabels();
         }
 
-        function updateLoupe(canvasX, canvasY) {
+        function updateLoupe(screenX, screenY) {
             if (!photoLoupeContainer || !photoLoupeCanvas || !graphOverlayImg || !photoCalibCanvas) return;
             const ctx = photoLoupeCanvas.getContext('2d');
-            const cw = photoCalibCanvas.width;
-            const ch = photoCalibCanvas.height;
+            const cw = photoCalibCanvas.clientWidth;
+            const ch = photoCalibCanvas.clientHeight;
             const iw = graphOverlayImg.width;
             const ih = graphOverlayImg.height;
             
-            const nx = Math.max(0, Math.min(1, canvasX / cw));
-            const ny = Math.max(0, Math.min(1, canvasY / ch));
-            const ix = nx * iw;
-            const iy = ny * ih;
+            const ix = (screenX - photoStudioPanX) / photoStudioZoom;
+            const iy = (screenY - photoStudioPanY) / photoStudioZoom;
             
-            const lSize = 120;
-            const sampleSize = 30;
+            if (ix < -80 || ix > iw + 80 || iy < -80 || iy > ih + 80) {
+                photoLoupeContainer.classList.add('hidden');
+                return;
+            }
+            
+            const lSize = 130;
+            const sampleSize = 20; // 6.5x zoom magnification of raw camera sensor pixels
             const sx = Math.max(0, Math.min(iw - sampleSize, ix - sampleSize / 2));
             const sy = Math.max(0, Math.min(ih - sampleSize, iy - sampleSize / 2));
             
-            ctx.imageSmoothingEnabled = false;
+            ctx.imageSmoothingEnabled = false; // Sharp pixelated view to spot exact line intersections
             ctx.clearRect(0, 0, lSize, lSize);
             ctx.drawImage(graphOverlayImg, sx, sy, sampleSize, sampleSize, 0, 0, lSize, lSize);
             
             // Center crosshairs
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(lSize / 2, 0); ctx.lineTo(lSize / 2, lSize);
+            ctx.moveTo(0, lSize / 2); ctx.lineTo(lSize, lSize / 2);
+            ctx.stroke();
+            
             ctx.strokeStyle = '#ef4444';
             ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.moveTo(lSize / 2, 0);
-            ctx.lineTo(lSize / 2, lSize);
-            ctx.moveTo(0, lSize / 2);
-            ctx.lineTo(lSize, lSize / 2);
+            ctx.moveTo(lSize / 2, 0); ctx.lineTo(lSize / 2, lSize);
+            ctx.moveTo(0, lSize / 2); ctx.lineTo(lSize, lSize / 2);
             ctx.stroke();
             
             ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.arc(lSize / 2, lSize / 2, 8, 0, Math.PI * 2);
+            ctx.arc(lSize / 2, lSize / 2, 9, 0, Math.PI * 2);
             ctx.stroke();
             
             if (photoLoupeCoord) {
-                photoLoupeCoord.textContent = `X: ${Math.round(ix)}, Y: ${Math.round(iy)}`;
+                photoLoupeCoord.textContent = `X: ${Math.round(Math.max(0, Math.min(iw, ix)))}, Y: ${Math.round(Math.max(0, Math.min(ih, iy)))}`;
             }
             
-            if (canvasX < cw * 0.4 && canvasY < ch * 0.4) {
+            if (screenX < cw * 0.45 && screenY < ch * 0.45) {
                 photoLoupeContainer.style.left = 'auto';
                 photoLoupeContainer.style.right = '16px';
             } else {
@@ -5529,36 +5628,51 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
 
         if (photoCalibCanvas) {
+            // Mouse Wheel Zoom
+            photoCalibCanvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const rect = photoCalibCanvas.getBoundingClientRect();
+                const mx = e.clientX - rect.left;
+                const my = e.clientY - rect.top;
+                
+                const factor = e.deltaY < 0 ? 1.25 : 0.8;
+                setPhotoStudioZoom(photoStudioZoom * factor, mx, my);
+                updateLoupe(mx, my);
+            }, { passive: false });
+            
             photoCalibCanvas.addEventListener('mousedown', (e) => {
                 const rect = photoCalibCanvas.getBoundingClientRect();
                 const mx = e.clientX - rect.left;
                 const my = e.clientY - rect.top;
-                const cw = photoCalibCanvas.width;
-                const ch = photoCalibCanvas.height;
+                photoStudioMouseDownPos = { x: mx, y: my };
+                const iw = graphOverlayImg ? graphOverlayImg.width : 1;
+                const ih = graphOverlayImg ? graphOverlayImg.height : 1;
                 
+                // Check if clicking near any pin in screen coordinates
                 const pins = ['p1', 'p2', 'p3', 'p4'];
                 let clickedPin = null;
                 let minDist = 24;
                 for (let pid of pins) {
-                    const px = tempPhotoPoints[pid].x * cw;
-                    const py = tempPhotoPoints[pid].y * ch;
-                    const d = Math.hypot(mx - px, my - py);
+                    const sx = photoStudioPanX + tempPhotoPoints[pid].x * iw * photoStudioZoom;
+                    const sy = photoStudioPanY + tempPhotoPoints[pid].y * ih * photoStudioZoom;
+                    const d = Math.hypot(mx - sx, my - sy);
                     if (d < minDist) {
                         minDist = d;
                         clickedPin = pid;
                     }
                 }
                 
-                if (clickedPin) {
+                if (clickedPin && e.button === 0 && !e.spaceKey) {
                     activePhotoPin = clickedPin;
                     draggingPhotoPin = clickedPin;
+                    updatePinSelectionUI();
+                    renderPhotoCalibCanvas();
                 } else {
-                    draggingPhotoPin = activePhotoPin;
-                    tempPhotoPoints[activePhotoPin].x = Math.max(0, Math.min(1, mx / cw));
-                    tempPhotoPoints[activePhotoPin].y = Math.max(0, Math.min(1, my / ch));
+                    // Panning mode
+                    isPhotoStudioPanning = true;
+                    photoStudioPanStart = { x: e.clientX - photoStudioPanX, y: e.clientY - photoStudioPanY };
+                    photoCalibCanvas.style.cursor = 'grabbing';
                 }
-                updatePinSelectionUI();
-                renderPhotoCalibCanvas();
                 updateLoupe(mx, my);
             });
             
@@ -5566,18 +5680,59 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 const rect = photoCalibCanvas.getBoundingClientRect();
                 const mx = e.clientX - rect.left;
                 const my = e.clientY - rect.top;
-                const cw = photoCalibCanvas.width;
-                const ch = photoCalibCanvas.height;
+                const iw = graphOverlayImg ? graphOverlayImg.width : 1;
+                const ih = graphOverlayImg ? graphOverlayImg.height : 1;
                 
                 if (draggingPhotoPin && tempPhotoPoints[draggingPhotoPin]) {
-                    tempPhotoPoints[draggingPhotoPin].x = Math.max(0, Math.min(1, mx / cw));
-                    tempPhotoPoints[draggingPhotoPin].y = Math.max(0, Math.min(1, my / ch));
+                    const ix = (mx - photoStudioPanX) / photoStudioZoom;
+                    const iy = (my - photoStudioPanY) / photoStudioZoom;
+                    tempPhotoPoints[draggingPhotoPin].x = Math.max(0, Math.min(1, ix / iw));
+                    tempPhotoPoints[draggingPhotoPin].y = Math.max(0, Math.min(1, iy / ih));
                     renderPhotoCalibCanvas();
+                } else if (isPhotoStudioPanning) {
+                    photoStudioPanX = e.clientX - photoStudioPanStart.x;
+                    photoStudioPanY = e.clientY - photoStudioPanStart.y;
+                    renderPhotoCalibCanvas();
+                } else {
+                    let nearPin = false;
+                    for (let pid of ['p1', 'p2', 'p3', 'p4']) {
+                        const sx = photoStudioPanX + tempPhotoPoints[pid].x * iw * photoStudioZoom;
+                        const sy = photoStudioPanY + tempPhotoPoints[pid].y * ih * photoStudioZoom;
+                        if (Math.hypot(mx - sx, my - sy) <= 24) {
+                            nearPin = true;
+                            break;
+                        }
+                    }
+                    photoCalibCanvas.style.cursor = nearPin ? 'pointer' : 'grab';
                 }
                 updateLoupe(mx, my);
             });
             
-            window.addEventListener('mouseup', () => {
+            window.addEventListener('mouseup', (e) => {
+                if (isPhotoStudioPanning) {
+                    isPhotoStudioPanning = false;
+                    if (photoCalibCanvas) photoCalibCanvas.style.cursor = 'grab';
+                    
+                    // If it was a quick click without dragging (< 5px), place active pin here
+                    if (photoCalibCanvas && graphOverlayImg && e.target === photoCalibCanvas && e.button === 0) {
+                        const rect = photoCalibCanvas.getBoundingClientRect();
+                        const mx = e.clientX - rect.left;
+                        const my = e.clientY - rect.top;
+                        const dragDist = Math.hypot(mx - photoStudioMouseDownPos.x, my - photoStudioMouseDownPos.y);
+                        if (dragDist < 5) {
+                            const iw = graphOverlayImg.width;
+                            const ih = graphOverlayImg.height;
+                            const ix = (mx - photoStudioPanX) / photoStudioZoom;
+                            const iy = (my - photoStudioPanY) / photoStudioZoom;
+                            if (ix >= 0 && ix <= iw && iy >= 0 && iy <= ih) {
+                                tempPhotoPoints[activePhotoPin].x = Math.max(0, Math.min(1, ix / iw));
+                                tempPhotoPoints[activePhotoPin].y = Math.max(0, Math.min(1, iy / ih));
+                                renderPhotoCalibCanvas();
+                                updateLoupe(mx, my);
+                            }
+                        }
+                    }
+                }
                 if (draggingPhotoPin) {
                     draggingPhotoPin = null;
                 }
@@ -5587,6 +5742,28 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 if (!draggingPhotoPin && photoLoupeContainer) {
                     photoLoupeContainer.classList.add('hidden');
                 }
+            });
+        }
+
+        // Photo Studio Toolbar Button Handlers
+        if (btnPhotoStudioZoomIn) {
+            btnPhotoStudioZoomIn.addEventListener('click', () => {
+                setPhotoStudioZoom(photoStudioZoom * 1.35);
+            });
+        }
+        if (btnPhotoStudioZoomOut) {
+            btnPhotoStudioZoomOut.addEventListener('click', () => {
+                setPhotoStudioZoom(photoStudioZoom / 1.35);
+            });
+        }
+        if (btnPhotoStudioFit) {
+            btnPhotoStudioFit.addEventListener('click', () => {
+                fitPhotoInStudio();
+            });
+        }
+        if (btnPhotoStudio100) {
+            btnPhotoStudio100.addEventListener('click', () => {
+                setPhotoStudioZoom(1.0); // 1:1 raw photo pixel size!
             });
         }
 
@@ -9362,6 +9539,21 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                     activePhotoPin = 'p' + e.key;
                     updatePinSelectionUI();
                     renderPhotoCalibCanvas();
+                    e.preventDefault();
+                    return;
+                }
+                if (e.key === '+' || e.key === '=') {
+                    setPhotoStudioZoom(photoStudioZoom * 1.35);
+                    e.preventDefault();
+                    return;
+                }
+                if (e.key === '-' || e.key === '_') {
+                    setPhotoStudioZoom(photoStudioZoom / 1.35);
+                    e.preventDefault();
+                    return;
+                }
+                if (e.key === '0' || e.key === 'f' || e.key === 'F') {
+                    fitPhotoInStudio();
                     e.preventDefault();
                     return;
                 }
