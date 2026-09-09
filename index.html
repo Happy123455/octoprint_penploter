@@ -1578,6 +1578,72 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
     <!-- Script Block -->
     <script>
+        // Safe localStorage wrappers to prevent private browsing or local file crashes
+        function safeGetItem(key) {
+            try {
+                return localStorage.getItem(key);
+            } catch(e) {
+                return null;
+            }
+        }
+        function safeSetItem(key, value) {
+            try {
+                localStorage.setItem(key, value);
+            } catch(e) {}
+        }
+
+        // Normalizes external font formats (like finlay_handwriting.json objects) into standard [x, y] strokes
+        function normalizeFinlayFont(rawFont) {
+            if (!rawFont || typeof rawFont !== 'object') return {};
+            const normalized = {};
+            const scale = 180 / 5.90; // Scales 5.9mm height in finlay font to 180px font designer canvas
+            const baseRef = 7.94;     // Average baseline in finlay font
+            
+            for (const char in rawFont) {
+                normalized[char] = [];
+                const rawVariants = rawFont[char];
+                if (!Array.isArray(rawVariants)) continue;
+                
+                for (let vIdx = 0; vIdx < rawVariants.length; vIdx++) {
+                    const rawVariant = rawVariants[vIdx];
+                    if (!Array.isArray(rawVariant)) {
+                        normalized[char].push([]);
+                        continue;
+                    }
+                    
+                    const variantStrokes = [];
+                    for (const rawStroke of rawVariant) {
+                        if (!Array.isArray(rawStroke) || rawStroke.length === 0) continue;
+                        
+                        const cleanStroke = [];
+                        for (const pt of rawStroke) {
+                            if (pt === null || pt === undefined) continue;
+                            let px, py;
+                            if (typeof pt.x === 'number' && typeof pt.y === 'number') {
+                                // Point is from finlay_handwriting.json { x, y, isDraw }
+                                px = pt.x * scale;
+                                py = 240 + (pt.y - baseRef) * scale;
+                            } else if (Array.isArray(pt) && pt.length >= 2) {
+                                px = Number(pt[0]);
+                                py = Number(pt[1]);
+                            }
+                            if (typeof px === 'number' && !isNaN(px) && typeof py === 'number' && !isNaN(py)) {
+                                cleanStroke.push([px, py]);
+                            }
+                        }
+                        if (cleanStroke.length > 0) {
+                            variantStrokes.push(cleanStroke);
+                        }
+                    }
+                    normalized[char].push(variantStrokes);
+                }
+                while (normalized[char].length < 3) {
+                    normalized[char].push([]);
+                }
+            }
+            return normalized;
+        }
+
         // Custom Handwriting Font Coordinate Tables (Standard vectors mapped [0, 10] box)
         const StrokeFont = {
             ' ': [],
@@ -1737,6 +1803,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         // Font design data storage
         // Structure: { char: [ [stroke1, stroke2...], [stroke1...], [stroke1...] ] } for dynamic variants
         let DrawnFont = {};
+        let activeFontMode = 'drawn'; // Defaults to 'drawn' (Finlay Handwriting)
+        let uploadedFont = null;
+        let lastMissingChars = new Set();
         
         let uppercaseList = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         let lowercaseList = "abcdefghijklmnopqrstuvwxyz";
@@ -1753,36 +1822,39 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
         function saveDrawnFontToLocalStorage() {
             try {
-                localStorage.setItem('plotter_drawn_font', JSON.stringify(DrawnFont));
+                safeSetItem('plotter_drawn_font', JSON.stringify(DrawnFont));
             } catch(e) {}
         }
         
         function loadDrawnFontFromLocalStorage() {
             try {
-                const stored = localStorage.getItem('plotter_drawn_font');
+                const stored = safeGetItem('plotter_drawn_font');
                 if (stored) {
                     const parsed = JSON.parse(stored);
+                    const normalized = normalizeFinlayFont(parsed);
                     // Register any custom characters dynamically
-                    for (let c in parsed) {
+                    for (let c in normalized) {
                         if (c.length === 1 && !allowedChars.includes(c)) {
                             symbolsList += c;
                             allowedChars = uppercaseList + lowercaseList + symbolsList;
                         }
                     }
                     for (let c of allowedChars) {
-                        if (parsed[c]) {
-                            DrawnFont[c] = parsed[c];
+                        if (normalized[c]) {
+                            DrawnFont[c] = normalized[c];
                         } else if (!DrawnFont[c]) {
                             DrawnFont[c] = [[], [], []];
                         }
                     }
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.error("loadDrawnFontFromLocalStorage error:", e);
+            }
         }
         loadDrawnFontFromLocalStorage();
 
         function loadDefaultFinlayFont() {
-            const stored = localStorage.getItem('plotter_drawn_font');
+            const stored = safeGetItem('plotter_drawn_font');
             let isReallyEmpty = true;
             if (stored) {
                 try {
@@ -1808,7 +1880,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 activeFontMode = 'drawn';
                 setTimeout(() => {
                     if (typeof setFontMode === 'function') setFontMode('drawn', false);
-                    triggerPreviewUpdate();
+                    if (typeof triggerPreviewUpdate === 'function') triggerPreviewUpdate();
                 }, 50);
                 return;
             }
@@ -1819,25 +1891,28 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     throw new Error("HTTP " + res.status);
                 })
                 .then(data => {
-                    for (let c in data) {
+                    const normalized = normalizeFinlayFont(data);
+                    for (let c in normalized) {
                         if (c.length === 1 && !allowedChars.includes(c)) {
                             symbolsList += c;
                             allowedChars = uppercaseList + lowercaseList + symbolsList;
                         }
                     }
-                    createCharacterGrid(charGridSymbols, symbolsList);
+                    if (typeof createCharacterGrid === 'function' && typeof charGridSymbols !== 'undefined' && charGridSymbols) {
+                        createCharacterGrid(charGridSymbols, symbolsList);
+                    }
                     
-                    DrawnFont = data;
+                    DrawnFont = normalized;
                     saveDrawnFontToLocalStorage();
-                    rebuildVariantSelectors();
-                    updateCharGridHighlights();
-                    drawDesignerGrid();
+                    if (typeof rebuildVariantSelectors === 'function') rebuildVariantSelectors();
+                    if (typeof updateCharGridHighlights === 'function') updateCharGridHighlights();
+                    if (typeof drawDesignerGrid === 'function') drawDesignerGrid();
                     activeFontMode = 'drawn';
                     if (typeof setFontMode === 'function') {
                         setFontMode('drawn', false);
                     }
-                    triggerPreviewUpdate();
-                    showToast("Loaded default 'Finlay Handwriting' font!", "success");
+                    if (typeof triggerPreviewUpdate === 'function') triggerPreviewUpdate();
+                    if (typeof showToast === 'function') showToast("Loaded default 'Finlay Handwriting' font!", "success");
                 })
                 .catch(err => {
                     console.warn("Could not auto-load Finlay font:", err);
@@ -1927,7 +2002,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
             // 7. Draw current active character strokes
             const variants = DrawnFont[activeDesignerChar];
-            const strokes = variants[activeVariant] || [];
+            const strokes = (variants && variants[activeVariant]) ? variants[activeVariant] : [];
             
             dCtx.lineWidth = 3.2;
             dCtx.strokeStyle = '#4f46e5'; // Beautiful Royal Indigo/Blue gel pen color
@@ -1935,11 +2010,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             dCtx.lineJoin = 'round';
             
             for (let stroke of strokes) {
-                if (stroke.length === 0) continue;
+                if (!stroke || stroke.length === 0) continue;
                 dCtx.beginPath();
-                dCtx.moveTo(stroke[0][0], stroke[0][1]);
+                const p0x = Array.isArray(stroke[0]) ? stroke[0][0] : (stroke[0].x !== undefined ? stroke[0].x : 0);
+                const p0y = Array.isArray(stroke[0]) ? stroke[0][1] : (stroke[0].y !== undefined ? stroke[0].y : 0);
+                dCtx.moveTo(p0x, p0y);
                 for (let i = 1; i < stroke.length; i++) {
-                    dCtx.lineTo(stroke[i][0], stroke[i][1]);
+                    const pix = Array.isArray(stroke[i]) ? stroke[i][0] : (stroke[i].x !== undefined ? stroke[i].x : 0);
+                    const piy = Array.isArray(stroke[i]) ? stroke[i][1] : (stroke[i].y !== undefined ? stroke[i].y : 0);
+                    dCtx.lineTo(pix, piy);
                 }
                 dCtx.stroke();
             }
@@ -2700,30 +2779,37 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         const customFontUploadArea = document.getElementById('customFontUploadArea');
         const fontFileInput = document.getElementById('fontFileInput');
 
-        let activeFontMode = 'drawn'; // Defaults to 'drawn' (Finlay Handwriting)
-        let uploadedFont = null;
-        let lastMissingChars = new Set();
-
         function setFontMode(mode, switchTabs = false) {
             activeFontMode = mode;
-            [fontSelectStroke, fontSelectCustom, fontSelectDrawn].forEach(btn => {
-                btn.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition-all";
+            const btnStroke = document.getElementById('fontSelectStroke');
+            const btnCustom = document.getElementById('fontSelectCustom');
+            const btnDrawn = document.getElementById('fontSelectDrawn');
+            const uploadArea = document.getElementById('customFontUploadArea');
+
+            [btnStroke, btnCustom, btnDrawn].forEach(btn => {
+                if (btn) btn.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border border-slate-800 bg-slate-950 text-slate-400 hover:text-white transition-all";
             });
             
             if (mode === 'stroke') {
-                fontSelectStroke.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all";
-                customFontUploadArea.classList.add('hidden');
+                if (btnStroke) btnStroke.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all";
+                if (uploadArea) uploadArea.classList.add('hidden');
             } else if (mode === 'custom') {
-                fontSelectCustom.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all";
-                customFontUploadArea.classList.remove('hidden');
+                if (btnCustom) btnCustom.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all";
+                if (uploadArea) uploadArea.classList.remove('hidden');
             } else {
-                fontSelectDrawn.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all font-bold";
-                customFontUploadArea.classList.add('hidden');
+                if (btnDrawn) btnDrawn.className = "py-2 px-1 rounded-lg text-[10px] sm:text-xs font-semibold border bg-indigo-600 border-indigo-500 text-white shadow-md transition-all font-bold";
+                if (uploadArea) uploadArea.classList.add('hidden');
                 if (switchTabs) {
-                    switchTab(tabDesigner, contentDesigner);
+                    const tabD = document.getElementById('tabDesigner');
+                    const contD = document.getElementById('contentDesigner');
+                    if (tabD && contD && typeof switchTab === 'function') {
+                        switchTab(tabD, contD);
+                    }
                 }
             }
-            triggerPreviewUpdate();
+            if (typeof triggerPreviewUpdate === 'function') {
+                triggerPreviewUpdate();
+            }
         }
 
         fontSelectStroke.addEventListener('click', () => setFontMode('stroke', false));
@@ -2824,9 +2910,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             let hasPoints = false;
             
             variant.forEach(stroke => {
-                if (!stroke) return;
+                if (!stroke || !Array.isArray(stroke)) return;
                 stroke.forEach(pt => {
-                    const x = pt[0];
+                    if (!pt) return;
+                    const x = Array.isArray(pt) ? pt[0] : (pt.x !== undefined ? pt.x : null);
+                    if (x === null || isNaN(x)) return;
                     if (x < minX) minX = x;
                     if (x > maxX) maxX = x;
                     hasPoints = true;
@@ -3568,13 +3656,26 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             }
                             if (!window.lastCharVariant) window.lastCharVariant = {};
                             window.lastCharVariant[char] = chosenVariantIdx;
-                            const rawStrokes = variants[chosenVariantIdx];
+                            const rawStrokes = variants[chosenVariantIdx] || [];
                             let minX = Infinity;
-                            rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
+                            rawStrokes.forEach(s => {
+                                if (Array.isArray(s)) {
+                                    s.forEach(p => {
+                                        if (p) {
+                                            const px = Array.isArray(p) ? p[0] : (p.x !== undefined ? p.x : null);
+                                            if (px !== null && !isNaN(px) && px < minX) minX = px;
+                                        }
+                                    });
+                                }
+                            });
+                            if (minX === Infinity) minX = 0;
                             characterStrokes = rawStrokes.map(stroke => {
+                                if (!Array.isArray(stroke)) return [];
                                 return stroke.map(pt => {
-                                    const xx = (pt[0] - minX) * (localHeight / 180.0);
-                                    const yy = (pt[1] - 240.0) * (localHeight / 180.0);
+                                    const px = Array.isArray(pt) ? pt[0] : (pt.x !== undefined ? pt.x : minX);
+                                    const py = Array.isArray(pt) ? pt[1] : (pt.y !== undefined ? pt.y : 240);
+                                    const xx = (px - minX) * (localHeight / 180.0);
+                                    const yy = (py - 240.0) * (localHeight / 180.0);
                                     const engineY = localHeight + yy;
                                     return { x: xx, y: engineY };
                                 });
@@ -4058,13 +4159,26 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                                 }
                                                 if (!window.lastCharVariant) window.lastCharVariant = {};
                                                 window.lastCharVariant[char] = chosenVariantIdx;
-                                                const rawStrokes = variants[chosenVariantIdx];
+                                                const rawStrokes = variants[chosenVariantIdx] || [];
                                                 let minX = Infinity;
-                                                rawStrokes.forEach(s => s.forEach(p => { if (p[0] < minX) minX = p[0]; }));
+                                                rawStrokes.forEach(s => {
+                                                    if (Array.isArray(s)) {
+                                                        s.forEach(p => {
+                                                            if (p) {
+                                                                const px = Array.isArray(p) ? p[0] : (p.x !== undefined ? p.x : null);
+                                                                if (px !== null && !isNaN(px) && px < minX) minX = px;
+                                                            }
+                                                        });
+                                                    }
+                                                });
+                                                if (minX === Infinity) minX = 0;
                                                 characterStrokes = rawStrokes.map(stroke => {
+                                                    if (!Array.isArray(stroke)) return [];
                                                     return stroke.map(pt => {
-                                                        const x = (pt[0] - minX) * (localHeight / 180.0);
-                                                        const y = (pt[1] - 240.0) * (localHeight / 180.0);
+                                                        const px = Array.isArray(pt) ? pt[0] : (pt.x !== undefined ? pt.x : minX);
+                                                        const py = Array.isArray(pt) ? pt[1] : (pt.y !== undefined ? pt.y : 240);
+                                                        const x = (px - minX) * (localHeight / 180.0);
+                                                        const y = (py - 240.0) * (localHeight / 180.0);
                                                         const engineY = localHeight + y;
                                                         return { x: x, y: engineY };
                                                     });
@@ -5235,47 +5349,52 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 }
             }
             
-        // Compile text handwriting paths
-            if (window.handwritingLayoutDirty || !window.cachedHandwritingPaths) {
-                window.cachedHandwritingPaths = computeHandwritingLayout(settings);
-                window.handwritingLayoutDirty = false;
-                updateMissingCharsUI(lastMissingChars);
-            }
-            const paths = window.cachedHandwritingPaths || [];
-            
-            // Draw compiled writing paths
-            pCtx.strokeStyle = '#1d4ed8'; // Royal Blue gel pen color
-            pCtx.lineWidth = 3.5;
-            pCtx.lineCap = 'round';
-            pCtx.lineJoin = 'round';
-            
-            for (let stroke of paths) {
-                if (stroke.length === 0) continue;
-                pCtx.beginPath();
-                
-                let startX, startY;
-                if (calibMatrix) {
-                    const ptStart = mapDesignToBed(stroke[0].x, stroke[0].y, calibMatrix);
-                    startX = ptStart.x * mmToPx;
-                    startY = (220 - ptStart.y) * mmToPx;
-                } else {
-                    startX = paperX + stroke[0].x * mmToPx;
-                    startY = paperY + stroke[0].y * mmToPx;
+            // Compile text handwriting paths
+            try {
+                if (window.handwritingLayoutDirty || !window.cachedHandwritingPaths) {
+                    window.cachedHandwritingPaths = computeHandwritingLayout(settings);
+                    window.handwritingLayoutDirty = false;
+                    updateMissingCharsUI(lastMissingChars);
                 }
-                pCtx.moveTo(startX, startY);
+                const paths = window.cachedHandwritingPaths || [];
                 
-                for (let i = 1; i < stroke.length; i++) {
-                    let ptX, ptY;
+                // Draw compiled writing paths
+                pCtx.strokeStyle = '#1d4ed8'; // Royal Blue gel pen color
+                pCtx.lineWidth = 3.5;
+                pCtx.lineCap = 'round';
+                pCtx.lineJoin = 'round';
+                
+                for (let stroke of paths) {
+                    if (!stroke || stroke.length === 0) continue;
+                    pCtx.beginPath();
+                    
+                    let startX, startY;
                     if (calibMatrix) {
-                        const pt = mapDesignToBed(stroke[i].x, stroke[i].y, calibMatrix);
-                        ptX = pt.x * mmToPx;
-                        ptY = (220 - pt.y) * mmToPx;
+                        const ptStart = mapDesignToBed(stroke[0].x, stroke[0].y, calibMatrix);
+                        startX = ptStart.x * mmToPx;
+                        startY = (220 - ptStart.y) * mmToPx;
                     } else {
-                        ptX = paperX + stroke[i].x * mmToPx;
-                        ptY = paperY + stroke[i].y * mmToPx;
+                        startX = paperX + stroke[0].x * mmToPx;
+                        startY = paperY + stroke[0].y * mmToPx;
                     }
-                    pCtx.lineTo(ptX, ptY);
+                    pCtx.moveTo(startX, startY);
+                    
+                    for (let i = 1; i < stroke.length; i++) {
+                        let ptX, ptY;
+                        if (calibMatrix) {
+                            const pt = mapDesignToBed(stroke[i].x, stroke[i].y, calibMatrix);
+                            ptX = pt.x * mmToPx;
+                            ptY = (220 - pt.y) * mmToPx;
+                        } else {
+                            ptX = paperX + stroke[i].x * mmToPx;
+                            ptY = paperY + stroke[i].y * mmToPx;
+                        }
+                        pCtx.lineTo(ptX, ptY);
+                    }
+                    pCtx.stroke();
                 }
+            } catch(hwErr) {
+                console.error("Error drawing handwriting paths:", hwErr);
             }
 
             // Draw Image Block Vector Strokes (if loaded)
@@ -9290,31 +9409,31 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         if (parkYInp) parkYInp.addEventListener('change', savePostPrintSettingsToLocalStorage);
 
         // --- INITIALIZATION ---
-        // Load settings profiles dict
-        loadProfiles();
-        loadCachedWebData();
-        loadCalibPointsFromLocalStorage();
-        loadPostPrintSettingsFromLocalStorage();
-        loadPrintShortcut();
-        updateFpsCalibButtonState();
-        updateVirtualUI();
-        initSlowStartTuningListeners();
-        initNavigationToolbar();
-        checkCalibrationStateConflict();
-        initAutoSaveListeners();
-        initLevelingListeners();
-        calculateBedLeveling();
+        try { loadProfiles(); } catch(e) { console.error("Init loadProfiles:", e); }
+        try { loadCachedWebData(); } catch(e) { console.error("Init loadCachedWebData:", e); }
+        try { loadCalibPointsFromLocalStorage(); } catch(e) { console.error("Init loadCalibPoints:", e); }
+        try { loadPostPrintSettingsFromLocalStorage(); } catch(e) { console.error("Init loadPostPrintSettings:", e); }
+        try { loadPrintShortcut(); } catch(e) { console.error("Init loadPrintShortcut:", e); }
+        try { updateFpsCalibButtonState(); } catch(e) { console.error("Init updateFpsCalibButtonState:", e); }
+        try { updateVirtualUI(); } catch(e) { console.error("Init updateVirtualUI:", e); }
+        try { initSlowStartTuningListeners(); } catch(e) { console.error("Init initSlowStartTuningListeners:", e); }
+        try { initNavigationToolbar(); } catch(e) { console.error("Init initNavigationToolbar:", e); }
+        try { checkCalibrationStateConflict(); } catch(e) { console.error("Init checkCalibrationStateConflict:", e); }
+        try { initAutoSaveListeners(); } catch(e) { console.error("Init initAutoSaveListeners:", e); }
+        try { initLevelingListeners(); } catch(e) { console.error("Init initLevelingListeners:", e); }
+        try { calculateBedLeveling(); } catch(e) { console.error("Init calculateBedLeveling:", e); }
         
         // Render initial view
-        rebuildVariantSelectors();
-        updateCharGridHighlights();
-        resizeDesignerCanvas();
-        triggerPreviewUpdate();
+        try { rebuildVariantSelectors(); } catch(e) { console.error("Init rebuildVariantSelectors:", e); }
+        try { updateCharGridHighlights(); } catch(e) { console.error("Init updateCharGridHighlights:", e); }
+        try { resizeDesignerCanvas(); } catch(e) { console.error("Init resizeDesignerCanvas:", e); }
+        try { triggerPreviewUpdate(); } catch(e) { console.error("Init triggerPreviewUpdate:", e); }
+        try { renderPreview(); } catch(e) { console.error("Init renderPreview fallback:", e); }
         
         // Handle window resizing to keep canvas scales clean
         window.addEventListener('resize', () => {
-            resizeDesignerCanvas();
-            renderPreview();
+            try { resizeDesignerCanvas(); } catch(e) {}
+            try { renderPreview(); } catch(e) {}
         });
     </script>
 </body>
