@@ -7592,14 +7592,18 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         // --- INTERACTIVE LAYOUT CLICK & TEXT SELECTION EDIT SYSTEM ---
         const lblSelectedChar = document.getElementById('lblSelectedChar');
         const btnEditSelectedChar = document.getElementById('btnEditSelectedChar');
+        const textInput = document.getElementById('textInput');
         let textTargetChar = null;
         
         // Listen to cursor caret clicks and selections inside step 1 textarea
-        textInput.addEventListener('click', updateTextSelectionTarget);
-        textInput.addEventListener('keyup', updateTextSelectionTarget);
-        textInput.addEventListener('select', updateTextSelectionTarget);
+        if (textInput) {
+            textInput.addEventListener('click', updateTextSelectionTarget);
+            textInput.addEventListener('keyup', updateTextSelectionTarget);
+            textInput.addEventListener('select', updateTextSelectionTarget);
+        }
         
         function updateTextSelectionTarget() {
+            if (!textInput) return;
             const start = textInput.selectionStart;
             const text = textInput.value;
             if (start > 0 && start <= text.length) {
@@ -7632,6 +7636,27 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             
             showToast(`Editing character '${textTargetChar}' (Variant 1) in Designer`, "info");
         });
+
+        // --- INTERACTIVE LIVE CALIBRATION AND JOG CONTROLS ---
+        let isDraggingPoint = false;
+        let draggingPointIdx = -1;
+        let hoverBedX = null;
+        let hoverBedY = null;
+        let slowStartTimerInterval = null;
+
+        // Zoom & Pan state variables (targets for smooth animation)
+        let zoomScale = 1.0;
+        let panOffsetX = 0.0;
+        let panOffsetY = 0.0;
+        let targetZoomScale = 1.0;
+        let targetPanOffsetX = 0.0;
+        let targetPanOffsetY = 0.0;
+        
+        let showBedGrid = true;
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+        let isAnimating = false;
 
         // Canvas Click Mode Toggle Logic (Defaults to 'jog' so normal tap moves the pen)
         let canvasClickMode = 'jog';
@@ -7673,8 +7698,8 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                     ? "px-2.5 py-1 text-[10.5px] font-bold rounded-lg bg-emerald-600 text-white shadow flex items-center gap-1 cursor-pointer"
                     : "px-2.5 py-1 text-[10.5px] font-medium rounded-lg text-emerald-400 hover:text-white flex items-center gap-1 cursor-pointer");
             }
-            renderPreview();
             if (!silent) {
+                renderPreview();
                 if (mode === 'jog') {
                     showToast("Canvas click mode: ✈️ Move Pen (Tap anywhere on canvas to move pen)", "info");
                 } else if (mode === 'edit') {
@@ -7696,27 +7721,6 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         
         // Initialize with 'jog' (Move Pen) active
         setCanvasClickMode('jog', true);
-
-        // --- INTERACTIVE LIVE CALIBRATION AND JOG CONTROLS ---
-        let isDraggingPoint = false;
-        let draggingPointIdx = -1;
-        let hoverBedX = null;
-        let hoverBedY = null;
-        let slowStartTimerInterval = null;
-
-        // Zoom & Pan state variables (targets for smooth animation)
-        let zoomScale = 1.0;
-        let panOffsetX = 0.0;
-        let panOffsetY = 0.0;
-        let targetZoomScale = 1.0;
-        let targetPanOffsetX = 0.0;
-        let targetPanOffsetY = 0.0;
-        
-        let showBedGrid = true;
-        let isPanning = false;
-        let panStartX = 0;
-        let panStartY = 0;
-        let isAnimating = false;
 
         // Buttery smooth animation loop using requestAnimationFrame
         function startAnimationLoop() {
