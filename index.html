@@ -681,6 +681,59 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     <label for="useM420" class="text-xs text-slate-300">Enable Bed Mesh (M420 S1) <span class="text-[10px] text-amber-500 font-semibold block sm:inline">*Requires pre-saved ABL mesh*</span></label>
                 </div>
 
+                <!-- Thick Book / Elevated Bed Mode (Z-Floor Limit) -->
+                <div class="pt-3.5 border-t border-slate-800/90 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="enableBookMode" class="rounded border-slate-700 text-amber-500 focus:ring-amber-400 bg-slate-950 h-4 w-4 cursor-pointer" />
+                            <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                                📖 Thick Book / Elevated Bed Mode
+                            </span>
+                        </label>
+                        <span id="bookModeBadge" class="text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700">DISABLED</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-normal">
+                        Sets a hard Z-floor limit and elevates all pen up/down, safe travel, and calibration heights so the ballpoint pen never collides with your book.
+                    </p>
+
+                    <div id="bookModeSettingsContainer" class="hidden space-y-3 bg-slate-950/70 p-3 rounded-lg border border-amber-900/40">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="bookThickness" class="text-xs font-semibold text-slate-300">Book Thickness / Elevation Limit (mm):</label>
+                                <span class="text-[10px] text-amber-400 font-mono font-bold" id="lblBookThicknessCm">0.70 cm</span>
+                            </div>
+                            <input type="number" id="bookThickness" step="0.1" min="0" max="80" value="7.0" class="w-full bg-slate-900 border border-amber-800/60 rounded px-3 py-1.5 text-sm text-amber-200 font-mono font-bold focus:outline-none focus:border-amber-500" />
+                        </div>
+
+                        <!-- Quick Presets -->
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-slate-400 font-semibold block">Quick Presets:</span>
+                            <div class="grid grid-cols-4 gap-1.5 text-[10px]">
+                                <button type="button" id="btnPresetBook7mm" class="py-1 px-1 rounded bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-700/60 font-bold transition text-center truncate cursor-pointer" title="0.7 cm standard notebook">0.7cm (7mm)</button>
+                                <button type="button" id="btnPresetBook10mm" class="py-1 px-1 rounded bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-700 font-semibold transition text-center truncate cursor-pointer" title="1.0 cm book">1.0cm (10mm)</button>
+                                <button type="button" id="btnPresetBook15mm" class="py-1 px-1 rounded bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-700 font-semibold transition text-center truncate cursor-pointer" title="1.5 cm thick book">1.5cm (15mm)</button>
+                                <button type="button" id="btnPresetBook0mm" class="py-1 px-1 rounded bg-slate-900 hover:bg-slate-850 text-slate-400 border border-slate-700 transition text-center truncate cursor-pointer" title="Flat bed / disable">Flat (0mm)</button>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic Calculated Heights Summary -->
+                        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-amber-900/30 text-center font-mono">
+                            <div class="bg-slate-900/90 p-1.5 rounded border border-slate-800">
+                                <span class="block text-[8.5px] text-slate-400 uppercase font-sans">Hard Floor</span>
+                                <span id="summaryZFloor" class="text-xs font-bold text-amber-300">7.00mm</span>
+                            </div>
+                            <div class="bg-slate-900/90 p-1.5 rounded border border-slate-800">
+                                <span class="block text-[8.5px] text-slate-400 uppercase font-sans">Contact Point</span>
+                                <span id="summaryZDown" class="text-xs font-bold text-emerald-400">7.20mm</span>
+                            </div>
+                            <div class="bg-slate-900/90 p-1.5 rounded border border-slate-800">
+                                <span class="block text-[8.5px] text-slate-400 uppercase font-sans">Travel Clearance</span>
+                                <span id="summaryZUp" class="text-xs font-bold text-indigo-300">10.50mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Pen Offsets disabled completely -->
                 <div style="display: none;">
                     <input type="number" id="penOffsetX" value="0.0" />
@@ -867,9 +920,30 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         </div>
                     </div>
 
+                    <!-- Thick Book Mode Active Indicator in Jog Controller -->
+                    <div id="jogBookModeAlert" class="hidden p-2 bg-amber-950/40 border border-amber-800/60 rounded-lg flex items-center justify-between text-[10px]">
+                        <span class="text-amber-300 font-bold flex items-center gap-1.5">
+                            📖 Book Mode: <span id="lblJogFloorLimit" class="font-mono text-amber-200 font-extrabold">+7.00mm</span> floor
+                        </span>
+                        <span class="text-[9px] text-slate-400">Moves elevated</span>
+                    </div>
+
                     <div class="flex gap-1.5">
-                        <button id="btnJogHome" class="w-full py-2 px-3 rounded-lg bg-indigo-950 hover:bg-indigo-900 border border-indigo-800 text-indigo-300 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md">
+                        <button id="btnJogHome" class="w-full py-2 px-3 rounded-lg bg-indigo-950 hover:bg-indigo-900 border border-indigo-800 text-indigo-300 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer">
                             🏠 Home Printer (G28)
+                        </button>
+                    </div>
+
+                    <!-- Live Pen Z-Height Test Controls -->
+                    <div class="grid grid-cols-3 gap-1.5 pt-0.5">
+                        <button id="btnJogPenDown" type="button" class="py-1.5 px-1 rounded bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-800/60 text-emerald-300 text-[9.5px] font-bold transition flex items-center justify-center gap-1 shadow-sm cursor-pointer" title="Lower pen to exact writing contact point on book/bed">
+                            ⬇️ Pen Down
+                        </button>
+                        <button id="btnJogPenUp" type="button" class="py-1.5 px-1 rounded bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-800/60 text-indigo-300 text-[9.5px] font-bold transition flex items-center justify-center gap-1 shadow-sm cursor-pointer" title="Raise pen to safe travel clearance">
+                            ⬆️ Pen Up
+                        </button>
+                        <button id="btnJogPenHigh" type="button" class="py-1.5 px-1 rounded bg-slate-900 hover:bg-slate-850 border border-slate-750 text-slate-300 text-[9.5px] font-bold transition flex items-center justify-center gap-1 shadow-sm cursor-pointer" title="Raise pen +20mm high">
+                            ⏫ Lift +20mm
                         </button>
                     </div>
 
@@ -3001,6 +3075,85 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             previewDebounce = setTimeout(renderPreview, 80);
         }
 
+        // Helper to compute effective Z heights based on standard settings and Thick Book / Elevated Bed Mode
+        function getEffectiveZHeights(settings) {
+            const s = settings || (typeof getSettings === 'function' ? getSettings() : {});
+            const elevation = (s.enableBookMode && s.bookThickness > 0) ? s.bookThickness : 0.0;
+            const effectiveZDown = (s.zDown !== undefined ? s.zDown : 0.2) + elevation;
+            const effectiveZUp = (s.zUp !== undefined ? s.zUp : 3.5) + elevation;
+            const safeTransitZ = effectiveZUp + 15.0;
+            return {
+                elevation,
+                effectiveZDown,
+                effectiveZUp,
+                safeTransitZ
+            };
+        }
+
+        // Live updater for Thick Book / Elevated Bed Mode settings & cards
+        function updateBookModeUI() {
+            const chk = document.getElementById('enableBookMode');
+            const thicknessInput = document.getElementById('bookThickness');
+            const container = document.getElementById('bookModeSettingsContainer');
+            const badge = document.getElementById('bookModeBadge');
+            const cmLabel = document.getElementById('lblBookThicknessCm');
+            const alertEl = document.getElementById('jogBookModeAlert');
+            const jogFloorEl = document.getElementById('lblJogFloorLimit');
+
+            if (!chk || !thicknessInput) return;
+
+            const isEnabled = chk.checked;
+            const thickness = Math.max(0.0, parseFloat(thicknessInput.value) || 0.0);
+
+            if (container) {
+                container.classList.toggle('hidden', !isEnabled);
+            }
+
+            if (badge) {
+                if (isEnabled) {
+                    badge.className = "text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-950 text-amber-300 border border-amber-700 animate-pulse";
+                    badge.textContent = `ACTIVE: +${thickness.toFixed(1)}mm`;
+                } else {
+                    badge.className = "text-[9px] px-2 py-0.5 rounded-full font-mono font-bold bg-slate-800 text-slate-400 border border-slate-700";
+                    badge.textContent = "DISABLED";
+                }
+            }
+
+            if (cmLabel) {
+                cmLabel.textContent = `${(thickness / 10.0).toFixed(2)} cm`;
+            }
+
+            const zDownBase = parseFloat(document.getElementById('zDown')?.value) || 0.2;
+            const zUpBase = parseFloat(document.getElementById('zUp')?.value) || 3.5;
+            const floor = isEnabled ? thickness : 0.0;
+            const zDownEff = isEnabled ? (zDownBase + thickness) : zDownBase;
+            const zUpEff = isEnabled ? (zUpBase + thickness) : zUpBase;
+
+            const sumFloor = document.getElementById('summaryZFloor');
+            const sumDown = document.getElementById('summaryZDown');
+            const sumUp = document.getElementById('summaryZUp');
+
+            if (sumFloor) sumFloor.textContent = `${floor.toFixed(2)}mm`;
+            if (sumDown) sumDown.textContent = `${zDownEff.toFixed(2)}mm`;
+            if (sumUp) sumUp.textContent = `${zUpEff.toFixed(2)}mm`;
+
+            if (alertEl) {
+                alertEl.classList.toggle('hidden', !isEnabled);
+            }
+            if (jogFloorEl) {
+                jogFloorEl.textContent = `+${thickness.toFixed(2)}mm`;
+            }
+
+            const btnJogPenDown = document.getElementById('btnJogPenDown');
+            const btnJogPenUp = document.getElementById('btnJogPenUp');
+            if (btnJogPenDown) {
+                btnJogPenDown.textContent = `⬇️ Pen Down (${zDownEff.toFixed(2)}mm)`;
+            }
+            if (btnJogPenUp) {
+                btnJogPenUp.textContent = `⬆️ Pen Up (${zUpEff.toFixed(2)}mm)`;
+            }
+        }
+
         // Gather all left-panel settings dynamically
         function getSettings() {
             return {
@@ -3021,6 +3174,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 paperYShift: parseFloat(document.getElementById('paperYShift').value) || 0.0,
                 zUp: parseFloat(document.getElementById('zUp').value) || 3.5,
                 zDown: parseFloat(document.getElementById('zDown').value) || 0.2,
+                enableBookMode: document.getElementById('enableBookMode') ? document.getElementById('enableBookMode').checked : false,
+                bookThickness: document.getElementById('bookThickness') ? (parseFloat(document.getElementById('bookThickness').value) || 0.0) : 7.0,
                 drawFeed: parseInt(document.getElementById('drawFeed').value) || 1800,
                 travelFeed: parseInt(document.getElementById('travelFeed').value) || 3600,
                 addHome: document.getElementById('addHomeCmd').checked,
@@ -6669,6 +6824,67 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             }
         });
 
+        // Wire up Thick Book / Elevated Bed Mode controls & presets
+        const enableBookModeEl = document.getElementById('enableBookMode');
+        const bookThicknessEl = document.getElementById('bookThickness');
+        const zUpEl = document.getElementById('zUp');
+        const zDownEl = document.getElementById('zDown');
+
+        if (enableBookModeEl) {
+            enableBookModeEl.addEventListener('change', () => {
+                updateBookModeUI();
+                triggerPreviewUpdate();
+                if (enableBookModeEl.checked) {
+                    showToast(`📖 Thick Book Mode enabled (+${parseFloat(bookThicknessEl?.value || 7.0).toFixed(1)}mm elevation)`, "info");
+                } else {
+                    showToast("Thick Book Mode disabled (standard flat bed)", "info");
+                }
+            });
+        }
+        if (bookThicknessEl) {
+            bookThicknessEl.addEventListener('input', () => {
+                updateBookModeUI();
+                triggerPreviewUpdate();
+            });
+            bookThicknessEl.addEventListener('change', () => {
+                updateBookModeUI();
+                triggerPreviewUpdate();
+            });
+        }
+        if (zUpEl) zUpEl.addEventListener('input', updateBookModeUI);
+        if (zDownEl) zDownEl.addEventListener('input', updateBookModeUI);
+
+        document.getElementById('btnPresetBook7mm')?.addEventListener('click', () => {
+            if (bookThicknessEl) bookThicknessEl.value = "7.0";
+            if (enableBookModeEl) enableBookModeEl.checked = true;
+            updateBookModeUI();
+            triggerPreviewUpdate();
+            showToast("Set Book Preset: 0.7 cm (7mm) Standard Notebook", "success");
+        });
+        document.getElementById('btnPresetBook10mm')?.addEventListener('click', () => {
+            if (bookThicknessEl) bookThicknessEl.value = "10.0";
+            if (enableBookModeEl) enableBookModeEl.checked = true;
+            updateBookModeUI();
+            triggerPreviewUpdate();
+            showToast("Set Book Preset: 1.0 cm (10mm) Book", "success");
+        });
+        document.getElementById('btnPresetBook15mm')?.addEventListener('click', () => {
+            if (bookThicknessEl) bookThicknessEl.value = "15.0";
+            if (enableBookModeEl) enableBookModeEl.checked = true;
+            updateBookModeUI();
+            triggerPreviewUpdate();
+            showToast("Set Book Preset: 1.5 cm (15mm) Thick Book", "success");
+        });
+        document.getElementById('btnPresetBook0mm')?.addEventListener('click', () => {
+            if (bookThicknessEl) bookThicknessEl.value = "0.0";
+            if (enableBookModeEl) enableBookModeEl.checked = false;
+            updateBookModeUI();
+            triggerPreviewUpdate();
+            showToast("Book Mode Disabled (Flat Bed)", "info");
+        });
+
+        // Initialize Book Mode UI on startup
+        updateBookModeUI();
 
         // --- PRESETS ENGINE ---
         document.getElementById('humanizePresetNone').addEventListener('click', () => {
@@ -6748,12 +6964,21 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 return false;
             }
             
+            const zHeights = getEffectiveZHeights(settings);
+
             let gcode = [];
             
             // Setup comments
             gcode.push("; Anycubic Kobra Neo Pen Plotter G-Code Output");
             gcode.push(`; Generated: ${new Date().toLocaleString()}`);
             gcode.push(`; Text strokes count: ${paths.length}`);
+            if (settings.enableBookMode) {
+                gcode.push(`; Thick Book / Elevated Bed Mode: ACTIVE (+${zHeights.elevation.toFixed(2)}mm elevation)`);
+                gcode.push(`;   Minimum Z-Floor Limit: ${zHeights.elevation.toFixed(2)}mm`);
+                gcode.push(`;   Pen DOWN (Contact): Z${zHeights.effectiveZDown.toFixed(2)}`);
+                gcode.push(`;   Pen UP (Travel): Z${zHeights.effectiveZUp.toFixed(2)}`);
+                gcode.push(`;   Safe Transit Height: Z${zHeights.safeTransitZ.toFixed(2)}`);
+            }
             if (calibMatrix) {
                 gcode.push("; Active Bilinear Calibration Map applied:");
                 gcode.push(`;   Point 1 (TL): X=${calibMatrix.p1.x.toFixed(2)}, Y=${calibMatrix.p1.y.toFixed(2)}`);
@@ -6769,10 +6994,11 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             
             if (settings.addHome) {
                 gcode.push("G28 ; Home X Y Z");
+                // Immediately raise Z above book surface before ANY horizontal travel!
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)} F1500 ; Raise Pen above book surface`);
+            } else {
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)} F${settings.travelFeed} ; Raise Pen`);
             }
-            
-            // Pen UP for initial safety
-            gcode.push(`G0 Z${settings.zUp.toFixed(2)} F${settings.travelFeed} ; Raise Pen`);
             
             if (settings.useM420) {
                 gcode.push("M420 S1 ; Enable Auto Bed Leveling Grid Mesh");
@@ -6796,10 +7022,10 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                     startY = (297 - startPt.y) + settings.paperYShift - settings.penOffsetY;
                 }
                 
-                gcode.push(`G0 X${startX.toFixed(2)} Y${startY.toFixed(2)} Z${settings.zUp.toFixed(2)} F${settings.travelFeed} ; Travel Move`);
+                gcode.push(`G0 X${startX.toFixed(2)} Y${startY.toFixed(2)} Z${zHeights.effectiveZUp.toFixed(2)} F${settings.travelFeed} ; Travel Move`);
                 
                 // Lower pen to contact point
-                gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800 ; Contact Pen Down`);
+                gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800 ; Contact Pen Down`);
                 
                 // Write stroke coordinates
                 for (let i = 1; i < stroke.length; i++) {
@@ -6824,23 +7050,29 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 }
                 
                 // Raise pen
-                gcode.push(`G0 Z${settings.zUp.toFixed(2)} F${settings.travelFeed} ; Lift Pen Up`);
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)} F${settings.travelFeed} ; Lift Pen Up`);
                 gcode.push("");
             }
             
             // Ending sequence
             gcode.push("; --- END PLOT PATHS ---");
-            gcode.push(`G0 Z${(settings.zUp + 15).toFixed(2)} F${settings.travelFeed} ; Raise pen high for safety`);
+            gcode.push(`G0 Z${zHeights.safeTransitZ.toFixed(2)} F${settings.travelFeed} ; Raise pen high for safety`);
             
             const autoPostPrint = document.getElementById('enablePostPrintAuto') ? document.getElementById('enablePostPrintAuto').checked : true;
             if (autoPostPrint) {
                 const parkX = parseFloat(document.getElementById('postPrintParkX').value) || -6.44;
                 const parkY = parseFloat(document.getElementById('postPrintParkY').value) || 211.92;
                 gcode.push("; Post-Print Auto Park Sequence");
-                gcode.push("G28 ; Home Printer");
+                if (settings.enableBookMode) {
+                    gcode.push(`G0 Z${zHeights.safeTransitZ.toFixed(2)} F2400 ; Maintain elevated Z clearance`);
+                    gcode.push("G28 X0 Y0 ; Home X and Y only (prevents Z crashing into book)");
+                } else {
+                    gcode.push("G28 ; Home Printer");
+                }
                 gcode.push(`G0 X${parkX.toFixed(2)} Y${parkY.toFixed(2)} F3600 ; Park at standby location`);
                 gcode.push("; Note: Stepper motors kept energized for immediate calibration");
             } else {
+                gcode.push(`G0 Z${zHeights.safeTransitZ.toFixed(2)} F2400 ; Keep Z high`);
                 gcode.push("G28 X0 Y0 ; Move bed forward and hotend out of the way");
                 gcode.push("M84 ; Disable stepper motors");
             }
@@ -6860,6 +7092,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         // Calibration G-code compiler (Draws boundary borders to align physical notebook lines)
         document.getElementById('generateCalibrationGCodeBtn').addEventListener('click', () => {
             const settings = getSettings();
+            const zHeights = getEffectiveZHeights(settings);
             const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
             if (settings.use3PointCalib && !calibMatrix) {
                 showToast("Calibration is active but the reference points are not configured properly!", "error");
@@ -6871,6 +7104,9 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             let gcode = [];
             gcode.push("; Anycubic Kobra Neo Pen Plotter - Notebook Line Alignment Calibration Profile");
             gcode.push("; Use this code to adjust paper orientation on the bed before writing.");
+            if (settings.enableBookMode) {
+                gcode.push(`; Thick Book / Elevated Bed Mode: ACTIVE (+${zHeights.elevation.toFixed(2)}mm elevation)`);
+            }
             if (calibMatrix) {
                 gcode.push("; SUCCESS: Active Bilinear Calibration Map applied:");
                 gcode.push(`;   Point 1 (TL): X=${calibMatrix.p1.x.toFixed(2)}, Y=${calibMatrix.p1.y.toFixed(2)}`);
@@ -6886,9 +7122,11 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             gcode.push("G90 ; Absolute coordinates");
             if (settings.addHome) {
                 gcode.push("G28 ; Home X Y Z");
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)} F1500 ; Raise above book surface`);
+            } else {
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)} F${settings.travelFeed}`);
             }
             
-            gcode.push(`G0 Z${settings.zUp.toFixed(2)} F${settings.travelFeed}`);
             if (settings.useM420) {
                 gcode.push("M420 S1");
             }
@@ -6927,29 +7165,29 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             
             gcode.push("; --- DRAW TOP LINE GUIDE ---");
             gcode.push(`G0 X${startX.toFixed(2)} Y${startY.toFixed(2)}`);
-            gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
+            gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
             gcode.push(`G1 X${endX.toFixed(2)} Y${endY.toFixed(2)} F${settings.drawFeed}`);
-            gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+            gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
             gcode.push("");
             
             gcode.push("; --- DRAW LEFT MARGIN GUIDE ---");
             gcode.push(`G0 X${startX.toFixed(2)} Y${startY.toFixed(2)}`);
-            gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
+            gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
             gcode.push(`G1 X${leftMarginBottomX.toFixed(2)} Y${leftMarginBottomY.toFixed(2)} F${settings.drawFeed}`);
-            gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+            gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
             gcode.push("");
 
             gcode.push("; --- DRAW RIGHT MARGIN GUIDE ---");
             gcode.push(`G0 X${endX.toFixed(2)} Y${endY.toFixed(2)}`);
-            gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
+            gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
             gcode.push(`G1 X${rightMarginBottomX.toFixed(2)} Y${rightMarginBottomY.toFixed(2)} F${settings.drawFeed}`);
-            gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+            gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
             gcode.push("");
             
             // End sequence
-            gcode.push("G0 Z30 F3600");
-            gcode.push("G28 X0 Y0");
-            gcode.push("M84");
+            gcode.push(`G0 Z${(zHeights.elevation + 30).toFixed(2)} F3600 ; Safe ending lift`);
+            gcode.push("G28 X0 Y0 ; Move carriage away");
+            gcode.push("M84 ; Disable steppers");
             
             generatedGCode = gcode.join('\n');
             document.getElementById('gcodeOutput').textContent = generatedGCode;
@@ -6960,6 +7198,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         // Dry Run Verification G-code compiler (Moves pen to start and end lines slowly, pausing 10s with pen UP)
         document.getElementById('generateVerifyAlignmentGCodeBtn').addEventListener('click', () => {
             const settings = getSettings();
+            const zHeights = getEffectiveZHeights(settings);
             const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
             if (settings.use3PointCalib && !calibMatrix) {
                 showToast("Calibration is active but the reference points are not configured properly!", "error");
@@ -6969,6 +7208,9 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             let gcode = [];
             gcode.push("; Anycubic Kobra Neo Pen Plotter - 10s Dry Run Alignment Verification Sequence");
             gcode.push("; Pen remains UP at all times. Use this to verify alignment before printing.");
+            if (settings.enableBookMode) {
+                gcode.push(`; Thick Book / Elevated Bed Mode: ACTIVE (+${zHeights.elevation.toFixed(2)}mm elevation)`);
+            }
             if (calibMatrix) {
                 gcode.push("; SUCCESS: Active Bilinear Calibration Map applied:");
                 gcode.push(`;   Point 1 (TL): X=${calibMatrix.p1.x.toFixed(2)}, Y=${calibMatrix.p1.y.toFixed(2)}`);
@@ -6982,10 +7224,11 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             gcode.push("G90 ; Absolute coordinates");
             if (settings.addHome) {
                 gcode.push("G28 ; Home X Y Z");
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)} F1500 ; Raise above book surface`);
+            } else {
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)} F${settings.travelFeed} ; Raise Pen UP`);
             }
             
-            // Raise pen for safety travel
-            gcode.push(`G0 Z${settings.zUp.toFixed(2)} F${settings.travelFeed} ; Raise Pen UP`);
             if (settings.useM420) {
                 gcode.push("M420 S1 ; Enable bed mesh");
             }
@@ -7021,7 +7264,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             
             // Return to safe position
             gcode.push("; 3. Return to safe home position");
-            gcode.push("G0 Z30 F3600 ; Raise pen high");
+            gcode.push(`G0 Z${(zHeights.elevation + 30).toFixed(2)} F3600 ; Raise pen high`);
             gcode.push("G28 X0 Y0 ; Move nozzle away");
             gcode.push("M84 ; Disable steppers");
             
@@ -7034,19 +7277,25 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         // Calibration Box G-code generator (Draws a precise 15x15cm box or corners on physical paper)
         document.getElementById('generateCalibBoxGCodeBtn').addEventListener('click', () => {
             const settings = getSettings();
+            const zHeights = getEffectiveZHeights(settings);
             
             let gcode = [];
             gcode.push("; Anycubic Kobra Neo Pen Plotter - Real-World Calibration Box");
             gcode.push("; Use this to verify X/Y dimensional scaling and rule line offsets.");
+            if (settings.enableBookMode) {
+                gcode.push(`; Thick Book / Elevated Bed Mode: ACTIVE (+${zHeights.elevation.toFixed(2)}mm elevation)`);
+            }
             gcode.push("");
             
             gcode.push("G21 ; Set units to mm");
             gcode.push("G90 ; Absolute coordinates");
             if (settings.addHome) {
                 gcode.push("G28 ; Home X Y Z");
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)} F1500 ; Raise above book surface`);
+            } else {
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)} F${settings.travelFeed} ; Raise Pen UP`);
             }
             
-            gcode.push(`G0 Z${settings.zUp.toFixed(2)} F${settings.travelFeed} ; Raise Pen UP`);
             if (settings.useM420) {
                 gcode.push("M420 S1 ; Enable bed mesh");
             }
@@ -7061,43 +7310,43 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             if (settings.calibBoxStyle === 'full') {
                 gcode.push("; --- DRAW FULL CALIBRATION BOX BORDER ---");
                 gcode.push(`G0 X${x0.toFixed(2)} Y${y0.toFixed(2)} F${settings.travelFeed}`);
-                gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800 ; Pen Down`);
+                gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800 ; Pen Down`);
                 
                 gcode.push(`G1 X${x1.toFixed(2)} Y${y0.toFixed(2)} F${settings.drawFeed} ; Top Edge`);
                 gcode.push(`G1 X${x1.toFixed(2)} Y${y1.toFixed(2)} F${settings.drawFeed} ; Right Edge`);
                 gcode.push(`G1 X${x0.toFixed(2)} Y${y1.toFixed(2)} F${settings.drawFeed} ; Bottom Edge`);
                 gcode.push(`G1 X${x0.toFixed(2)} Y${y0.toFixed(2)} F${settings.drawFeed} ; Left Edge`);
                 
-                gcode.push(`G0 Z${settings.zUp.toFixed(2)} ; Pen Up`);
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)} ; Pen Up`);
             } else if (settings.calibBoxStyle === 'dots') {
                 gcode.push("; --- DRAW 4 CORNER DOTS ONLY ---");
                 
                 // 1. Top-Left
                 gcode.push("; Dot 1: Top-Left");
                 gcode.push(`G0 X${x0.toFixed(2)} Y${y0.toFixed(2)} F${settings.travelFeed}`);
-                gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
-                gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+                gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
                 gcode.push("");
                 
                 // 2. Top-Right
                 gcode.push("; Dot 2: Top-Right");
                 gcode.push(`G0 X${x1.toFixed(2)} Y${y0.toFixed(2)} F${settings.travelFeed}`);
-                gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
-                gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+                gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
                 gcode.push("");
                 
                 // 3. Bottom-Left
                 gcode.push("; Dot 3: Bottom-Left");
                 gcode.push(`G0 X${x0.toFixed(2)} Y${y1.toFixed(2)} F${settings.travelFeed}`);
-                gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
-                gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+                gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
                 gcode.push("");
                 
                 // 4. Bottom-Right
                 gcode.push("; Dot 4: Bottom-Right");
                 gcode.push(`G0 X${x1.toFixed(2)} Y${y1.toFixed(2)} F${settings.travelFeed}`);
-                gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
-                gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+                gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
                 gcode.push("");
             } else {
                 gcode.push("; --- DRAW 4 CORNER MARKERS (Saves Ink) ---");
@@ -7106,42 +7355,42 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 // 1. Top-Left Corner
                 gcode.push("; Corner 1: Top-Left");
                 gcode.push(`G0 X${(x0 + len).toFixed(2)} Y${y0.toFixed(2)} F${settings.travelFeed}`);
-                gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
+                gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
                 gcode.push(`G1 X${x0.toFixed(2)} Y${y0.toFixed(2)} F${settings.drawFeed}`);
                 gcode.push(`G1 X${x0.toFixed(2)} Y${(y0 - len).toFixed(2)} F${settings.drawFeed}`);
-                gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
                 gcode.push("");
                 
                 // 2. Top-Right Corner
                 gcode.push("; Corner 2: Top-Right");
                 gcode.push(`G0 X${(x1 - len).toFixed(2)} Y${y0.toFixed(2)} F${settings.travelFeed}`);
-                gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
+                gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
                 gcode.push(`G1 X${x1.toFixed(2)} Y${y0.toFixed(2)} F${settings.drawFeed}`);
                 gcode.push(`G1 X${x1.toFixed(2)} Y${(y0 - len).toFixed(2)} F${settings.drawFeed}`);
-                gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
                 gcode.push("");
                 
                 // 3. Bottom-Left Corner
                 gcode.push("; Corner 3: Bottom-Left");
                 gcode.push(`G0 X${x0.toFixed(2)} Y${(y1 + len).toFixed(2)} F${settings.travelFeed}`);
-                gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
+                gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
                 gcode.push(`G1 X${x0.toFixed(2)} Y${y1.toFixed(2)} F${settings.drawFeed}`);
                 gcode.push(`G1 X${(x0 + len).toFixed(2)} Y${y1.toFixed(2)} F${settings.drawFeed}`);
-                gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
                 gcode.push("");
                 
                 // 4. Bottom-Right Corner
                 gcode.push("; Corner 4: Bottom-Right");
                 gcode.push(`G0 X${x1.toFixed(2)} Y${(y1 + len).toFixed(2)} F${settings.travelFeed}`);
-                gcode.push(`G1 Z${settings.zDown.toFixed(2)} F800`);
+                gcode.push(`G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`);
                 gcode.push(`G1 X${x1.toFixed(2)} Y${y1.toFixed(2)} F${settings.drawFeed}`);
                 gcode.push(`G1 X${(x1 - len).toFixed(2)} Y${y1.toFixed(2)} F${settings.drawFeed}`);
-                gcode.push(`G0 Z${settings.zUp.toFixed(2)}`);
+                gcode.push(`G0 Z${zHeights.effectiveZUp.toFixed(2)}`);
                 gcode.push("");
             }
             
             gcode.push("; --- END CALIBRATION SEQUENCE ---");
-            gcode.push("G0 Z30 F3600 ; Raise pen high");
+            gcode.push(`G0 Z${(zHeights.elevation + 30).toFixed(2)} F3600 ; Raise pen high`);
             gcode.push("G28 X0 Y0 ; Move carriage away");
             gcode.push("M84 ; Disable steppers");
             
@@ -7523,21 +7772,27 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 const url = getCleanOctoprintUrl();
                 const apiKey = octoprintApiKeyInput.value.trim();
                 if (url) {
+                    const settings = getSettings();
+                    const zHeights = getEffectiveZHeights(settings);
+                    const commands = settings.enableBookMode ? [
+                        "G90",
+                        `G0 Z${zHeights.safeTransitZ.toFixed(2)} F2400`,
+                        "G28 X0 Y0",
+                        `G0 X${parkX.toFixed(2)} Y${parkY.toFixed(2)} F3600`
+                    ] : [
+                        "G91",
+                        "G0 Z10 F3000",
+                        "G90",
+                        "G28",
+                        `G0 X${parkX.toFixed(2)} Y${parkY.toFixed(2)} F3600`
+                    ];
                     fetch(`${url}/api/printer/command`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'X-Api-Key': apiKey
                         },
-                        body: JSON.stringify({
-                            commands: [
-                                "G91",
-                                "G0 Z10 F3000",
-                                "G90",
-                                "G28",
-                                `G0 X${parkX.toFixed(2)} Y${parkY.toFixed(2)} F3600`
-                            ]
-                        })
+                        body: JSON.stringify({ commands })
                     }).catch(() => {});
                 }
             }
@@ -7800,9 +8055,19 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         function homePrinter() {
             jogVirtualX = 0.0;
             jogVirtualY = 0.0;
-            jogVirtualZ = 0.0;
-            updateVirtualUI();
-            sendJogGCodeCommands(["G28"]);
+            const settings = getSettings();
+            const zHeights = getEffectiveZHeights(settings);
+            if (settings.enableBookMode) {
+                jogVirtualZ = zHeights.effectiveZUp;
+                updateVirtualUI();
+                sendJogGCodeCommands(["G28", `G0 Z${zHeights.effectiveZUp.toFixed(2)} F1500`]);
+                showToast(`🏠 Homed printer and elevated Z to ${zHeights.effectiveZUp.toFixed(2)}mm`, "success");
+            } else {
+                jogVirtualZ = 0.0;
+                updateVirtualUI();
+                sendJogGCodeCommands(["G28"]);
+                showToast("🏠 Homed printer (G28)", "info");
+            }
         }
 
         function sendJogGCodeCommands(commands) {
@@ -7825,7 +8090,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             });
         }
 
-        // Travel to specific point on the bed
+        // Travel to specific point on the bed (always elevating Z before horizontal travel)
         function travelToPoint(x, y) {
             if (isNaN(x) || isNaN(y)) {
                 showToast("Point coordinates not set!", "warning");
@@ -7836,11 +8101,19 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             
             jogVirtualX = clampedX;
             jogVirtualY = clampedY;
+
+            const zHeights = getEffectiveZHeights();
+            const safeTravelZ = zHeights.effectiveZUp;
+            jogVirtualZ = safeTravelZ;
             updateVirtualUI();
             if (typeof renderPreview === 'function') renderPreview();
             
-            showToast(`✈️ Moving pen to X: ${clampedX.toFixed(2)}, Y: ${clampedY.toFixed(2)}`, "info");
-            sendJogGCodeCommands(["G90", `G0 X${clampedX.toFixed(2)} Y${clampedY.toFixed(2)} F3000`]);
+            showToast(`✈️ Moving pen to X: ${clampedX.toFixed(2)}, Y: ${clampedY.toFixed(2)} (Z: ${safeTravelZ.toFixed(2)}mm)`, "info");
+            sendJogGCodeCommands([
+                "G90",
+                `G0 Z${safeTravelZ.toFixed(2)} F1500`,
+                `G0 X${clampedX.toFixed(2)} Y${clampedY.toFixed(2)} F3000`
+            ]);
         }
 
         document.getElementById('btnJogHome').addEventListener('click', homePrinter);
@@ -7848,8 +8121,15 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         function performJumpYDown() {
             const distance = parseFloat(document.getElementById('jumpYDistanceInput').value) || 146.0;
             jogVirtualY = Math.max(0.0, jogVirtualY - distance);
+            const zHeights = getEffectiveZHeights();
+            const safeTravelZ = zHeights.effectiveZUp;
+            jogVirtualZ = safeTravelZ;
             updateVirtualUI();
-            sendJogGCodeCommands(["G90", `G0 X${jogVirtualX.toFixed(2)} Y${jogVirtualY.toFixed(2)} F3000`]);
+            sendJogGCodeCommands([
+                "G90",
+                `G0 Z${safeTravelZ.toFixed(2)} F1500`,
+                `G0 X${jogVirtualX.toFixed(2)} Y${jogVirtualY.toFixed(2)} F3000`
+            ]);
             triggerPreviewUpdate();
             showToast(`Jumped Y down by ${distance.toFixed(1)}mm!`, "info");
         }
@@ -7857,14 +8137,45 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         function performJumpXRight() {
             const distance = parseFloat(document.getElementById('jumpXDistanceInput').value) || 168.5;
             jogVirtualX = Math.min(220.0, jogVirtualX + distance);
+            const zHeights = getEffectiveZHeights();
+            const safeTravelZ = zHeights.effectiveZUp;
+            jogVirtualZ = safeTravelZ;
             updateVirtualUI();
-            sendJogGCodeCommands(["G90", `G0 X${jogVirtualX.toFixed(2)} Y${jogVirtualY.toFixed(2)} F3000`]);
+            sendJogGCodeCommands([
+                "G90",
+                `G0 Z${safeTravelZ.toFixed(2)} F1500`,
+                `G0 X${jogVirtualX.toFixed(2)} Y${jogVirtualY.toFixed(2)} F3000`
+            ]);
             triggerPreviewUpdate();
             showToast(`Jumped X right by ${distance.toFixed(1)}mm!`, "info");
         }
 
         document.getElementById('btnJumpYDown').addEventListener('click', performJumpYDown);
         document.getElementById('btnJumpXRight').addEventListener('click', performJumpXRight);
+
+        // Live Pen Z height test button listeners
+        document.getElementById('btnJogPenDown')?.addEventListener('click', () => {
+            const zHeights = getEffectiveZHeights();
+            jogVirtualZ = zHeights.effectiveZDown;
+            updateVirtualUI();
+            sendJogGCodeCommands(["G90", `G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`]);
+            showToast(`⬇️ Lowered pen to contact height (Z: ${zHeights.effectiveZDown.toFixed(2)}mm)`, "info");
+        });
+        document.getElementById('btnJogPenUp')?.addEventListener('click', () => {
+            const zHeights = getEffectiveZHeights();
+            jogVirtualZ = zHeights.effectiveZUp;
+            updateVirtualUI();
+            sendJogGCodeCommands(["G90", `G0 Z${zHeights.effectiveZUp.toFixed(2)} F1500`]);
+            showToast(`⬆️ Raised pen to travel clearance (Z: ${zHeights.effectiveZUp.toFixed(2)}mm)`, "info");
+        });
+        document.getElementById('btnJogPenHigh')?.addEventListener('click', () => {
+            const zHeights = getEffectiveZHeights();
+            const highZ = zHeights.elevation + 25.0;
+            jogVirtualZ = highZ;
+            updateVirtualUI();
+            sendJogGCodeCommands(["G90", `G0 Z${highZ.toFixed(2)} F2400`]);
+            showToast(`⏫ Raised pen high (Z: ${highZ.toFixed(2)}mm)`, "info");
+        });
 
         // Capture functions and automation helper
         function captureCalibPoint(index) {
@@ -8508,6 +8819,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 document.getElementById('promptAddonAsterisk').checked = p.promptAddonAsteriskChecked;
             }
 
+            updateBookModeUI();
             triggerPreviewUpdate();
         }
         
@@ -8531,7 +8843,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const keys = [
                 'charHeight', 'charSpacing', 'wordSpacing', 'wobbleStrength', 'baselineDrift', 'slantJitter', 'heightJitter',
                 'lineSpacing', 'topLineOffset', 'leftMargin', 'rightMargin', 'letterYOffset', 'paperXShift', 'paperYShift',
-                'zUp', 'zDown', 'drawFeed', 'travelFeed', 'addHomeCmd', 'useM420', 'ttfRenderMode', 'skeletonMethod',
+                'zUp', 'zDown', 'enableBookMode', 'bookThickness', 'drawFeed', 'travelFeed', 'addHomeCmd', 'useM420', 'ttfRenderMode', 'skeletonMethod',
                 'preThinning', 'hatchSpacing', 'charSpacingJitter', 'wordSpacingJitter', 'penOffsetX', 'penOffsetY',
                 'showCalibBox', 'calibBoxWidth', 'calibBoxHeight', 'calibBoxX', 'calibBoxY', 'calibBoxStyle', 'use3PointCalib'
             ];
