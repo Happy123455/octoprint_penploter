@@ -119,12 +119,12 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     </button>
                 </div>
 
-                <div id="missingCharsWarning" class="mt-2 p-2.5 bg-amber-950/20 border border-amber-900/40 rounded-lg hidden flex flex-col gap-1 text-[11px]">
+                <div id="missingCharsWarning" class="mt-2 p-2.5 bg-amber-950/20 border border-amber-900/40 rounded-lg hidden flex flex-col gap-1.5 text-[11px]">
                     <div class="flex justify-between items-center text-amber-400 font-semibold mb-0.5">
-                        <span class="flex items-center gap-1">⚠️ Missing handwriting characters:</span>
-                        <button id="btnCopyMissingChars" class="px-2 py-0.5 bg-amber-950 hover:bg-amber-900 border border-amber-800 text-amber-300 rounded text-[9.5px] font-bold shadow-sm transition">📋 Copy Characters</button>
+                        <span class="flex items-center gap-1">⚠️ Missing handwriting characters <span class="text-[10px] font-normal text-amber-300/80">(click to copy):</span></span>
+                        <button id="btnCopyMissingChars" class="px-2 py-0.5 bg-amber-950 hover:bg-amber-900 border border-amber-800 text-amber-300 rounded text-[9.5px] font-bold shadow-sm transition cursor-pointer">📋 Copy All</button>
                     </div>
-                    <span id="missingCharsList" class="font-mono text-slate-300 tracking-wider"></span>
+                    <div id="missingCharsList" class="flex flex-wrap gap-1.5 items-center font-mono"></div>
                 </div>
 
                 <!-- Gemini API Editor Integration -->
@@ -4753,15 +4753,88 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             
             if (activeFontMode === 'drawn' && missingSet && missingSet.size > 0) {
                 warningEl.classList.remove('hidden');
-                const rawChars = Array.from(missingSet).join('');
-                const sortedList = Array.from(missingSet).map(c => `'${c}'`).join('  ');
-                listEl.textContent = `${sortedList} (${missingSet.size} total)`;
-                
+                listEl.innerHTML = '';
+
+                const sortedChars = Array.from(missingSet).sort((a, b) => a.localeCompare(b));
+                const rawChars = sortedChars.join('');
+
+                const copyToClipboard = (text) => {
+                    const fallback = (val) => {
+                        return new Promise((resolve, reject) => {
+                            try {
+                                const ta = document.createElement('textarea');
+                                ta.value = val;
+                                ta.style.position = 'fixed';
+                                ta.style.left = '-9999px';
+                                ta.style.top = '-9999px';
+                                ta.setAttribute('readonly', '');
+                                document.body.appendChild(ta);
+                                ta.select();
+                                const ok = document.execCommand('copy');
+                                document.body.removeChild(ta);
+                                if (ok) resolve();
+                                else reject(new Error('execCommand failed'));
+                            } catch (e) {
+                                reject(e);
+                            }
+                        });
+                    };
+
+                    if (navigator.clipboard && window.isSecureContext) {
+                        return navigator.clipboard.writeText(text).catch(() => fallback(text));
+                    }
+                    return fallback(text);
+                };
+
+                sortedChars.forEach(char => {
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = 'px-2 py-0.5 rounded bg-amber-950/70 border border-amber-800/80 text-amber-200 hover:bg-amber-800 hover:text-white hover:border-amber-600 text-xs font-mono font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer select-none active:scale-95';
+                    chip.title = `Click to copy '${char}'`;
+
+                    const charLabel = document.createElement('span');
+                    charLabel.textContent = `'${char}'`;
+                    chip.appendChild(charLabel);
+
+                    chip.onclick = (e) => {
+                        e.stopPropagation();
+                        copyToClipboard(char)
+                            .then(() => {
+                                showToast(`Copied '${char}' to clipboard!`, 'success');
+                                const origClass = chip.className;
+                                chip.className = 'px-2 py-0.5 rounded bg-emerald-700 border border-emerald-500 text-white text-xs font-mono font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer select-none scale-105';
+                                charLabel.textContent = `✓ '${char}'`;
+                                setTimeout(() => {
+                                    chip.className = origClass;
+                                    charLabel.textContent = `'${char}'`;
+                                }, 800);
+                            })
+                            .catch(() => {
+                                showToast(`Failed to copy '${char}'`, 'error');
+                            });
+
+                        // Also target character for convenient editing in designer if applicable
+                        if (typeof allowedChars !== 'undefined' && allowedChars.includes(char)) {
+                            textTargetChar = char;
+                            const lbl = document.getElementById('lblSelectedChar');
+                            const btnEdit = document.getElementById('btnEditSelectedChar');
+                            if (lbl) lbl.innerHTML = `Target: character <b class="text-indigo-400 text-sm font-extrabold mx-1">'${char}'</b>`;
+                            if (btnEdit) btnEdit.classList.remove('hidden');
+                        }
+                    };
+                    listEl.appendChild(chip);
+                });
+
+                const countBadge = document.createElement('span');
+                countBadge.className = 'text-[10px] text-slate-400 font-sans ml-1';
+                countBadge.textContent = `(${missingSet.size} total)`;
+                listEl.appendChild(countBadge);
+
                 const copyBtn = document.getElementById('btnCopyMissingChars');
                 if (copyBtn) {
                     copyBtn.onclick = () => {
-                        navigator.clipboard.writeText(rawChars).then(() => {
-                            showToast("Copied missing characters to clipboard!", "success");
+                        copyToClipboard(rawChars).then(() => {
+                            showToast("Copied all missing characters to clipboard!", "success");
                         }).catch(() => {
                             showToast("Failed to copy characters", "error");
                         });
@@ -4769,6 +4842,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 }
             } else {
                 warningEl.classList.add('hidden');
+                listEl.innerHTML = '';
             }
         }
 
