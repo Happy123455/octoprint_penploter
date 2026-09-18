@@ -4,6 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Gemini AI Powered](https://img.shields.io/badge/Gemini%20AI-Powered-blueviolet.svg)](https://deepmind.google/technologies/gemini)
 
+[![Watch the video](https://youtube.com/shorts/zeAoA7UlQQs?si=hGqrp12-icRUJi_T)](https://youtube.com/shorts/zeAoA7UlQQs?si=hGqrp12-icRUJi_T)
+
+
 An advanced, high-precision OctoPrint plugin and standalone web workbench to generate organic, human-looking handwriting G-code for 3D printers, pen plotters, and drawing machines. 
 
 ## Equipped with a **3/4-Point Rigid Transformation calibration engine**, a **centerline tracing font skeletonizer**, a **buttery smooth canvas editor**, and a **Gemini AI Layout Optimizer**, this utility turns standard G-code plotters into expert human scribes.
