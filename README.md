@@ -3,7 +3,7 @@
 [![OctoPrint Plugin](https://img.shields.io/badge/OctoPrint-Plugin-emerald.svg)](https://octoprint.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Gemini AI Powered](https://img.shields.io/badge/Gemini%20AI-Powered-blueviolet.svg)](https://deepmind.google/technologies/gemini)
-[![YouTube Demo](https://img.shields.io/badge/YouTube-Watch%20Plotter%20Demo-red?logo=youtube)](https://youtube.com/shorts/zeAoA7UlQQs)
+[![Demo: Graph Plotting](https://img.shields.io/badge/Demo-Graph%20Plotting-blue.svg)](#-watch-the-machine-plot-live)
 
 An advanced, high-precision OctoPrint plugin and standalone web workbench to generate organic, human-looking handwriting G-code for 3D printers, pen plotters, and drawing machines. 
 
@@ -27,16 +27,8 @@ We have introduced a major **Graph & Diagram Plotting Update** that turns standa
 See the 3D printer pen carriage physically drawing a complex scientific diagram with continuous, silent strokes:
 
 <div align="center">
-  <a href="https://www.youtube.com/watch?v=zeAoA7UlQQs" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.youtube.com/vi/zeAoA7UlQQs/maxresdefault.jpg" alt="Graph Update Pen Plotter Drawing Demo" width="720" style="max-width: 100%; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.3);" />
-  </a>
-  <br />
-  <p>
-    <b><a href="https://www.youtube.com/watch?v=zeAoA7UlQQs" target="_blank">▶️ Click to Watch the Physical Pen Plotter Drawing a Scientific Diagram on YouTube</a></b>
-  </p>
-  <a href="https://youtube.com/shorts/zeAoA7UlQQs" target="_blank">
-    <img src="https://img.shields.io/badge/YouTube%20Shorts-Watch%20Plotter%20Drawing%20Demo-red?style=for-the-badge&logo=youtube" alt="Watch Demo on YouTube" />
-  </a>
+  <img src="./graph_demonstration.gif" alt="Physical Pen Plotter Drawing a Scientific Diagram" width="380" style="border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,0.35);" />
+  <p><em><b>Live Plotter Demonstration: Automated Continuous Toolpath Drawing</b></em></p>
 </div>
 
 <br />
