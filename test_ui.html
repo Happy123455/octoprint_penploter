@@ -1752,8 +1752,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                 <option value="blank">Every blank line (one paragraph per page)</option>
                             </select>
                         </div>
-                        <div class="space-y-1 flex flex-col justify-end">
+                        <div class="space-y-1.5 flex flex-col justify-end">
                             <label class="check-row"><input type="checkbox" id="pagesImportHeadings" class="check" />Headings (# Title) start a new group</label>
+                            <label class="check-row" title="Each new group behaves like one continuous document: a full page carries on to the next, and deleting lines pulls text back up."><input type="checkbox" id="pagesImportFlow" checked class="check" />Keep it flowing (pages refill as you edit)</label>
                         </div>
                     </div>
                     <div class="flex items-center justify-between gap-2">
@@ -3366,7 +3367,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         function triggerPreviewUpdate() {
             window.handwritingLayoutDirty = true;
             if (previewDebounce) clearTimeout(previewDebounce);
-            previewDebounce = setTimeout(renderPreview, 80);
+            previewDebounce = setTimeout(() => {
+                renderPreview();
+                if (typeof checkFlowGroups === 'function') checkFlowGroups();
+            }, 80);
         }
 
         // Helper to compute effective Z heights based on standard settings and Thick Book / Elevated Bed Mode
@@ -11673,7 +11677,8 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             b.title = g.collapsed ? 'Show this group\'s pages' : 'Hide this group\'s pages';
             b.innerHTML = `<svg class="i-sm transition-transform ${g.collapsed ? '-rotate-90' : ''}"><use href="#i-chev-down"/></svg>`;
             const s = document.createElement('span');
-            s.textContent = `${g.name} · ${count}`;
+            s.textContent = `${g.name} · ${count}${g.flow ? ' · auto' : ''}`;
+            if (g.flow) b.title += ' (auto-flow: pages refill as you edit)';
             b.appendChild(s);
             const del = document.createElement('span');
             del.className = "text-[9px] text-slate-500 hover:text-red-400 ml-0.5 select-none cursor-pointer font-bold transition-all px-0.5 normal-case";
@@ -11733,6 +11738,157 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             if (modal && !modal.classList.contains('hidden')) renderPagesOrganizer();
         }
 
+        // --- AUTO-FLOW GROUPS ---
+        // A flowing group is one continuous text (g.flowText); its pages are ranges of it (g.flowRanges) that are
+        // re-fitted whenever the text or the layout settings change, like pages in a word processor. The editor
+        // shows the current page's slice, and printing still prints only that page.
+        // g.flowFrom: offset from which the layout is stale (null when up to date).
+        let flowTimer = null, flowRunning = false, flowQueued = false, flowSettingsSig = null;
+
+        function flowGroupOfPage(i) {
+            const g = pageGroupById(pageGroupOf[i]);
+            return g && g.flow ? g : null;
+        }
+
+        function flowTexts(g) {
+            return (g.flowRanges || []).map(([s, e]) => g.flowText.slice(s, e));
+        }
+
+        function scheduleFlowReflow(delay = 350) {
+            clearTimeout(flowTimer);
+            flowTimer = setTimeout(runFlowReflows, delay);
+        }
+
+        function setGroupFlow(g, on) {
+            if (on) {
+                g.flow = true;
+                g.flowText = pagesText.filter((_, i) => pageGroupOf[i] === g.id).join('\n');
+                g.flowRanges = null;
+                g.flowFrom = 0;
+            } else {
+                g.flow = false;
+                delete g.flowText; delete g.flowRanges; delete g.flowFrom;
+            }
+            commitPagesChange();
+            if (on) scheduleFlowReflow(0);
+        }
+
+        // Runs after every preview update: picks up layout-setting changes, and pages of a flowing group that
+        // were changed outside the editor (tab delete, split overflow, AI edit, moves, imports).
+        function checkFlowGroups() {
+            if (!pageGroups.some(g => g.flow)) return;
+            syncPageGroups();
+            const sig = JSON.stringify(Object.assign({}, getSettings(), { text: '' }));
+            const settingsChanged = flowSettingsSig !== null && sig !== flowSettingsSig;
+            flowSettingsSig = sig;
+            let dirty = false;
+            pageGroups.forEach(g => {
+                if (!g.flow) return;
+                if (typeof g.flowText !== 'string') g.flowText = pagesText.filter((_, i) => pageGroupOf[i] === g.id).join('\n');
+                if (g.flowRanges) {
+                    const pages = pagesText.filter((_, i) => pageGroupOf[i] === g.id);
+                    const derived = flowTexts(g);
+                    if (pages.length !== derived.length || pages.some((t, i) => t !== derived[i])) {
+                        g.flowText = pages.join('\n');
+                        g.flowRanges = null;
+                    }
+                }
+                // edits typed in the editor are already queued (with their own typing pause); only new work here
+                if (!g.flowRanges || settingsChanged || (g.flowFrom !== null && g.flowFrom !== undefined && !flowTimer)) {
+                    if (!g.flowRanges || settingsChanged) g.flowFrom = 0;
+                    dirty = true;
+                }
+            });
+            if (dirty) scheduleFlowReflow(settingsChanged ? 250 : 0);
+        }
+
+        async function runFlowReflows() {
+            flowTimer = null;
+            if (flowRunning) { flowQueued = true; return; }
+            flowRunning = true;
+            try {
+                for (const g of pageGroups.filter(g => g.flow && g.flowFrom !== null && g.flowFrom !== undefined)) {
+                    await reflowGroup(g);
+                }
+            } catch (err) {
+                console.error('Auto-flow failed', err);
+            } finally {
+                flowRunning = false;
+                if (flowQueued) { flowQueued = false; scheduleFlowReflow(0); }
+            }
+        }
+
+        async function reflowGroup(g) {
+            const ver = g.flowVer || 0;
+            const src = g.flowText;
+            const old = g.flowRanges || [];
+            const from = g.flowRanges ? g.flowFrom : 0;
+            // restart one page before the edited one: it may now take words back from the edited page
+            let k = old.findIndex(([, e]) => e >= from);
+            if (k < 0) k = old.length;
+            k = Math.max(0, k - 1);
+            const start = k < old.length ? old[k][0] : 0;
+            const later = new Map();
+            old.slice(k + 1).forEach((r, j) => { if (r[0] > from) later.set(r[0], k + 1 + j); });
+            const res = await paginateRanges(src, start, new Set(later.keys()));
+            if ((g.flowVer || 0) !== ver || g.flowText !== src || !g.flow) return;   // edited meanwhile: next pass
+            let ranges = old.slice(0, k).concat(res.ranges);
+            if (res.reusedFrom !== null) ranges = ranges.concat(old.slice(later.get(res.reusedFrom)));
+            if (!ranges.length) ranges = [[0, src.length]];
+            applyFlowRanges(g, ranges);
+        }
+
+        // Replace the group's pages with the new layout, keeping the caret at the same place in the text
+        // (so typing past the end of a page carries on at the top of the next one).
+        function applyFlowRanges(g, ranges) {
+            syncPageGroups();
+            const first = pageGroupOf.indexOf(g.id);
+            const count = pageGroupOf.filter(id => id === g.id).length;
+            const inGroup = currentPageIdx >= first && currentPageIdx < first + count;
+            const focused = document.activeElement === textInput;
+            let local = currentPageIdx - first, caret = null;
+            if (inGroup && focused && g.flowRanges && g.flowRanges[local]) {
+                const at = g.flowRanges[local][0] + textInput.selectionStart;
+                let j = ranges.findIndex(([, e]) => at <= e);
+                if (j < 0) j = ranges.length - 1;
+                local = j;
+                caret = Math.max(0, at - ranges[j][0]);
+            }
+            g.flowRanges = ranges;
+            g.flowFrom = null;
+            const texts = flowTexts(g);
+            pagesText.splice(first, count, ...texts);
+            pageGroupOf.splice(first, count, ...texts.map(() => g.id));
+            if (inGroup) currentPageIdx = first + Math.min(Math.max(0, local), texts.length - 1);
+            else if (currentPageIdx >= first + count) currentPageIdx += texts.length - count;
+            if (textInput.value !== pagesText[currentPageIdx]) {
+                textInput.value = pagesText[currentPageIdx];
+                if (caret !== null) textInput.setSelectionRange(caret, caret);
+            }
+            rebuildPageTabs();
+            triggerPreviewUpdate();
+            saveCachedWebData();
+            const modal = document.getElementById('pagesModal');
+            if (modal && !modal.classList.contains('hidden')) renderPagesOrganizer();
+        }
+
+        // Typing in a page of a flowing group edits the continuous text; the pages are re-fitted shortly after.
+        textInput.addEventListener('input', () => {
+            const g = flowGroupOfPage(currentPageIdx);
+            if (!g || !g.flowRanges) return;
+            const local = currentPageIdx - pageGroupOf.indexOf(g.id);
+            const r = g.flowRanges[local];
+            if (!r) return;
+            const [s, e] = r;
+            const val = textInput.value;
+            const delta = val.length - (e - s);
+            g.flowText = g.flowText.slice(0, s) + val + g.flowText.slice(e);
+            g.flowRanges = g.flowRanges.map(([a, b], j) => j < local ? [a, b] : j === local ? [a, b + delta] : [a + delta, b + delta]);
+            g.flowFrom = Math.min(g.flowFrom ?? Infinity, s);
+            g.flowVer = (g.flowVer || 0) + 1;
+            scheduleFlowReflow();
+        });
+
         // Does this text fit on one sheet with the current settings? Runs the real layout engine and applies the
         // same off-bed test as "Split overflow".
         function pageTextFits(text, settings, calibMatrix) {
@@ -11745,54 +11901,88 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             });
         }
 
-        // Split text into pages that each fit the sheet. Whole lines first; a paragraph that doesn't fit is
-        // continued on the next page at a word boundary. Table rows and math lines are never split mid-line.
-        async function paginateText(text, onProgress) {
+        // Page ranges for text laid out from offset `from`: [[start, end], ...], each page being src.slice(start, end).
+        // Whole lines first; a paragraph that doesn't fit continues on the next page at a word boundary. Table rows
+        // and math lines are only split mid-line when a single line is taller than a page. `reuse` holds old page
+        // starts after an edit (already shifted): when a new page starts at one of them, the rest of the old
+        // layout is still valid, so layout stops there and reports it as reusedFrom.
+        async function paginateRanges(src, from, reuse, onProgress) {
             const settings = getSettings();
             const calib = settings.use3PointCalib ? getCalibMapping() : null;
-            const fits = (lines) => pageTextFits(lines.join('\n'), settings, calib);
+            const fits = (s, e) => pageTextFits(src.slice(s, e), settings, calib);
             const cap = (getBedLayoutStats().ruledLines || 24) + 4;
-            let lines = text.split('\n');
-            if (fits(lines)) return [text];
-            const pages = [];
-            while (lines.length) {
-                if (pages.length) {
-                    while (lines.length && lines[0].trim() === '') lines.shift();
-                    if (!lines.length) break;
+            const ranges = [];
+            let pos = from;
+            while (true) {
+                if (ranges.length || from > 0) {
+                    // a page never starts with blank lines
+                    while (pos < src.length) {
+                        const nl = src.indexOf('\n', pos);
+                        const lineEnd = nl < 0 ? src.length : nl;
+                        if (src.slice(pos, lineEnd).trim() !== '') break;
+                        pos = nl < 0 ? src.length : nl + 1;
+                    }
                 }
+                if (pos >= src.length && (ranges.length || from > 0)) break;
+                if (reuse && ranges.length && reuse.has(pos)) return { ranges, reusedFrom: pos };
+                // line ends from pos, at most `cap` lines (a page can't hold more)
+                const ends = [];
+                let q = pos;
+                while (ends.length < cap) {
+                    const nl = src.indexOf('\n', q);
+                    if (nl < 0) { ends.push(src.length); break; }
+                    ends.push(nl);
+                    q = nl + 1;
+                }
+                const reachesEnd = ends[ends.length - 1] === src.length;
                 // largest n whose first n lines fit (lo always fits, hi never does)
-                let lo = 0, hi = Math.min(lines.length, cap);
-                if (fits(lines.slice(0, hi))) lo = hi;
+                let lo = 0, hi = ends.length;
+                if (fits(pos, ends[hi - 1])) lo = hi;
                 else while (hi - lo > 1) {
                     const mid = (lo + hi) >> 1;
-                    if (fits(lines.slice(0, mid))) lo = mid; else hi = mid;
+                    if (fits(pos, ends[mid - 1])) lo = mid; else hi = mid;
                 }
-                let page = lines.slice(0, lo);
-                let rest = lines.slice(lo);
+                if (lo === ends.length && reachesEnd) { ranges.push([pos, src.length]); break; }
+                let end = lo > 0 ? ends[lo - 1] : pos;
+                let next = lo > 0 ? ends[lo - 1] + 1 : pos;
                 // fill the remaining space with the start of the next paragraph
-                const next = rest[0];
-                const splittable = next !== undefined && next.trim() !== '' && !/^\s*[|$]/.test(next);
-                if (lo < cap && (splittable || (lo === 0 && next !== undefined))) {
-                    const words = next.split(' ');
-                    let a = 0, b = words.length;
-                    while (b - a > 1) {
-                        const mid = (a + b) >> 1;
-                        if (fits(page.concat(words.slice(0, mid).join(' ')))) a = mid; else b = mid;
-                    }
-                    if (lo === 0) a = Math.max(1, a);   // always make progress
-                    if (a > 0) {
-                        page = page.concat(words.slice(0, a).join(' '));
-                        const remainder = words.slice(a).join(' ').replace(/^\s+/, '');
-                        rest = remainder ? [remainder].concat(rest.slice(1)) : rest.slice(1);
+                if (lo < cap && next < src.length) {
+                    const nl = src.indexOf('\n', next);
+                    const lineEnd = nl < 0 ? src.length : nl;
+                    const line = src.slice(next, lineEnd);
+                    if ((line.trim() !== '' && !/^\s*[|$]/.test(line)) || lo === 0) {
+                        const cuts = [];
+                        for (let i = 1; i < line.length; i++) if (line[i] === ' ' && line[i - 1] !== ' ') cuts.push(next + i);
+                        let a = 0, b = cuts.length + 1;
+                        while (b - a > 1) {
+                            const mid = (a + b) >> 1;
+                            if (fits(pos, cuts[mid - 1])) a = mid; else b = mid;
+                        }
+                        if (lo === 0 && a === 0 && cuts.length) a = 1;   // always make progress
+                        if (a > 0) {
+                            end = cuts[a - 1];
+                            next = end;
+                            while (src[next] === ' ') next++;
+                        }
                     }
                 }
-                if (page.length === 0) { page = [rest[0]]; rest = rest.slice(1); }
-                pages.push(page.join('\n'));
-                lines = rest;
-                if (onProgress) onProgress(pages.length);
+                if (end === pos) {   // a single unbreakable line taller than the page: give it its own page
+                    const nl = src.indexOf('\n', pos);
+                    end = nl < 0 ? src.length : nl;
+                    next = end + 1;
+                }
+                ranges.push([pos, end]);
+                pos = next;
+                if (onProgress) onProgress(ranges.length);
                 await new Promise(r => setTimeout(r, 0));
             }
-            return pages.length ? pages : [""];
+            return { ranges, reusedFrom: null };
+        }
+
+        // Split text into pages that each fit the sheet (see paginateRanges).
+        async function paginateText(text, onProgress) {
+            const { ranges } = await paginateRanges(text, 0, null, onProgress);
+            return ranges.length ? ranges.map(([s, e]) => text.slice(s, e)) : [text];
         }
 
         function rebuildPageTabs() {
@@ -11801,7 +11991,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
 
             syncPageGroups();
             container.innerHTML = "";
-            const showGroups = pageGroups.length > 1;
+            const showGroups = pageGroups.length > 1 || pageGroups.some(g => g.flow);
 
             pagesText.forEach((pText, idx) => {
                 const group = pageGroupById(pageGroupOf[idx]);
@@ -11866,6 +12056,10 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             addBtn.addEventListener('click', () => {
                 // new page goes at the end of the current page's group
                 const gid = pageGroupOf[currentPageIdx];
+                if (pageGroupById(gid).flow) {
+                    showToast("This group flows automatically: keep typing and new pages appear by themselves", "info");
+                    return;
+                }
                 const at = pageGroupOf.lastIndexOf(gid) + 1;
                 pagesText.splice(at, 0, "");
                 pageGroupOf.splice(at, 0, gid);
@@ -11881,6 +12075,10 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         }
 
         function splitPageOverflow() {
+            if (flowGroupOfPage(currentPageIdx)) {
+                showToast("This group flows automatically: overflow moves to the next page by itself", "info");
+                return;
+            }
             const stats = getBedLayoutStats();
             if (stats.linesCutOff <= 0) {
                 showToast("All text fits on the current page!", "info");
@@ -12005,6 +12203,15 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 });
                 hd.appendChild(name);
                 hd.appendChild(pagesEl('span', 'chip chip-muted shrink-0', `${idxs.length} page${idxs.length === 1 ? '' : 's'}`));
+                const flowBtn = pagesEl('button', `btn btn-sm shrink-0 ${g.flow ? 'btn-primary' : 'btn-ghost'}`, g.flow ? 'Auto-flow on' : 'Auto-flow');
+                flowBtn.title = g.flow
+                    ? 'Pages refill automatically as you edit. Click to freeze the current pages.'
+                    : 'Treat this group as one continuous text: a full page carries on to the next, and deleting lines pulls text back up.';
+                flowBtn.addEventListener('click', () => {
+                    setGroupFlow(g, !g.flow);
+                    showToast(g.flow ? `"${g.name}" now flows across pages` : `"${g.name}" pages are fixed again`, "success");
+                });
+                hd.appendChild(flowBtn);
                 hd.appendChild(pagesIconBtn('i-arrow-up', 'Move group up', () => {
                     [pageGroups[gi - 1], pageGroups[gi]] = [pageGroups[gi], pageGroups[gi - 1]];
                     commitPagesChange();
@@ -12013,13 +12220,13 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                     [pageGroups[gi + 1], pageGroups[gi]] = [pageGroups[gi], pageGroups[gi + 1]];
                     commitPagesChange();
                 }, gi === pageGroups.length - 1));
-                hd.appendChild(pagesIconBtn('i-plus', 'Add a page to this group', () => {
+                hd.appendChild(pagesIconBtn('i-plus', g.flow ? 'Pages are added automatically in auto-flow' : 'Add a page to this group', () => {
                     const at = pageGroupOf.lastIndexOf(g.id) + 1;
                     pagesText.splice(at, 0, "");
                     pageGroupOf.splice(at, 0, g.id);
                     currentPageIdx = at;
                     commitPagesChange();
-                }));
+                }, g.flow));
                 hd.appendChild(pagesIconBtn('i-layers', 'Ungroup: keep the pages, move them to a neighbouring group', () => {
                     const into = pageGroups[gi - 1] || pageGroups[gi + 1];
                     showConfirmModal('Ungroup',
@@ -12156,15 +12363,26 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             try {
                 pagesText[currentPageIdx] = textInput.value;
                 // lay out every chunk first, so nothing changes if something goes wrong
+                const flow = document.getElementById('pagesImportFlow').checked;
                 const laidOut = [];
                 let count = 0;
                 for (const s of sections) {
+                    const intoNewGroup = !!s.name || target !== 'append';
+                    if (flow && intoNewGroup) {
+                        // one continuous text; explicit breaks only separate paragraphs here
+                        const text = s.chunks.join('\n\n');
+                        const { ranges } = await paginateRanges(text, 0, null, n => { status.textContent = `Fitting text… ${count + n} pages`; });
+                        const r = ranges.length ? ranges : [[0, text.length]];
+                        laidOut.push({ name: s.name, pages: r.map(([a, b]) => text.slice(a, b)), flow: { text, ranges: r } });
+                        count += r.length;
+                        continue;
+                    }
                     const pages = [];
                     for (const c of s.chunks) {
                         pages.push(...await paginateText(c, n => { status.textContent = `Fitting text… ${count + n} pages`; }));
-                        count = laidOut.reduce((a, x) => a + x.pages.length, 0) + pages.length;
                     }
                     laidOut.push({ name: s.name, pages });
+                    count += pages.length;
                 }
                 if (target === 'replace') {
                     pagesText = [];
@@ -12177,7 +12395,9 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                     if (!s.name && target === 'append') {
                         gid = pageGroupOf[currentPageIdx];
                     } else {
-                        gid = addPageGroup(s.name || baseName || (target === 'replace' ? 'Pages' : 'Imported')).id;
+                        const ng = addPageGroup(s.name || baseName || (target === 'replace' ? 'Pages' : 'Imported'));
+                        if (s.flow) Object.assign(ng, { flow: true, flowText: s.flow.text, flowRanges: s.flow.ranges, flowFrom: null });
+                        gid = ng.id;
                     }
                     const at = target === 'append' && !s.name ? pageGroupOf.lastIndexOf(gid) + 1 : pagesText.length;
                     pagesText.splice(at, 0, ...s.pages);
