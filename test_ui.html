@@ -1351,23 +1351,23 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         </div>
 
                         <!-- FPS real-time calibration HUD overlay -->
-                        <div id="fpsCalibHud" class="hidden absolute inset-0 bg-slate-950/50 backdrop-blur-[2px] flex flex-col items-center justify-between p-6 z-30 select-none cursor-crosshair">
-                            <div class="bg-slate-900/95 border border-indigo-500/50 rounded-2xl px-5 py-3 shadow-2xl flex flex-wrap items-center justify-between gap-4 max-w-xl w-full">
+                        <div id="fpsCalibHud" class="hidden absolute inset-0 bg-slate-950/25 flex flex-col items-center justify-between p-3 sm:p-6 z-30 select-none cursor-crosshair" style="touch-action: none;">
+                            <div class="bg-slate-900/95 border border-indigo-500/50 rounded-2xl px-3 py-2 sm:px-5 sm:py-3 shadow-2xl flex flex-wrap items-center justify-between gap-2 sm:gap-4 max-w-xl w-full">
                                 <div class="flex items-center gap-3">
                                     <div class="relative flex h-3 w-3">
                                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                         <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                                     </div>
                                     <div class="text-left">
-                                        <div class="text-sm font-semibold text-white flex items-center gap-2" id="fpsHudTitle">
+                                        <div class="text-xs sm:text-sm font-semibold text-white flex items-center gap-2" id="fpsHudTitle">
                                             🎯 FPS Mode: Calibrating Point 1 (Top-Left)
                                         </div>
-                                        <div class="text-[11px] text-slate-300 mt-0.5" id="fpsHudInstruction">
+                                        <div class="text-[10px] sm:text-[11px] leading-snug text-slate-300 mt-0.5" id="fpsHudInstruction">
                                             Move mouse to jog nozzle • <span class="text-amber-300 font-bold">Double-Click</span> to lock point • <span class="text-rose-400 font-bold">ESC</span> to exit
                                         </div>
                                     </div>
                                 </div>
-                                <div class="border-l border-slate-700/80 pl-4 text-right font-mono text-xs">
+                                <div class="border-l border-slate-700/80 pl-3 sm:pl-4 text-right font-mono text-[11px] sm:text-xs">
                                     <div class="text-indigo-300 font-bold" id="fpsHudCoords">X: 0.00 | Y: 0.00</div>
                                     <div class="text-[10px] text-emerald-400 font-semibold" id="fpsHudStatus">Tracking Active</div>
                                 </div>
@@ -1381,16 +1381,21 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                 <div class="w-0.5 h-28 bg-gradient-to-b from-transparent via-indigo-400/80 to-transparent absolute"></div>
                             </div>
 
-                            <div class="bg-slate-900/95 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-300 shadow-2xl flex flex-wrap items-center justify-between gap-3 max-w-xl w-full">
+                            <div class="bg-slate-900/95 border border-slate-800 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-xs text-slate-300 shadow-2xl flex flex-wrap items-center justify-between gap-2 sm:gap-3 max-w-xl w-full">
                                 <div class="flex items-center gap-2.5">
                                     <span class="text-[11px] text-slate-400 font-medium">Jog sensitivity</span>
                                     <input type="range" id="fpsSensitivityRange" min="0.005" max="0.25" step="0.005" value="0.05" class="w-24 accent-indigo-500 cursor-pointer" />
                                     <span id="fpsSensitivityVal" class="font-mono text-[10px] text-indigo-300 font-bold">0.050 mm/px</span>
-                                    <span class="kbd">◀ ▶ or &lt; &gt;</span>
+                                    <span class="kbd fps-desktop-only">◀ ▶ or &lt; &gt;</span>
                                 </div>
-                                <button id="btnExitFpsCalib" type="button" class="btn btn-sm bg-red-600 border-red-500 text-white hover:bg-red-500">
-                                    Exit FPS mode (ESC)
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button id="btnLockFpsPoint" type="button" class="btn btn-sm btn-go hidden" title="Lock the pen position as this calibration point">
+                                        <svg class="i-sm"><use href="#i-target"/></svg>Lock point
+                                    </button>
+                                    <button id="btnExitFpsCalib" type="button" class="btn btn-sm bg-red-600 border-red-500 text-white hover:bg-red-500">
+                                        Exit FPS mode<span class="fps-desktop-only"> (ESC)</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -7439,12 +7444,22 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
 
         // Draw preview grid on right panel Canvas
-        function renderPreview() {
+        // The page layer (paper, handwriting, blocks, frames) is cached after every full render. While only the
+        // pen cursor moves (FPS jogging), renderPreview({ cursorOnly: true }) redraws that cache plus the cursor
+        // and calibration marks, instead of every stroke on the page: that's what keeps phones smooth.
+        const previewBaseCache = document.createElement('canvas');
+        let previewBaseCacheValid = false;
+
+        function renderPreview(opts) {
+            const cursorOnly = !!(opts && opts.cursorOnly) && previewBaseCacheValid;
             const settings = getSettings();
             
-            // Set high resolution (1760x1760) for crystal clear HD rendering
-            previewCanvas.width = 1760;
-            previewCanvas.height = 1760;
+            // High resolution (1760x1760) for crisp rendering. Resizing a canvas reallocates it, so only when needed.
+            if (previewCanvas.width !== 1760 || previewCanvas.height !== 1760) {
+                previewCanvas.width = 1760;
+                previewCanvas.height = 1760;
+            }
+            if (typeof pCtx.reset === 'function') pCtx.reset(); else pCtx.setTransform(1, 0, 0, 1, 0, 0);
             
             pCtx.clearRect(0, 0, 1760, 1760);
             
@@ -7470,6 +7485,12 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             const paperY = (220.0 - settings.paperYShift - 297.0) * mmToPx;
             const paperHeightPx = 297.0 * mmToPx;
             
+            if (cursorOnly) {
+                pCtx.save();
+                pCtx.setTransform(1, 0, 0, 1, 0, 0);
+                pCtx.drawImage(previewBaseCache, 0, 0);
+                pCtx.restore();
+            } else {
             // Draw paper sheet and grid
             if (showBedGrid) {
                 if (currentPaperType === 'graph') {
@@ -7999,6 +8020,17 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     pCtx.moveTo(boxXPx + boxWPx - bracketLen, boxYPx + boxHPx); pCtx.lineTo(boxXPx + boxWPx, boxYPx + boxHPx); pCtx.lineTo(boxXPx + boxWPx, boxYPx + boxHPx - bracketLen);
                     pCtx.stroke();
                 }
+            }
+
+            // cache the page layer for cursor-only frames
+            if (previewBaseCache.width !== 1760 || previewBaseCache.height !== 1760) {
+                previewBaseCache.width = 1760;
+                previewBaseCache.height = 1760;
+            }
+            const baseCtx = previewBaseCache.getContext('2d');
+            baseCtx.clearRect(0, 0, 1760, 1760);
+            baseCtx.drawImage(previewCanvas, 0, 0);
+            previewBaseCacheValid = true;
             }
 
             // Draw Carriage Position Indicator
@@ -10110,10 +10142,12 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const status = document.getElementById('fpsHudStatus');
             const coords = document.getElementById('fpsHudCoords');
             
-            if (title) title.textContent = `🎯 FPS Mode: Calibrating ${pointNames[fpsActivePointIndex] || 'Point ' + fpsActivePointIndex}`;
+            if (title) title.textContent = `🎯 ${fpsIsTouch ? '' : 'FPS Mode: '}Calibrating ${pointNames[fpsActivePointIndex] || 'Point ' + fpsActivePointIndex}`;
             if (instruction) {
                 if (fpsIsAutomatingJump) {
                     instruction.innerHTML = `<span class="text-amber-400 font-bold animate-pulse">Running automated jump travel...</span>`;
+                } else if (fpsIsTouch) {
+                    instruction.innerHTML = `Drag to jog the pen • <span class="text-amber-300 font-bold">Double-tap</span> or <span class="text-emerald-300 font-bold">Lock point</span> to lock`;
                 } else {
                     instruction.innerHTML = `Move mouse to jog nozzle • <span class="text-amber-300 font-bold">Double-Click</span> to lock point • <span class="text-sky-300 font-bold">◀ ▶ or &lt; &gt;</span> sensitivity (${fpsSensitivity.toFixed(3)}) • <span class="text-rose-400 font-bold">ESC</span> to exit`;
                 }
@@ -10122,8 +10156,8 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 if (fpsIsAutomatingJump) {
                     status.textContent = "Auto Traveling";
                     status.className = "text-[10px] text-amber-400 font-semibold";
-                } else if (document.pointerLockElement === previewCanvas) {
-                    status.textContent = "Tracking Active";
+                } else if (fpsIsTouch || document.pointerLockElement === previewCanvas) {
+                    status.textContent = fpsIsTouch ? "Touch trackpad" : "Tracking Active";
                     status.className = "text-[10px] text-emerald-400 font-semibold";
                 } else {
                     status.textContent = "Click to Resume";
@@ -10152,13 +10186,25 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const hud = document.getElementById('fpsCalibHud');
             if (hud) hud.classList.remove('hidden');
             
+            fpsIsTouch = fpsPrefersTouch();
+            document.querySelectorAll('.fps-desktop-only').forEach(el => el.classList.toggle('hidden', fpsIsTouch));
+            const lockBtn = document.getElementById('btnLockFpsPoint');
+            if (lockBtn) lockBtn.classList.toggle('hidden', !fpsIsTouch);
             updateFpsHud();
             
-            try {
-                previewCanvas.requestPointerLock();
-            } catch(e) {}
+            if (!fpsIsTouch) {
+                try {
+                    const r = previewCanvas.requestPointerLock();
+                    if (r && r.catch) r.catch(() => {});
+                } catch(e) {}
+            } else if (hud) {
+                // on phones the preview sits below the settings: bring it on screen to aim
+                hud.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
             
-            showToast(`🎯 FPS Calibration Mode: Aiming ${pointNames[fpsActivePointIndex]}. Double-click to lock point.`, "info");
+            showToast(fpsIsTouch
+                ? `🎯 FPS Calibration Mode: drag to aim ${pointNames[fpsActivePointIndex]}, double-tap or press Lock point.`
+                : `🎯 FPS Calibration Mode: Aiming ${pointNames[fpsActivePointIndex]}. Double-click to lock point.`, "info");
         }
 
         function exitFpsCalibMode(completed = false) {
@@ -10209,24 +10255,43 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 fpsActivePointIndex = currentIdx + 1;
                 updateFpsHud();
                 
-                if (document.pointerLockElement !== previewCanvas) {
+                if (!fpsIsTouch && document.pointerLockElement !== previewCanvas) {
                     try {
                         previewCanvas.requestPointerLock();
                     } catch(e) {}
                 }
-                showToast(`Point ${currentIdx} locked! Aiming ${pointNames[fpsActivePointIndex]}. Double-click when ready.`, "info");
+                showToast(`Point ${currentIdx} locked! Aiming ${pointNames[fpsActivePointIndex]}. ${fpsIsTouch ? 'Double-tap or press Lock point' : 'Double-click'} when ready.`, "info");
             }, jumpDelay + 400);
         }
 
+        // At most one jog request in flight and one every 70 ms; the latest position always gets sent (a timer
+        // covers the case where movement stops inside the 70 ms window, which used to drop the final move).
+        let fpsJogTimer = null;
         function scheduleFpsThrottledJog(x, y) {
             fpsPendingCoords = { x, y };
-            if (fpsIsSendingJog) return;
-            
-            const now = performance.now();
-            if (now - fpsLastJogTime < 70) {
+            if (fpsIsSendingJog) return;   // dispatched when the current request finishes
+            const wait = 70 - (performance.now() - fpsLastJogTime);
+            if (wait > 0) {
+                if (!fpsJogTimer) {
+                    fpsJogTimer = setTimeout(() => {
+                        fpsJogTimer = null;
+                        if (!fpsIsSendingJog) dispatchFpsJog();
+                    }, wait);
+                }
                 return;
             }
             dispatchFpsJog();
+        }
+
+        // One cursor redraw per display frame, however many move events arrive.
+        let cursorRenderQueued = false;
+        function requestCursorRender() {
+            if (cursorRenderQueued) return;
+            cursorRenderQueued = true;
+            requestAnimationFrame(() => {
+                cursorRenderQueued = false;
+                renderPreview({ cursorOnly: true });
+            });
         }
 
         function dispatchFpsJog() {
@@ -10301,9 +10366,10 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         if (fpsHudOverlay) {
             fpsHudOverlay.addEventListener('click', (e) => {
                 if (e.target.id === 'btnExitFpsCalib' || e.target.closest('#btnExitFpsCalib') || e.target === fpsSensSlider) return;
-                if (isFpsCalibMode && document.pointerLockElement !== previewCanvas) {
+                if (isFpsCalibMode && !fpsIsTouch && document.pointerLockElement !== previewCanvas) {
                     try {
-                        previewCanvas.requestPointerLock();
+                        const r = previewCanvas.requestPointerLock();
+                        if (r && r.catch) r.catch(() => {});
                     } catch(err) {}
                 }
             });
@@ -10324,6 +10390,57 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 updateFpsHud();
             }
         });
+
+        // --- FPS mode on touch screens: the preview becomes a trackpad ---
+        // Phones and tablets have no pointer lock or mouse movement, so a finger dragged anywhere over the preview
+        // jogs the pen by the distance it moves (same mm-per-pixel sensitivity as the mouse). A double-tap or the
+        // Lock point button locks the point.
+        let fpsIsTouch = false;
+        function fpsPrefersTouch() {
+            return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || !previewCanvas.requestPointerLock;
+        }
+        const fpsTouch = { id: null, x: 0, y: 0, downX: 0, downY: 0, downT: 0, moved: false, lastTapT: 0 };
+        if (fpsHudOverlay) {
+            fpsHudOverlay.addEventListener('pointerdown', (e) => {
+                if (!isFpsCalibMode || e.pointerType === 'mouse' || e.target.closest('button, input, label')) return;
+                e.preventDefault();
+                fpsIsTouch = true;
+                Object.assign(fpsTouch, { id: e.pointerId, x: e.clientX, y: e.clientY, downX: e.clientX, downY: e.clientY, downT: performance.now(), moved: false });
+                try { fpsHudOverlay.setPointerCapture(e.pointerId); } catch (err) {}
+            });
+            fpsHudOverlay.addEventListener('pointermove', (e) => {
+                if (!isFpsCalibMode || e.pointerId !== fpsTouch.id) return;
+                e.preventDefault();
+                const dx = e.clientX - fpsTouch.x, dy = e.clientY - fpsTouch.y;
+                fpsTouch.x = e.clientX;
+                fpsTouch.y = e.clientY;
+                if (Math.hypot(e.clientX - fpsTouch.downX, e.clientY - fpsTouch.downY) > 8) fpsTouch.moved = true;
+                if (fpsIsAutomatingJump || (!dx && !dy)) return;
+                jogVirtualX = Math.max(-16.6, Math.min(220.0, jogVirtualX + dx * fpsSensitivity));
+                jogVirtualY = Math.max(0.0, Math.min(220.0, jogVirtualY - dy * fpsSensitivity));   // finger up is +Y
+                updateVirtualUI();
+                updateFpsHud();
+                requestCursorRender();
+                scheduleFpsThrottledJog(jogVirtualX, jogVirtualY);
+            });
+            const fpsTouchEnd = (e) => {
+                if (e.pointerId !== fpsTouch.id) return;
+                fpsTouch.id = null;
+                const now = performance.now();
+                if (e.type === 'pointerup' && !fpsTouch.moved && now - fpsTouch.downT < 300) {
+                    if (now - fpsTouch.lastTapT < 350) {
+                        fpsTouch.lastTapT = 0;
+                        lockFpsPoint();
+                    } else {
+                        fpsTouch.lastTapT = now;
+                    }
+                }
+            };
+            fpsHudOverlay.addEventListener('pointerup', fpsTouchEnd);
+            fpsHudOverlay.addEventListener('pointercancel', fpsTouchEnd);
+        }
+        const btnLockFpsEl = document.getElementById('btnLockFpsPoint');
+        if (btnLockFpsEl) btnLockFpsEl.addEventListener('click', () => lockFpsPoint());
 
         // --- PROFILE MANAGEMENT SYSTEM ---
         const profileSelect = document.getElementById('profileSelect');
@@ -11396,7 +11513,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 
                 updateVirtualUI();
                 updateFpsHud();
-                renderPreview();
+                requestCursorRender();
                 scheduleFpsThrottledJog(jogVirtualX, jogVirtualY);
                 return;
             }
