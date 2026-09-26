@@ -2147,6 +2147,102 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             ]
         };
 
+        // Extra single-stroke fallback glyphs for the math and markdown symbols hand-drawn fonts usually lack
+        // (only used when the active font has no glyph of its own). Drawn on the Font Designer grid: 300 × 300,
+        // cap line y = 60, x-height ≈ 140, baseline y = 240. Each gets three variants, gently skewed and shifted
+        // (not jittered point by point, which would make the lines ragged), so repeats don't look stamped.
+        (function addMathFallbackGlyphs() {
+            const bez = (p0, p1, p2, p3, n = 10) => {
+                const o = [];
+                for (let i = 0; i <= n; i++) {
+                    const t = i / n, u = 1 - t;
+                    o.push([u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+                            u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]]);
+                }
+                return o;
+            };
+            const arc = (cx, cy, rx, ry, a0, a1, n = 16) => {
+                const o = [];
+                for (let i = 0; i <= n; i++) {
+                    const a = (a0 + (a1 - a0) * i / n) * Math.PI / 180;
+                    o.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
+                }
+                return o;
+            };
+            // chain path pieces that share their joining point
+            const join = (...parts) => parts.reduce((a, q) => a.concat(a.length ? q.slice(1) : q), []);
+            const dot = (x, y) => arc(x, y, 4.5, 4.5, 0, 360, 10);
+            const lemniscate = [];
+            for (let i = 0; i <= 32; i++) {
+                const t = i / 32 * Math.PI * 2, d = 1 + Math.sin(t) ** 2;
+                lemniscate.push([150 + 44 * Math.cos(t) / d, 194 + 44 * Math.sin(t) * Math.cos(t) / d]);
+            }
+            const G = {
+                ':': [dot(150, 158), dot(150, 232)],
+                ';': [dot(150, 158), join([[152, 226]], bez([152, 226], [154, 240], [150, 252], [141, 262]))],
+                '<': [[[178, 152], [122, 192], [178, 232]]],
+                '>': [[[122, 152], [178, 192], [122, 232]]],
+                '≤': [[[178, 130], [122, 166], [178, 202]], [[124, 236], [178, 231]]],
+                '≥': [[[122, 130], [178, 166], [122, 202]], [[122, 231], [176, 236]]],
+                '≠': [[[122, 176], [178, 174]], [[122, 206], [178, 204]], [[166, 150], [134, 232]]],
+                '≈': [bez([120, 180], [135, 164], [162, 196], [180, 174]), bez([120, 208], [135, 192], [162, 224], [180, 202])],
+                '×': [[[128, 162], [172, 222]], [[172, 162], [128, 222]]],
+                '÷': [[[120, 192], [180, 192]], dot(150, 164), dot(150, 220)],
+                '–': [[[118, 192], [182, 190]]],
+                '—': [[[100, 192], [200, 190]]],
+                '−': [[[120, 192], [180, 192]]],
+                '→': [[[110, 192], [190, 192]], [[170, 175], [190, 192], [170, 209]]],
+                '%': [arc(128, 100, 14, 18, 0, 360, 14), [[178, 68], [122, 240]], arc(172, 210, 14, 18, 0, 360, 14)],
+                '&': [join([[190, 240]], bez([190, 240], [160, 200], [125, 160], [128, 110]), bez([128, 110], [130, 70], [176, 72], [170, 110]),
+                           bez([170, 110], [165, 140], [118, 165], [118, 205]), bez([118, 205], [118, 245], [172, 245], [190, 190]))],
+                '[': [[[166, 58], [138, 58], [138, 262], [166, 262]]],
+                ']': [[[134, 58], [162, 58], [162, 262], [134, 262]]],
+                '{': [join(bez([170, 58], [140, 58], [152, 140], [128, 160]), bez([128, 160], [152, 180], [140, 262], [170, 262]))],
+                '}': [join(bez([130, 58], [160, 58], [148, 140], [172, 160]), bez([172, 160], [148, 180], [160, 262], [130, 262]))],
+                '|': [[[150, 55], [150, 265]]],
+                '#': [[[138, 90], [128, 240]], [[172, 90], [162, 240]], [[114, 140], [186, 140]], [[110, 190], [182, 190]]],
+                '*': [[[150, 86], [150, 140]], [[127, 100], [173, 126]], [[173, 100], [127, 126]]],
+                '"': [[[136, 62], [134, 98]], [[164, 62], [162, 98]]],
+                "'": [[[150, 62], [148, 98]]],
+                '“': [[[138, 64], [134, 98]], [[164, 64], [160, 98]]],
+                '”': [[[140, 62], [136, 96]], [[166, 62], [162, 96]]],
+                '‘': [[[152, 64], [148, 98]]],
+                '’': [[[154, 62], [148, 98]]],
+                'α': [join(bez([188, 150], [170, 218], [150, 242], [134, 238]), bez([134, 238], [108, 232], [112, 168], [140, 158]),
+                           bez([140, 158], [168, 148], [174, 214], [194, 240]))],
+                'β': [join([[130, 292], [130, 108]], bez([130, 108], [133, 62], [190, 66], [180, 108]), bez([180, 108], [174, 136], [150, 146], [140, 148]),
+                           bez([140, 148], [200, 146], [202, 240], [150, 240]), bez([150, 240], [140, 240], [134, 232], [131, 224]))],
+                'γ': [join(bez([116, 150], [140, 142], [152, 205], [153, 244]), bez([153, 244], [152, 286], [132, 286], [140, 262]),
+                           bez([140, 262], [150, 236], [170, 190], [184, 150]))],
+                'δ': [join(bez([176, 92], [162, 66], [120, 72], [140, 112]), bez([140, 112], [200, 150], [190, 240], [150, 240]),
+                           bez([150, 240], [108, 240], [110, 172], [150, 160]))],
+                'ε': [join(bez([178, 160], [152, 140], [118, 152], [132, 184]), bez([132, 184], [108, 196], [112, 244], [178, 232]))],
+                'η': [[[126, 150], [126, 240]], join([[126, 180]], bez([126, 180], [140, 146], [180, 142], [178, 182]), [[178, 182], [178, 292]])],
+                'θ': [arc(150, 150, 30, 90, -90, 270, 24), [[122, 150], [178, 150]]],
+                'λ': [join(bez([118, 60], [140, 58], [150, 90], [160, 150]), [[160, 150], [186, 240]]), [[156, 146], [118, 240]]],
+                'μ': [[[128, 150], [128, 292]], join(bez([128, 205], [132, 248], [176, 246], [178, 205]), [[178, 205], [178, 150]]),
+                      join([[178, 150], [178, 228]], bez([178, 228], [180, 242], [186, 242], [192, 236]))],
+                'ρ': [join([[120, 292], [120, 198]], arc(150, 198, 30, 40, 180, 540, 20))],
+                'ω': [join(bez([128, 152], [106, 232], [146, 252], [150, 200]), bez([150, 200], [154, 252], [194, 232], [172, 152]))],
+                'Δ': [[[150, 60], [112, 240], [188, 240], [150, 60]]],
+                'Σ': [[[186, 62], [116, 62], [160, 150], [116, 240], [188, 240]]],
+                'Ω': [join([[110, 240], [136, 240]], bez([136, 240], [94, 204], [100, 64], [150, 62]), bez([150, 62], [200, 64], [206, 204], [164, 240]),
+                           [[164, 240], [190, 240]])],
+                '∞': [lemniscate],
+                '√': [[[112, 196], [124, 186], [140, 240], [168, 60], [196, 60]]]
+            };
+            const variant = (strokes, k) => {
+                const [skew, sc, dx, dy] = [[0, 1, 0, 0], [0.05, 0.97, 2, -1], [-0.04, 1.03, -2, 1]][k];
+                return strokes.map(st => st.map(([x, y]) => [
+                    +(150 + (x - 150) * sc + skew * (240 - y) + dx).toFixed(1),
+                    +(240 + (y - 240) * sc + dy).toFixed(1)
+                ]));
+            };
+            for (const ch in G) {
+                if (!BUILTIN_FALLBACK_GLYPHS[ch]) BUILTIN_FALLBACK_GLYPHS[ch] = [0, 1, 2].map(k => variant(G[ch], k));
+            }
+        })();
+
         // --- CUSTOM TOASTS AND MODALS SYSTEM ---
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
@@ -3609,7 +3705,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         if (text[i] === '{') {
                             let end = text.indexOf('}', i);
                             if (end !== -1) {
-                                tokens.push({ text: text.substring(i + 1, end), type: type });
+                                tokens.push({ text: text.substring(i + 1, end).replace(/[_^{}]/g, ''), type: type });
                                 i = end + 1;
                             } else {
                                 tokens.push({ text: '{', type: 'normal' });
@@ -3995,6 +4091,16 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 return "\n    " + eqTrimmed.split('\n').join('\n    ') + "\n";
             });
             
+            // 1.5. An equation alone on its line ($...$ or \[...\]) is a display equation: it gets its own centred
+            //      row (the indented form below), like in handwritten notes
+            processed = processed.replace(/^[ \t]*\$([^$\n]+)\$[ \t]*$/gm, (m, eq) => '    ' + eq.trim());
+            processed = processed.replace(/^[ \t]*\\\[(.+?)\\\][ \t]*$/gm, (m, eq) => '    ' + eq.trim());
+            processed = processed.replace(/\\\((.+?)\\\)/g, '$1');
+
+            // 1.6. Markdown structure: headings lose their #'s, "* " / "+ " list markers become bullets
+            processed = processed.replace(/^[ \t]*#{1,6}[ \t]+/gm, '');
+            processed = processed.replace(/^([ \t]*)[*+][ \t]+/gm, '$1• ');
+
             // 2. Convert inline math $...$ by stripping the $ signs
             processed = processed.replace(/\$([^\$]+?)\$/g, (match, inline) => {
                 return inline;
@@ -4003,12 +4109,19 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             // 2.5. Remove bold markers **
             processed = processed.replace(/\*\*/g, '');
 
-            // 2.7. Strip \left and \right scaling commands
+            // 2.7. Strip \left and \right scaling commands (brackets around fractions grow on their own)
+            processed = processed.replace(/\\(left|right)\./g, '');
             processed = processed.replace(/\\left/g, '');
             processed = processed.replace(/\\right/g, '');
 
-            // 2.8. Strip \text{...} wrappers in math equations
-            processed = processed.replace(/\\text\{([^\}]+?)\}/g, '$1');
+            // 2.8. Strip \text{...} (and similar font) wrappers in math equations
+            processed = processed.replace(/\\(?:text|mathrm|mathit|textbf|textit|operatorname|boldsymbol)\{([^\}]+?)\}/g, '$1');
+
+            // 2.82. Math spacing commands become plain spaces
+            processed = processed.replace(/\\qquad(?![a-zA-Z])/g, '    ');
+            processed = processed.replace(/\\quad(?![a-zA-Z])/g, '  ');
+            processed = processed.replace(/\\[,;:>](?![a-zA-Z])/g, ' ');
+            processed = processed.replace(/\\!/g, '');
 
             // 2.85. Strip \mathbf{...} wrappers and bare \mathbf
             let prevMb;
@@ -4092,7 +4205,16 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 '\\\\kappa(?![a-zA-Z])': 'κ',
                 '\\\\chi(?![a-zA-Z])': 'χ',
                 '\\\\Omega(?![a-zA-Z])': 'Ω',
-                '\\\\infty(?![a-zA-Z])': '∞'
+                '\\\\infty(?![a-zA-Z])': '∞',
+                '\\\\ne(?![a-zA-Z])': '≠',
+                '\\\\lt(?![a-zA-Z])': '<',
+                '\\\\gt(?![a-zA-Z])': '>',
+                '\\\\to(?![a-zA-Z])': '→',
+                '\\\\rightarrow(?![a-zA-Z])': '→',
+                '\\\\varepsilon(?![a-zA-Z])': 'ε',
+                '\\\\vartheta(?![a-zA-Z])': 'θ',
+                '\\\\varphi(?![a-zA-Z])': 'φ',
+                '\\\\%': '%'
             };
             
             for (let latex in symbols) {
@@ -4197,97 +4319,126 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             return elements;
         }
 
-        function layoutMath(elements, settings, getTokenWidth) {
-            let totalW = 0;
-            let maxHA = 0;
-            let maxHB = 0;
-            
+        // Brackets that enclose a fraction or root become 'delim' elements, drawn as tall as what they enclose
+        // (this is what \left( ... \right) asks for). Other brackets stay ordinary text.
+        function splitMathDelims(elements) {
+            if (!elements.some(e => e.type === 'fraction' || e.type === 'sqrt')) return elements;
+            const items = [];
+            for (const el of elements) {
+                if (el.type !== 'text') { items.push(el); continue; }
+                let run = '';
+                for (let i = 0; i < el.text.length; i++) {
+                    const c = el.text[i];
+                    // "_(...)" / "^(...)" are script groups, not brackets
+                    if ('()[]'.includes(c) && !(c === '(' && i > 0 && '_^'.includes(el.text[i - 1]))) {
+                        if (run) items.push({ type: 'text', text: run });
+                        run = '';
+                        items.push({ type: 'bracket', char: c });
+                    } else {
+                        run += c;
+                    }
+                }
+                if (run) items.push({ type: 'text', text: run });
+            }
+            const stack = [], tall = new Set();
+            items.forEach((it, i) => {
+                if (it.type !== 'bracket') return;
+                if (it.char === '(' || it.char === '[') { stack.push(i); return; }
+                const j = stack.pop();
+                if (j !== undefined && items.slice(j + 1, i).some(x => x.type === 'fraction' || x.type === 'sqrt')) {
+                    tall.add(i);
+                    tall.add(j);
+                }
+            });
+            const out = [];
+            items.forEach((it, i) => {
+                if (it.type === 'bracket' && tall.has(i)) {
+                    out.push({ type: 'delim', char: it.char, open: it.char === '(' || it.char === '[' });
+                } else if (it.type === 'bracket' || it.type === 'text') {
+                    const t = it.type === 'bracket' ? it.char : it.text;
+                    const last = out[out.length - 1];
+                    if (last && last.type === 'text') last.text += t; else out.push({ type: 'text', text: t });
+                } else {
+                    out.push(it);
+                }
+            });
+            return out;
+        }
+
+        // Math layout. `scale` is relative to the body text: numerators and denominators are drawn at 80% of their
+        // parent (never below half size), like handwritten fractions. Heights include sub/superscripts so rows
+        // can reserve exactly the space they need. Every layout item remembers its scale for drawing.
+        function layoutMath(elements, settings, getTokenWidth, scale = 1) {
+            const ch = settings.charHeight * scale;
             const layouts = [];
-            for (let el of elements) {
+            for (const el of splitMathDelims(elements)) {
+                let lay;
                 if (el.type === 'text') {
                     const tokens = tokenizeText(el.text);
-                    let w = 0;
-                    for (let tok of tokens) {
-                        const tokHeight = tok.type === 'normal' ? settings.charHeight : settings.charHeight * 0.65;
-                        w += getTokenWidth(tok.text, tokHeight);
+                    // capitals and ascenders reach a full letter height above the baseline in hand-drawn fonts
+                    let w = 0, ha = ch * 1.05, hb = ch * 0.2;
+                    for (const tok of tokens) {
+                        w += getTokenWidth(tok.text, tok.type === 'normal' ? ch : ch * 0.65);
+                        if (tok.type === 'super') ha = Math.max(ha, ch * (0.45 + 0.65 * 1.05));
+                        if (tok.type === 'sub') hb = Math.max(hb, ch * (0.15 + 0.65 * 0.25));
                     }
-                    const ha = settings.charHeight * 0.8;
-                    const hb = settings.charHeight * 0.2;
-                    layouts.push({
-                        element: el,
-                        width: w,
-                        heightAbove: ha,
-                        heightBelow: hb,
-                        tokens: tokens
-                    });
-                    totalW += w;
-                    if (ha > maxHA) maxHA = ha;
-                    if (hb > maxHB) maxHB = hb;
+                    lay = { element: el, width: w, heightAbove: ha, heightBelow: hb, tokens };
                 } else if (el.type === 'fraction') {
-                    const numLayout = layoutMath(el.num, settings, getTokenWidth);
-                    const denLayout = layoutMath(el.den, settings, getTokenWidth);
-                    
-                    const padX = 2.0;
-                    const w = Math.max(numLayout.width, denLayout.width) + 2 * padX;
-                    
-                    const gapY = 1.5; 
-                    const ha = gapY + numLayout.heightBelow + numLayout.heightAbove;
-                    const hb = gapY + denLayout.heightAbove + denLayout.heightBelow;
-                    
-                    layouts.push({
-                        element: el,
-                        width: w,
-                        heightAbove: ha,
-                        heightBelow: hb,
-                        numLayout: numLayout,
-                        denLayout: denLayout,
-                        padX: padX,
-                        gapY: gapY
-                    });
-                    totalW += w;
-                    if (ha > maxHA) maxHA = ha;
-                    if (hb > maxHB) maxHB = hb;
+                    const part = Math.max(0.5, scale * 0.8);
+                    const numLayout = layoutMath(el.num, settings, getTokenWidth, part);
+                    const denLayout = layoutMath(el.den, settings, getTokenWidth, part);
+                    const padX = ch * 0.35, gapY = ch * 0.24;
+                    lay = {
+                        element: el, numLayout, denLayout, padX, gapY,
+                        width: Math.max(numLayout.width, denLayout.width) + 2 * padX,
+                        heightAbove: gapY + numLayout.heightBelow + numLayout.heightAbove,
+                        heightBelow: gapY + denLayout.heightAbove + denLayout.heightBelow
+                    };
                 } else if (el.type === 'sqrt') {
-                    const innerLay = layoutMath(el.content, settings, getTokenWidth);
-                    const radWidth = settings.charHeight * 0.8;
-                    const ha = innerLay.heightAbove + settings.charHeight * 0.25;
-                    const hb = innerLay.heightBelow;
-                    
-                    layouts.push({
-                        element: el,
-                        width: radWidth + innerLay.width + 1.0,
-                        heightAbove: ha,
-                        heightBelow: hb,
-                        innerLayout: innerLay,
-                        radWidth: radWidth
-                    });
-                    totalW += radWidth + innerLay.width + 1.0;
-                    if (ha > maxHA) maxHA = ha;
-                    if (hb > maxHB) maxHB = hb;
+                    const innerLayout = layoutMath(el.content, settings, getTokenWidth, scale);
+                    const radWidth = ch * 0.62;
+                    lay = {
+                        element: el, innerLayout, radWidth,
+                        width: radWidth + innerLayout.width + ch * 0.2,
+                        heightAbove: innerLayout.heightAbove + ch * 0.28,
+                        heightBelow: innerLayout.heightBelow + ch * 0.08
+                    };
                 } else if (el.type === 'bar') {
-                    const innerLay = layoutMath(el.content, settings, getTokenWidth);
-                    const ha = innerLay.heightAbove + settings.charHeight * 0.25;
-                    const hb = innerLay.heightBelow;
-                    
-                    layouts.push({
-                        element: el,
-                        width: innerLay.width,
-                        heightAbove: ha,
-                        heightBelow: hb,
-                        innerLayout: innerLay
-                    });
-                    totalW += innerLay.width;
-                    if (ha > maxHA) maxHA = ha;
-                    if (hb > maxHB) maxHB = hb;
+                    const innerLayout = layoutMath(el.content, settings, getTokenWidth, scale);
+                    lay = {
+                        element: el, innerLayout, width: innerLayout.width,
+                        heightAbove: innerLayout.heightAbove + ch * 0.25, heightBelow: innerLayout.heightBelow
+                    };
+                } else if (el.type === 'delim') {
+                    lay = { element: el, width: ch * 0.5, heightAbove: ch * 0.8, heightBelow: ch * 0.2 };
                 }
+                lay.scale = scale;
+                layouts.push(lay);
             }
-            
-            return {
-                width: totalW,
-                heightAbove: maxHA,
-                heightBelow: maxHB,
-                layouts: layouts
-            };
+            // a matched pair of tall brackets spans everything between them
+            const open = [];
+            layouts.forEach((lay, i) => {
+                if (lay.element.type !== 'delim') return;
+                if (lay.element.open) { open.push(i); return; }
+                const j = open.pop();
+                if (j === undefined) return;
+                let ha = ch * 0.8, hb = ch * 0.2;
+                for (let k = j + 1; k < i; k++) {
+                    ha = Math.max(ha, layouts[k].heightAbove);
+                    hb = Math.max(hb, layouts[k].heightBelow);
+                }
+                for (const d of [layouts[j], lay]) {
+                    d.heightAbove = ha + ch * 0.1;
+                    d.heightBelow = hb + ch * 0.1;
+                }
+            });
+            let width = 0, heightAbove = 0, heightBelow = 0;
+            for (const lay of layouts) {
+                width += lay.width;
+                heightAbove = Math.max(heightAbove, lay.heightAbove);
+                heightBelow = Math.max(heightBelow, lay.heightBelow);
+            }
+            return { width, heightAbove, heightBelow, layouts, scale };
         }
 
         // Live text layout compiler & stroke generator
@@ -4303,7 +4454,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             if (activeFontMode === 'drawn') {
                 for (let i = 0; i < cleanText.length; i++) {
                     const char = cleanText[i];
-                    if (char !== ' ' && char !== '\n' && char !== '\r' && char !== '\t') {
+                    if (char !== ' ' && char !== '\n' && char !== '\r' && char !== '\t' && !'_^\\{}$'.includes(char)) {
                         let variants = DrawnFont[char];
                         if ((!variants || !variants.some(v => v && v.length > 0)) && typeof BUILTIN_FALLBACK_GLYPHS !== 'undefined' && BUILTIN_FALLBACK_GLYPHS[char]) {
                             variants = BUILTIN_FALLBACK_GLYPHS[char];
@@ -4468,124 +4619,151 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 }
             }
 
+            // A smooth, hand-like line through a few key points: corners slightly rounded, and a slow wobble along
+            // the line's length. (Independent jitter on every point reads as a jagged, machine-made line.)
+            function handLine(pts, amp) {
+                let p = pts;
+                if (p.length > 2) {
+                    // round each corner over a small fixed distance, so long strokes (a root's bar) stay straight
+                    const r = [p[0]];
+                    for (let i = 0; i < p.length - 1; i++) {
+                        const a = p[i], b = p[i + 1];
+                        const c = Math.min(0.2, 0.3 / (Math.hypot(b.x - a.x, b.y - a.y) || 1));
+                        if (i > 0) r.push({ x: a.x * (1 - c) + b.x * c, y: a.y * (1 - c) + b.y * c });
+                        if (i < p.length - 2) r.push({ x: a.x * c + b.x * (1 - c), y: a.y * c + b.y * (1 - c) });
+                    }
+                    r.push(p[p.length - 1]);
+                    p = r;
+                }
+                const ph1 = pseudoRandom() * Math.PI * 2, ph2 = pseudoRandom() * Math.PI * 2;
+                const out = [];
+                let dist = 0;
+                for (let i = 0; i < p.length - 1; i++) {
+                    const a = p[i], b = p[i + 1];
+                    const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1e-6;
+                    const nx = -dy / len, ny = dx / len;
+                    const n = Math.max(1, Math.ceil(len / 0.35));
+                    for (let k = i === 0 ? 0 : 1; k <= n; k++) {
+                        const t = k / n, d = dist + t * len;
+                        const w = amp * (0.65 * Math.sin(d * 0.45 + ph1) + 0.35 * Math.sin(d * 1.3 + ph2));
+                        out.push({ x: a.x + dx * t + nx * w, y: a.y + dy * t + ny * w });
+                    }
+                    dist += len;
+                }
+                return out;
+            }
+
+            function mathWobble() {
+                return Math.min(0.35, Math.max(0.04, (settings.mathLineWobble || 0) * 0.5));
+            }
+
+            // Put a row whose ink reaches `above` mm over its baseline and `below` mm under it onto the ruled lines.
+            // The baseline sits on a ruled line, moved down whole lines until the row clears the line before it;
+            // `next` is the first ruled line whose text can't touch this row.
+            function placeMathRow(lineY, above, below) {
+                const sp = settings.lineSpacing, ch = settings.charHeight, clear = ch * 0.12;
+                let base = lineY;
+                if (lineY > settings.topLineOffset + 0.01) {
+                    while (base - above < (lineY - sp) + ch * 0.3 + clear) base += sp;
+                }
+                let next = base + sp;
+                while (next - ch * 0.8 - clear < base + below) next += sp;
+                return { base, next };
+            }
+
+            // Math text sits this far below the row's math axis (centerY): fraction bars line up with the middle of
+            // the letters, so +, = and ≤ between fractions are centred on the bars.
+            function mathBaselineDrop(scale) {
+                return settings.charHeight * scale * 0.38;
+            }
+
             function drawMathElements(layouts, startX, centerY) {
                 let x = startX;
+                let prev = null;
                 for (let lay of layouts) {
                     const el = lay.element;
+                    const sc = lay.scale || 1;
+                    const ch = settings.charHeight * sc;
                     if (el.type === 'text') {
-                        const textBaselineY = centerY + settings.charHeight * 0.15;
-                        for (let tok of lay.tokens) {
-                            const tokHeight = tok.type === 'normal' ? settings.charHeight : settings.charHeight * 0.65;
+                        const textBaselineY = centerY + mathBaselineDrop(sc);
+                        // an exponent right after a tall closing bracket goes up to the bracket's top
+                        const lift = prev && prev.element.type === 'delim' && !prev.element.open
+                            ? Math.max(0, prev.heightAbove - ch * 0.8) : 0;
+                        lay.tokens.forEach((tok, ti) => {
+                            const tokHeight = tok.type === 'normal' ? ch : ch * 0.65;
                             let tokYOffset = 0;
-                            if (tok.type === 'super') {
-                                tokYOffset = -settings.charHeight * 0.45;
-                            } else if (tok.type === 'sub') {
-                                tokYOffset = settings.charHeight * 0.15;
-                            }
-                            
+                            if (tok.type === 'super') tokYOffset = -ch * 0.45 - (ti === 0 ? lift : 0);
+                            else if (tok.type === 'sub') tokYOffset = ch * 0.15;
                             for (let c = 0; c < tok.text.length; c++) {
                                 const char = tok.text[c];
                                 if (char === ' ') {
-                                    x += settings.wordSpacing;
+                                    x += settings.wordSpacing * sc;
                                     continue;
                                 }
-                                
                                 const heightJitterMultiplier = 1.0 + ((pseudoRandom() - 0.5) * settings.heightJitter / 50.0);
                                 const localHeight = tokHeight * heightJitterMultiplier;
                                 const slantAngleDeg = (pseudoRandom() - 0.5) * settings.slantJitter * 2.0;
                                 const slantRad = (slantAngleDeg * Math.PI) / 180.0;
-                                
                                 drawMathLetter(char, x, textBaselineY, localHeight, slantRad, tokYOffset);
                                 x += getCharWidth(char, localHeight, settings) + settings.charSpacing;
                             }
-                        }
+                        });
                     } else if (el.type === 'fraction') {
-                        const barStroke = [];
-                        const steps = Math.ceil(lay.width / 1.5);
-                        const startY = centerY + (pseudoRandom() - 0.5) * settings.mathLineTilt;
-                        const endY = centerY + (pseudoRandom() - 0.5) * settings.mathLineTilt;
-                        
-                        for (let s = 0; s <= steps; s++) {
-                            const t = s / steps;
-                            const px = x + t * lay.width;
-                            let py = startY + t * (endY - startY);
-                            py += (pseudoRandom() - 0.5) * settings.mathLineWobble;
-                            barStroke.push({ x: px, y: py });
-                        }
-                        paths.push(barStroke);
-                        
-                        const numStartX = x + (lay.width - lay.numLayout.width) / 2;
-                        const denStartX = x + (lay.width - lay.denLayout.width) / 2;
-                        
-                        const numCenterY = centerY - lay.gapY - lay.numLayout.heightBelow;
-                        const denCenterY = centerY + lay.gapY + lay.denLayout.heightAbove;
-                        
-                        drawMathElements(lay.numLayout.layouts, numStartX, numCenterY);
-                        drawMathElements(lay.denLayout.layouts, denStartX, denCenterY);
-                        
+                        // bar: a gentle bow and a slight tilt, like a ruler-free pen stroke
+                        const tilt = (pseudoRandom() - 0.5) * (settings.mathLineTilt || 0) * 0.6;
+                        const bow = (pseudoRandom() - 0.3) * ch * 0.05;
+                        const x0 = x + ch * 0.06, x1 = x + lay.width - ch * 0.06;
+                        paths.push(handLine([
+                            { x: x0, y: centerY - tilt / 2 },
+                            { x: (x0 + x1) / 2, y: centerY + bow },
+                            { x: x1, y: centerY + tilt / 2 }
+                        ], mathWobble()));
+                        drawMathElements(lay.numLayout.layouts, x + (lay.width - lay.numLayout.width) / 2,
+                            centerY - lay.gapY - lay.numLayout.heightBelow);
+                        drawMathElements(lay.denLayout.layouts, x + (lay.width - lay.denLayout.width) / 2,
+                            centerY + lay.gapY + lay.denLayout.heightAbove);
                         x += lay.width;
                     } else if (el.type === 'sqrt') {
-                        const radPath = [];
-                        
-                        function addWobblySegment(xStart, yStart, xEnd, yEnd) {
-                            const dx = xEnd - xStart;
-                            const dy = yEnd - yStart;
-                            const len = Math.sqrt(dx * dx + dy * dy);
-                            const steps = Math.ceil(len / 1.5);
-                            
-                            const startY = yStart + (pseudoRandom() - 0.5) * settings.mathLineTilt;
-                            const endY = yEnd + (pseudoRandom() - 0.5) * settings.mathLineTilt;
-                            
-                            for (let s = 0; s <= steps; s++) {
-                                const t = s / steps;
-                                const px = xStart + t * dx;
-                                let py = startY + t * (endY - startY);
-                                py += (pseudoRandom() - 0.5) * settings.mathLineWobble;
-                                radPath.push({ x: px, y: py });
-                            }
-                        }
-                        
-                        const p0_x = x;
-                        const p0_y = centerY;
-                        const p1_x = x + lay.radWidth * 0.35;
-                        const p1_y = centerY + lay.innerLayout.heightBelow + 0.5;
-                        
-                        const p2_x = x + lay.radWidth * 0.75;
-                        const p2_y = centerY - lay.innerLayout.heightAbove - settings.charHeight * 0.25;
-                        
-                        const p3_x = x + lay.width;
-                        const p3_y = p2_y;
-                        
-                        const p4_x = p3_x;
-                        const p4_y = p3_y + 0.8;
-                        
-                        addWobblySegment(p0_x, p0_y, p1_x, p1_y);
-                        addWobblySegment(p1_x, p1_y, p2_x, p2_y);
-                        addWobblySegment(p2_x, p2_y, p3_x, p3_y);
-                        addWobblySegment(p3_x, p3_y, p4_x, p4_y);
-                        
-                        paths.push(radPath);
-                        
-                        drawMathElements(lay.innerLayout.layouts, x + lay.radWidth, centerY);
+                        // radical: short lead-in tick, down to below the contents, a long rise, then the bar over them
+                        const inner = lay.innerLayout, rw = lay.radWidth;
+                        const yTop = centerY - inner.heightAbove - ch * 0.2;
+                        const yBot = centerY + inner.heightBelow + ch * 0.06;
+                        const yTick = centerY + ch * 0.1;
+                        paths.push(handLine([
+                            { x: x, y: yTick + ch * 0.12 },
+                            { x: x + rw * 0.2, y: yTick - ch * 0.04 },
+                            { x: x + rw * 0.46, y: yBot },
+                            { x: x + rw * 0.92, y: yTop },
+                            { x: x + lay.width, y: yTop + (pseudoRandom() - 0.5) * ch * 0.06 }
+                        ], mathWobble()));
+                        drawMathElements(inner.layouts, x + rw, centerY);
+                        x += lay.width;
                     } else if (el.type === 'bar') {
-                        const barStroke = [];
-                        const steps = Math.ceil(lay.width / 1.5);
-                        const barY = centerY - lay.innerLayout.heightAbove - settings.charHeight * 0.1;
-                        const startY = barY + (pseudoRandom() - 0.5) * settings.mathLineTilt;
-                        const endY = barY + (pseudoRandom() - 0.5) * settings.mathLineTilt;
-                        
-                        for (let s = 0; s <= steps; s++) {
-                            const t = s / steps;
-                            const px = x + t * lay.width;
-                            let py = startY + t * (endY - startY);
-                            py += (pseudoRandom() - 0.5) * settings.mathLineWobble;
-                            barStroke.push({ x: px, y: py });
-                        }
-                        paths.push(barStroke);
-                        
+                        const yb = centerY - lay.innerLayout.heightAbove - ch * 0.1;
+                        const tilt = (pseudoRandom() - 0.5) * (settings.mathLineTilt || 0) * 0.5;
+                        paths.push(handLine([{ x: x, y: yb }, { x: x + lay.width, y: yb + tilt }], mathWobble()));
                         drawMathElements(lay.innerLayout.layouts, x, centerY);
                         x += lay.width;
+                    } else if (el.type === 'delim') {
+                        const top = centerY - lay.heightAbove, bot = centerY + lay.heightBelow, w = lay.width;
+                        let pts;
+                        if (el.char === '(' || el.char === ')') {
+                            const dir = el.char === '(' ? 1 : -1;
+                            const xe = el.char === '(' ? x + w * 0.8 : x + w * 0.2;
+                            pts = [];
+                            for (let k = 0; k <= 8; k++) {
+                                const t = k / 8;
+                                pts.push({ x: xe - dir * w * 0.55 * Math.sin(Math.PI * t), y: top + (bot - top) * t });
+                            }
+                        } else {
+                            const xo = el.char === '[' ? x + w * 0.8 : x + w * 0.2;
+                            const xi = el.char === '[' ? x + w * 0.35 : x + w * 0.65;
+                            pts = [{ x: xo, y: top }, { x: xi, y: top }, { x: xi, y: bot }, { x: xo, y: bot }];
+                        }
+                        paths.push(handLine(pts, mathWobble() * 0.6));
+                        x += w;
                     }
+                    prev = lay;
                 }
             }
 
@@ -4631,14 +4809,16 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 } else if (block.text.includes('\\frac{') || block.text.includes('\\sqrt{') || block.text.includes('\\bar{')) {
                     const isBlockMath = block.text.startsWith('    ');
                     if (isBlockMath) {
-                        const elements = parseMathString(block.text);
-                        const layout = layoutMath(elements, settings, getTokenWidth);
-                        const totalHeight = layout.heightAbove + layout.heightBelow;
-                        const requiredLines = Math.max(1, Math.ceil(totalHeight / settings.lineSpacing));
-                        
-                        let centerY = currentLineY + (requiredLines * settings.lineSpacing) / 2.0;
-                        const lineIndex = Math.round((centerY - settings.topLineOffset) / settings.lineSpacing);
-                        centerY = settings.topLineOffset + lineIndex * settings.lineSpacing;
+                        const elements = parseMathString(block.text.trim());
+                        const printableWidth = rightMarginX - settings.leftMargin;
+                        let layout = layoutMath(elements, settings, getTokenWidth);
+                        if (layout.width > printableWidth) {
+                            // too wide for the page: write it smaller rather than off the edge
+                            layout = layoutMath(elements, settings, getTokenWidth, Math.max(0.6, printableWidth / layout.width));
+                        }
+                        const drop = mathBaselineDrop(layout.scale);
+                        const row = placeMathRow(currentLineY, layout.heightAbove + drop, layout.heightBelow - drop);
+                        const centerY = row.base - drop;
                         
                         let startX;
                         if (settings.mathLeftOffset === 0) {
@@ -4649,7 +4829,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         }
                         
                         drawMathElements(layout.layouts, startX, centerY);
-                        currentLineY += requiredLines * settings.lineSpacing;
+                        currentLineY = row.next;
                     } else {
                         const tokens = [];
                         const elements = parseMathString(block.text);
@@ -4690,9 +4870,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     }
                                 }
                             } else if (tok.type === 'math') {
-                                const inlineScale = 0.70;
-                                const inlineSettings = Object.assign({}, settings, { charHeight: settings.charHeight * inlineScale });
-                                const lay = layoutMath([tok.element], inlineSettings, getTokenWidth);
+                                const lay = layoutMath([tok.element], settings, getTokenWidth, 0.85);
                                 tokWidth = lay.width;
                                 tok.layout = lay;
                             }
@@ -4712,19 +4890,18 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         
                         let isFirstLine = true;
                         for (let lineTokens of linesOfTokens) {
+                            // how far this row's ink reaches above / below its baseline (inline math sits on the baseline)
                             let maxHA = settings.charHeight * 0.8;
-                            let maxHB = settings.charHeight * 0.2;
+                            let maxHB = settings.charHeight * 0.25;
                             for (let tok of lineTokens) {
                                 if (tok.type === 'math') {
-                                    const belowBaseline = tok.layout.heightBelow - settings.charHeight * 0.3;
-                                    if (belowBaseline > maxHB) maxHB = belowBaseline;
-                                    const aboveBaseline = tok.layout.heightAbove + settings.charHeight * 0.3;
-                                    if (aboveBaseline > maxHA) maxHA = aboveBaseline;
+                                    const drop = mathBaselineDrop(tok.layout.scale);
+                                    maxHA = Math.max(maxHA, tok.layout.heightAbove + drop);
+                                    maxHB = Math.max(maxHB, tok.layout.heightBelow - drop);
                                 }
                             }
-                            
-                            const textBaselineY = currentLineY;
-                            const centerY = currentLineY - settings.charHeight * 0.3;
+                            const row = placeMathRow(currentLineY, maxHA, maxHB);
+                            const textBaselineY = row.base;
                             let x = isFirstLine ? settings.leftMargin : wrapMarginX;
                             
                             for (let tok of lineTokens) {
@@ -4752,15 +4929,13 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                         }
                                     }
                                 } else if (tok.type === 'math') {
-                                    drawMathElements(tok.layout.layouts, x, centerY);
+                                    drawMathElements(tok.layout.layouts, x, textBaselineY - mathBaselineDrop(tok.layout.scale));
                                     x += tok.layout.width;
                                 }
                             }
                             
                             isFirstLine = false;
-                            const totalRowHeight = maxHA + maxHB;
-                            const requiredLines = Math.max(1, Math.ceil((totalRowHeight + 2.0) / settings.lineSpacing));
-                            currentLineY += requiredLines * settings.lineSpacing;
+                            currentLineY = row.next;
                         }
                     }
                 } else {
