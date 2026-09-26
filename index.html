@@ -720,17 +720,25 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         <!-- Image & diagram block -->
                         <div class="card">
                             <div class="card-hd">
-                                <h2 class="card-title"><svg class="i"><use href="#i-image"/></svg>Image &amp; diagram</h2>
+                                <h2 class="card-title"><svg class="i"><use href="#i-image"/></svg>Images, diagrams &amp; text</h2>
                                 <span id="imageBlockStatus" class="chip chip-muted font-mono">No Image</span>
                             </div>
                             <div class="card-bd">
-                                <p class="hint">Upload a black &amp; white diagram, sketch or drawing. It's vectorized into clean single-stroke lines and plotted alongside your handwriting.</p>
+                                <p class="hint">Upload black &amp; white diagrams, sketches or drawings (each upload adds a block), or add a text block you can place anywhere. Drag a block in <b>Move / resize</b> mode: side handles stretch it, corners scale it, the top knob rotates it. The pen line stays the same thickness.</p>
                                 <div class="file-drop">
                                     <input type="file" id="imageBlockFileInput" accept="image/*" class="file" />
                                 </div>
+                                <div class="flex flex-wrap items-center gap-1">
+                                    <div id="imageBlockList" class="flex flex-wrap items-center gap-1"></div>
+                                    <button id="btnAddTextBlock" type="button" class="btn btn-sm btn-secondary"><svg class="i-sm"><use href="#i-type"/></svg>Add text block</button>
+                                </div>
 
                                 <div id="imageBlockControls" class="space-y-3 hidden">
-                                    <div class="grid grid-cols-2 gap-3">
+                                    <div data-block-text-only class="hidden space-y-1">
+                                        <label class="lbl" for="textBlockInput">Text in this block</label>
+                                        <textarea id="textBlockInput" rows="3" class="field text-[13px] select-text" placeholder="Type the text for this block…"></textarea>
+                                    </div>
+                                    <div data-block-image-only class="grid grid-cols-2 gap-3">
                                         <div>
                                             <div class="row mb-1">
                                                 <label for="imgThresholdRange" class="text-[11px] text-slate-400">Line sensitivity</label>
@@ -755,7 +763,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                         </div>
                                     </div>
 
-                                    <div class="grid grid-cols-3 gap-2">
+                                    <div class="grid grid-cols-4 gap-2">
                                         <div>
                                             <label class="lbl" for="imgPosX">Pos X</label>
                                             <div class="relative"><input type="number" id="imgPosX" value="35.0" step="1" class="field field-mono pr-8" /><span class="unit">mm</span></div>
@@ -767,6 +775,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                         <div>
                                             <label class="lbl" for="imgWidth">Width</label>
                                             <div class="relative"><input type="number" id="imgWidth" value="65.0" step="1" class="field field-mono pr-8" /><span class="unit">mm</span></div>
+                                        </div>
+                                        <div>
+                                            <label class="lbl" for="imgHeight">Height</label>
+                                            <div class="relative"><input type="number" id="imgHeight" value="65.0" step="1" class="field field-mono pr-8" /><span class="unit">mm</span></div>
                                         </div>
                                     </div>
 
@@ -784,11 +796,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
                                     <div class="flex flex-wrap items-center justify-between gap-2">
                                         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                                            <label class="check-row text-[11px]">
+                                            <label class="check-row text-[11px]" title="When on, typing a width or height scales the other one too">
+                                                <input type="checkbox" id="imgKeepAspect" class="check" />
+                                                Keep proportions
+                                            </label>
+                                            <label data-block-image-only class="check-row text-[11px]">
                                                 <input type="checkbox" id="imgInvertColors" class="check" />
                                                 Invert (white on black)
                                             </label>
-                                            <label class="check-row text-[11px]" title="Show translucent original image preview while in Move / Resize mode">
+                                            <label data-block-image-only class="check-row text-[11px]" title="Show translucent original image preview while in Move / Resize mode">
                                                 <input type="checkbox" id="imgShowUnderlay" checked class="check" />
                                                 Underlay in move mode
                                             </label>
@@ -5640,6 +5656,50 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             _rasterW: 1600,
             _rasterH: 1600
         };
+        // Every image and text block on the page. imageBlock is the selected one: the side-panel controls and the
+        // canvas handles act on it, while the preview and G-code include all of them.
+        // A text block (kind: 'text') is handwriting laid out once and then treated like an image: its strokes
+        // are stretched and rotated as geometry, so the pen line stays the same thickness.
+        let imageBlocks = [];
+
+        function newImageBlock(kind = 'image') {
+            return {
+                kind, img: null, text: '', x: 35.0, y: 50.0, width: 65.0, height: 65.0, rotation: 0,
+                threshold: 128, style: 'contours', invert: false, showUnderlay: kind !== 'text', keepAspect: kind !== 'text',
+                strokes: [], _rawStrokes: [], _rasterW: 1600, _rasterH: 1600
+            };
+        }
+
+        function blockIsLive(b) {
+            return !!b && (!!b.img || (b.kind === 'text' && b._rawStrokes && b._rawStrokes.length > 0));
+        }
+
+        function selectedImageBlock() {
+            return imageBlock;
+        }
+
+        // Lay out a text block's text with the handwriting engine (unwrapped, 210 mm wide) and keep its strokes in
+        // local millimetres. Editing the text keeps the block's current stretch.
+        function buildTextBlockStrokes(b) {
+            const s = Object.assign({}, getSettings(), { text: b.text || '', leftMargin: 0, rightMargin: 0 });
+            const paths = (computeHandwritingLayout(s) || []).filter(p => p && p.length > 1);
+            window.handwritingLayoutDirty = true;   // the page preview must be laid out again
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+            paths.forEach(p => p.forEach(pt => {
+                x0 = Math.min(x0, pt.x); y0 = Math.min(y0, pt.y); x1 = Math.max(x1, pt.x); y1 = Math.max(y1, pt.y);
+            }));
+            if (!paths.length) { b._rawStrokes = []; b.strokes = []; return; }
+            const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
+            const hadSize = b._rawStrokes && b._rawStrokes.length > 0;
+            const sx = hadSize ? b.width / b._rasterW : 1, sy = hadSize ? b.height / b._rasterH : 1;
+            b._rawStrokes = paths.map(p => p.map(pt => ({ x: pt.x - x0, y: pt.y - y0 })));
+            b._rasterW = w;
+            b._rasterH = h;
+            b.width = parseFloat((w * sx).toFixed(1));
+            b.height = parseFloat((h * sy).toFixed(1));
+            rescaleImageStrokes(b);
+        }
+
         let isDraggingImage = false;
         let isResizingImage = false;
         let isRotatingImage = false;
@@ -5670,8 +5730,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         const topClickModeImage = document.getElementById('topClickModeImage');
 
         // Check if a point in design space (dPt) is over an image resize/rotate handle or inside the image
-        function getImageHandleAtPoint(dPt, zoomScale = 1.0) {
-            if (!imageBlock || !imageBlock.img) return null;
+        function getImageHandleAtPoint(dPt, zoomScale = 1.0, imageBlock = selectedImageBlock()) {
+            if (!blockIsLive(imageBlock)) return null;
             const x0 = imageBlock.x;
             const y0 = imageBlock.y;
             const x1 = imageBlock.x + imageBlock.width;
@@ -5713,7 +5773,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
 
         // Fast stroke rescale and rotate during drag / reposition / slider adjustments
-        function rescaleImageStrokes() {
+        function rescaleImageStrokes(imageBlock = selectedImageBlock()) {
             if (!imageBlock._rawStrokes || imageBlock._rawStrokes.length === 0) {
                 imageBlock.strokes = [];
                 return;
@@ -6162,6 +6222,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
 
         function vectorizeImageBlock() {
+            if (imageBlock.kind === 'text') {
+                rescaleImageStrokes();
+                triggerPreviewUpdate();
+                return;
+            }
             if (!imageBlock.img) {
                 imageBlock.strokes = [];
                 imageBlock._rawStrokes = [];
@@ -6261,6 +6326,116 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             triggerPreviewUpdate();
         }
 
+        const imgHeight = document.getElementById('imgHeight');
+        const imgKeepAspect = document.getElementById('imgKeepAspect');
+        const textBlockInput = document.getElementById('textBlockInput');
+
+        function blockLabel(b) {
+            const same = imageBlocks.filter(o => o.kind === b.kind);
+            const n = same.indexOf(b) + 1;
+            if (b.kind === 'text') {
+                const t = (b.text || '').trim().split('\n')[0];
+                return t ? (t.length > 14 ? t.slice(0, 14) + '…' : t) : `Text ${n}`;
+            }
+            return `Image ${n}`;
+        }
+
+        function renderImageBlockList() {
+            const list = document.getElementById('imageBlockList');
+            if (!list) return;
+            list.innerHTML = '';
+            imageBlocks.forEach(b => {
+                const on = b === imageBlock;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `h-7 px-2.5 rounded-md text-[11px] font-medium flex items-center gap-1.5 transition-all ${on
+                    ? 'bg-indigo-600 border border-indigo-500/80 text-white'
+                    : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`;
+                btn.innerHTML = `<svg class="i-sm"><use href="#${b.kind === 'text' ? 'i-type' : 'i-image'}"/></svg>`;
+                btn.appendChild(document.createTextNode(blockLabel(b)));
+                btn.title = 'Select this block';
+                btn.addEventListener('click', () => selectImageBlock(b));
+                list.appendChild(btn);
+            });
+        }
+
+        // Make b the selected block and show its values in the panel.
+        function selectImageBlock(b) {
+            imageBlock = b || newImageBlock('image');
+            const live = blockIsLive(imageBlock) || imageBlock.kind === 'text';
+            if (imageBlockControls) imageBlockControls.classList.toggle('hidden', !live);
+            const isText = imageBlock.kind === 'text';
+            document.querySelectorAll('[data-block-image-only]').forEach(el => el.classList.toggle('hidden', isText));
+            document.querySelectorAll('[data-block-text-only]').forEach(el => el.classList.toggle('hidden', !isText));
+            if (textBlockInput) textBlockInput.value = imageBlock.text || '';
+            if (imgPosX) imgPosX.value = imageBlock.x;
+            if (imgPosY) imgPosY.value = imageBlock.y;
+            if (imgWidth) imgWidth.value = imageBlock.width;
+            if (imgHeight) imgHeight.value = imageBlock.height;
+            if (imgThresholdRange) imgThresholdRange.value = imageBlock.threshold;
+            if (lblImgThreshold) lblImgThreshold.textContent = imageBlock.threshold;
+            if (imgDensitySelect) imgDensitySelect.value = imageBlock.style;
+            if (imgInvertColors) imgInvertColors.checked = !!imageBlock.invert;
+            if (imgShowUnderlay) imgShowUnderlay.checked = imageBlock.showUnderlay !== false;
+            if (imgKeepAspect) imgKeepAspect.checked = imageBlock.keepAspect !== false;
+            updateRotationUI(imageBlock.rotation || 0);
+            if (imageBlockStatus) {
+                const n = imageBlocks.length;
+                imageBlockStatus.textContent = n ? `${n} block${n === 1 ? '' : 's'}` : 'No blocks';
+                imageBlockStatus.className = `chip ${n ? 'chip-ok' : 'chip-muted'} font-mono`;
+            }
+            renderImageBlockList();
+            triggerPreviewUpdate();
+        }
+
+        // New blocks are offset from the previous one so they don't land exactly on top of it.
+        function placeNewBlock(b) {
+            const k = imageBlocks.length;
+            b.x = 25 + (k % 5) * 12;
+            b.y = 45 + (k % 5) * 12;
+            imageBlocks.push(b);
+        }
+
+        const btnAddTextBlock = document.getElementById('btnAddTextBlock');
+        if (btnAddTextBlock) {
+            btnAddTextBlock.addEventListener('click', () => {
+                const b = newImageBlock('text');
+                b.text = 'Your text here';
+                placeNewBlock(b);
+                buildTextBlockStrokes(b);
+                selectImageBlock(b);
+                if (typeof setCanvasClickMode === 'function') setCanvasClickMode('image', true);
+                if (textBlockInput) { textBlockInput.focus(); textBlockInput.select(); }
+                showToast("Text block added: type your text, then drag it into place", "success");
+            });
+        }
+        if (textBlockInput) {
+            textBlockInput.addEventListener('input', () => {
+                if (imageBlock.kind !== 'text') return;
+                imageBlock.text = textBlockInput.value;
+                buildTextBlockStrokes(imageBlock);
+                if (imgWidth) imgWidth.value = imageBlock.width;
+                if (imgHeight) imgHeight.value = imageBlock.height;
+                renderImageBlockList();
+                triggerPreviewUpdate();
+            });
+        }
+        if (imgKeepAspect) {
+            imgKeepAspect.addEventListener('change', () => { imageBlock.keepAspect = imgKeepAspect.checked; });
+        }
+        if (imgHeight) {
+            imgHeight.addEventListener('input', (e) => {
+                const h = Math.max(1, parseFloat(e.target.value) || 1);
+                if (imgKeepAspect && imgKeepAspect.checked && imageBlock.height > 0) {
+                    imageBlock.width = parseFloat((imageBlock.width * h / imageBlock.height).toFixed(1));
+                    if (imgWidth) imgWidth.value = imageBlock.width;
+                }
+                imageBlock.height = h;
+                rescaleImageStrokes();
+                triggerPreviewUpdate();
+            });
+        }
+
         if (imageBlockFileInput) {
             imageBlockFileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
@@ -6269,6 +6444,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 reader.onload = (evt) => {
                     const img = new Image();
                     img.onload = () => {
+                        const nb = newImageBlock('image');
+                        placeNewBlock(nb);
+                        imageBlock = nb;
                         imageBlock.img = img;
                         const aspect = img.width / img.height;
                         imageBlock.height = parseFloat((imageBlock.width / aspect).toFixed(1));
@@ -6290,8 +6468,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             console.warn("Auto threshold error:", tErr);
                         }
 
-                        if (imageBlockControls) imageBlockControls.classList.remove('hidden');
+                        selectImageBlock(nb);
                         vectorizeImageBlock();
+                        imageBlockFileInput.value = "";
                         showToast("Vectorized diagram with continuous strokes & clear text!", "success");
                     };
                     img.src = evt.target.result;
@@ -6354,11 +6533,12 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
         if (imgWidth) {
             imgWidth.addEventListener('input', (e) => {
-                imageBlock.width = parseFloat(e.target.value) || 10.0;
-                if (imageBlock.img) {
-                    const aspect = imageBlock.img.width / imageBlock.img.height;
-                    imageBlock.height = parseFloat((imageBlock.width / aspect).toFixed(1));
+                const w = Math.max(1, parseFloat(e.target.value) || 1);
+                if (imgKeepAspect && imgKeepAspect.checked && imageBlock.width > 0) {
+                    imageBlock.height = parseFloat((imageBlock.height * w / imageBlock.width).toFixed(1));
+                    if (imgHeight) imgHeight.value = imageBlock.height;
                 }
+                imageBlock.width = w;
                 rescaleImageStrokes();
                 triggerPreviewUpdate();
             });
@@ -6417,19 +6597,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
         if (btnClearImageBlock) {
             btnClearImageBlock.addEventListener('click', () => {
-                imageBlock.img = null;
-                imageBlock.strokes = [];
-                imageBlock._rawStrokes = [];
-                imageBlock.rotation = 0;
-                updateRotationUI(0);
-                if (imageBlockControls) imageBlockControls.classList.add('hidden');
-                if (imageBlockStatus) {
-                    imageBlockStatus.textContent = "No Image";
-                    imageBlockStatus.className = "chip chip-muted font-mono";
-                }
+                const wasText = imageBlock.kind === 'text';
+                imageBlocks = imageBlocks.filter(b => b !== imageBlock);
                 if (imageBlockFileInput) imageBlockFileInput.value = "";
-                triggerPreviewUpdate();
-                showToast("Image removed", "info");
+                selectImageBlock(imageBlocks[imageBlocks.length - 1]);
+                showToast(wasText ? "Text block removed" : "Image removed", "info");
             });
         }
 
@@ -7431,7 +7603,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             }
 
             // Draw Image Block Vector Strokes & Underlay (if loaded)
-            if (imageBlock && imageBlock.img) {
+            // every block; the selected one last so its handles sit on top
+            const selectedBlockForDraw = imageBlock;
+            for (const imageBlock of imageBlocks.filter(b => b !== selectedBlockForDraw).concat(imageBlocks.includes(selectedBlockForDraw) ? [selectedBlockForDraw] : [])) {
+            if (blockIsLive(imageBlock)) {
                 pCtx.save();
 
                 const cx = imageBlock.x + imageBlock.width / 2;
@@ -7461,7 +7636,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 // Draw translucent original image underlay when interacting or when selected
                 const showUnderlay = (imageBlock.showUnderlay !== false);
                 const isInteracting = (canvasClickMode === 'image' || isDraggingImage || isResizingImage || isRotatingImage);
-                if (showUnderlay && isInteracting) {
+                if (showUnderlay && isInteracting && imageBlock.img && imageBlock === selectedBlockForDraw) {
                     pCtx.save();
                     pCtx.globalAlpha = (isDraggingImage || isRotatingImage) ? 0.65 : 0.40;
                     const cCenter = getCanvasPt(cx, cy);
@@ -7474,8 +7649,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 }
 
                 if (imageBlock.strokes && imageBlock.strokes.length > 0) {
-                    pCtx.strokeStyle = '#0f172a'; // Deep charcoal/black ink for diagram
-                    pCtx.lineWidth = 1.4; // Crisp, sharp line width (prevents text smudging)
+                    // text blocks use the handwriting pen; stretching only moves points, never the line width
+                    pCtx.strokeStyle = imageBlock.kind === 'text' ? '#1d4ed8' : '#0f172a'; // blue gel pen / charcoal diagram ink
+                    pCtx.lineWidth = imageBlock.kind === 'text' ? 3.5 : 1.4;
                     pCtx.lineCap = 'round';
                     pCtx.lineJoin = 'round';
                     for (let stroke of imageBlock.strokes) {
@@ -7491,7 +7667,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 }
 
                 // If in Move / Resize Image Mode, draw interactive bounding box and resize handles
-                if (canvasClickMode === 'image') {
+                if (canvasClickMode === 'image' && imageBlock === selectedBlockForDraw) {
                     pCtx.setLineDash([6, 6]);
                     pCtx.strokeStyle = '#6366f1';
                     pCtx.lineWidth = 2.5;
@@ -7593,9 +7769,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     pCtx.font = 'bold 10.5px sans-serif';
                     pCtx.textAlign = 'left';
                     pCtx.textBaseline = 'middle';
-                    pCtx.fillText(`🖼️ Image: ${imageBlock.width.toFixed(1)}×${imageBlock.height.toFixed(1)}mm${rotText} [Drag / Resize / Rotate]`, cTL.x + 6, cTL.y - 13);
+                    pCtx.fillText(`${imageBlock.kind === 'text' ? '✍️ Text' : '🖼️ Image'}: ${imageBlock.width.toFixed(1)}×${imageBlock.height.toFixed(1)}mm${rotText} [Drag / Resize / Rotate]`, cTL.x + 6, cTL.y - 13);
                 }
                 pCtx.restore();
+            }
             }
             
             // Draw a subtle bed boundary frame on top of the paper (Dashed green line) for positioning reference
@@ -8276,9 +8453,9 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const settings = getSettings();
             const textPaths = computeHandwritingLayout(settings);
             const paths = [...textPaths];
-            if (imageBlock && imageBlock.strokes && imageBlock.strokes.length > 0) {
-                paths.push(...imageBlock.strokes);
-            }
+            imageBlocks.forEach(b => {
+                if (blockIsLive(b) && b.strokes && b.strokes.length > 0) paths.push(...b.strokes);
+            });
             
             if (paths.length === 0) {
                 showToast("Cannot generate G-code - paths are empty", "error");
@@ -10952,11 +11129,19 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             }
 
             // If in Move / Resize Image Mode:
-            if (canvasClickMode === 'image' && imageBlock && imageBlock.img) {
+            if (canvasClickMode === 'image' && imageBlocks.some(blockIsLive)) {
                 const settings = getSettings();
                 const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
                 const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
-                const handle = getImageHandleAtPoint(dPt, zoomScale);
+                let handle = getImageHandleAtPoint(dPt, zoomScale);
+                if (!handle) {
+                    // clicked another block: select the topmost one under the pointer
+                    const hit = imageBlocks.slice().reverse().find(b => b !== imageBlock && getImageHandleAtPoint(dPt, zoomScale, b));
+                    if (hit) {
+                        selectImageBlock(hit);
+                        handle = getImageHandleAtPoint(dPt, zoomScale);
+                    }
+                }
                 if (handle === 'rotate') {
                     isRotatingImage = true;
                     const cx = imageBlock.x + imageBlock.width / 2;
@@ -11059,7 +11244,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             hoverBedY = targetBedY;
 
             // Dynamic hover cursor styling in Move / Resize Image mode
-            if (canvasClickMode === 'image' && imageBlock && imageBlock.img && !isDraggingImage && !isResizingImage && !isRotatingImage && !isPanning && !isDraggingPoint && !draggingGraphPin) {
+            if (canvasClickMode === 'image' && blockIsLive(imageBlock) && !isDraggingImage && !isResizingImage && !isRotatingImage && !isPanning && !isDraggingPoint && !draggingGraphPin) {
                 const settings = getSettings();
                 const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
                 const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
@@ -11081,7 +11266,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 }
             }
 
-            if (isRotatingImage && imageRotateState && imageBlock && imageBlock.img) {
+            if (isRotatingImage && imageRotateState && blockIsLive(imageBlock)) {
                 const settings = getSettings();
                 const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
                 const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
@@ -11099,7 +11284,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 return;
             }
 
-            if (isResizingImage && imageResizeState && imageBlock && imageBlock.img) {
+            if (isResizingImage && imageResizeState && blockIsLive(imageBlock)) {
                 const settings = getSettings();
                 const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
                 const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
@@ -11108,74 +11293,43 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 const dy = dPt.y - state.startMouseY;
                 const handle = state.handle;
 
-                if (handle === 'br' || handle === 'r') {
-                    let newW = Math.max(10.0, Math.min(210.0 - state.startX, state.startWidth + dx));
-                    let newH = newW / state.aspect;
-                    if (state.startY + newH > 297.0) {
-                        newH = 297.0 - state.startY;
-                        newW = newH * state.aspect;
-                    }
-                    imageBlock.width = parseFloat(newW.toFixed(1));
-                    imageBlock.height = parseFloat(newH.toFixed(1));
-                } else if (handle === 'b') {
-                    let newH = Math.max(10.0, Math.min(297.0 - state.startY, state.startHeight + dy));
-                    let newW = newH * state.aspect;
-                    if (state.startX + newW > 210.0) {
-                        newW = 210.0 - state.startX;
-                        newH = newW / state.aspect;
-                    }
-                    imageBlock.width = parseFloat(newW.toFixed(1));
-                    imageBlock.height = parseFloat(newH.toFixed(1));
-                } else if (handle === 'bl' || handle === 'l') {
-                    let newW = Math.max(10.0, Math.min(state.startX + state.startWidth, state.startWidth - dx));
-                    let newH = newW / state.aspect;
-                    let newX = (state.startX + state.startWidth) - newW;
-                    if (state.startY + newH > 297.0) {
-                        newH = 297.0 - state.startY;
-                        newW = newH * state.aspect;
-                        newX = (state.startX + state.startWidth) - newW;
-                    }
-                    imageBlock.x = parseFloat(Math.max(0, newX).toFixed(1));
-                    imageBlock.width = parseFloat(newW.toFixed(1));
-                    imageBlock.height = parseFloat(newH.toFixed(1));
-                } else if (handle === 'tr' || handle === 't') {
-                    let newW = Math.max(10.0, Math.min(210.0 - state.startX, state.startWidth + dx));
-                    let newH = newW / state.aspect;
-                    let newY = (state.startY + state.startHeight) - newH;
-                    if (newY < 0) {
-                        newY = 0;
-                        newH = state.startY + state.startHeight;
-                        newW = newH * state.aspect;
-                    }
-                    imageBlock.y = parseFloat(Math.max(0, newY).toFixed(1));
-                    imageBlock.width = parseFloat(newW.toFixed(1));
-                    imageBlock.height = parseFloat(newH.toFixed(1));
-                } else if (handle === 'tl') {
-                    let newW = Math.max(10.0, Math.min(state.startX + state.startWidth, state.startWidth - dx));
-                    let newH = newW / state.aspect;
-                    let newX = (state.startX + state.startWidth) - newW;
-                    let newY = (state.startY + state.startHeight) - newH;
-                    if (newY < 0) {
-                        newY = 0;
-                        newH = state.startY + state.startHeight;
-                        newW = newH * state.aspect;
-                        newX = (state.startX + state.startWidth) - newW;
-                    }
-                    imageBlock.x = parseFloat(Math.max(0, newX).toFixed(1));
-                    imageBlock.y = parseFloat(Math.max(0, newY).toFixed(1));
-                    imageBlock.width = parseFloat(newW.toFixed(1));
-                    imageBlock.height = parseFloat(newH.toFixed(1));
+                // Work in the block's own (rotated) axes. Side handles stretch one dimension; corners scale both,
+                // keeping proportions unless "Keep proportions" is off. The opposite edge / corner stays put.
+                const rad = ((imageBlock.rotation || 0) * Math.PI) / 180;
+                const cos = Math.cos(rad), sin = Math.sin(rad);
+                const lx = dx * cos + dy * sin;
+                const ly = -dx * sin + dy * cos;
+                const hx = handle.includes('r') ? 1 : handle.includes('l') ? -1 : 0;
+                const hy = handle.includes('b') ? 1 : handle.includes('t') ? -1 : 0;
+                let w = Math.max(3.0, state.startWidth + hx * lx);
+                let h = Math.max(2.0, state.startHeight + hy * ly);
+                if (hx && hy && imageBlock.keepAspect !== false) {
+                    const k = Math.max(w / state.startWidth, h / state.startHeight);
+                    w = state.startWidth * k;
+                    h = state.startHeight * k;
                 }
+                // new centre, in local axes relative to the old centre, then back to page coordinates
+                const ox = hx * (w - state.startWidth) / 2;
+                const oy = hy * (h - state.startHeight) / 2;
+                const cx0 = state.startX + state.startWidth / 2;
+                const cy0 = state.startY + state.startHeight / 2;
+                const ncx = cx0 + ox * cos - oy * sin;
+                const ncy = cy0 + ox * sin + oy * cos;
+                imageBlock.width = parseFloat(w.toFixed(1));
+                imageBlock.height = parseFloat(h.toFixed(1));
+                imageBlock.x = parseFloat((ncx - imageBlock.width / 2).toFixed(1));
+                imageBlock.y = parseFloat((ncy - imageBlock.height / 2).toFixed(1));
 
                 if (imgPosX) imgPosX.value = imageBlock.x;
                 if (imgPosY) imgPosY.value = imageBlock.y;
                 if (imgWidth) imgWidth.value = imageBlock.width;
+                if (imgHeight) imgHeight.value = imageBlock.height;
                 rescaleImageStrokes();
                 renderPreview();
                 return;
             }
 
-            if (isDraggingImage && imageBlock && imageBlock.img) {
+            if (isDraggingImage && blockIsLive(imageBlock)) {
                 const settings = getSettings();
                 const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
                 const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
