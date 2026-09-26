@@ -635,6 +635,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <div class="row mb-1"><label for="mathLeftOffset" class="text-[11px] text-slate-400">Equation left indent (from margin)</label><span class="val" id="mathLeftOffsetVal">Centered</span></div>
                                     <input type="range" id="mathLeftOffset" min="0.0" max="60.0" step="1.0" value="0.0" class="slider" />
                                 </div>
+                                <label class="check-row text-[11px]" title="Off: every equation gets generous room (about three ruled lines for a fraction). On: equations are packed into as few lines as possible, with slightly smaller fraction parts, still without touching the lines around them.">
+                                    <input type="checkbox" id="mathCompact" class="check" />
+                                    Compact equations (fewer blank lines)
+                                </label>
                             </div>
                         </details>
                     </section>
@@ -3605,6 +3609,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 mathLineWobble: parseFloat(document.getElementById('mathLineWobble').value) || 0.15,
                 mathLineTilt: parseFloat(document.getElementById('mathLineTilt').value) || 0.30,
                 mathLeftOffset: parseFloat(document.getElementById('mathLeftOffset').value) || 0.0,
+                mathCompact: !!(document.getElementById('mathCompact') && document.getElementById('mathCompact').checked),
                 calibBoxWidth: parseFloat(document.getElementById('calibBoxWidth').value) || 150.0,
                 calibBoxHeight: parseFloat(document.getElementById('calibBoxHeight').value) || 150.0,
                 calibBoxX: isNaN(parseFloat(document.getElementById('calibBoxX').value)) ? 30.0 : parseFloat(document.getElementById('calibBoxX').value),
@@ -4384,10 +4389,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     }
                     lay = { element: el, width: w, heightAbove: ha, heightBelow: hb, tokens };
                 } else if (el.type === 'fraction') {
-                    const part = Math.max(0.5, scale * 0.8);
+                    const part = Math.max(0.5, scale * (settings.mathCompact ? 0.74 : 0.8));
                     const numLayout = layoutMath(el.num, settings, getTokenWidth, part);
                     const denLayout = layoutMath(el.den, settings, getTokenWidth, part);
-                    const padX = ch * 0.35, gapY = ch * 0.24;
+                    const padX = ch * 0.35, gapY = ch * (settings.mathCompact ? 0.18 : 0.24);
                     lay = {
                         element: el, numLayout, denLayout, padX, gapY,
                         width: Math.max(numLayout.width, denLayout.width) + 2 * padX,
@@ -4661,13 +4666,16 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             // The baseline sits on a ruled line, moved down whole lines until the row clears the line before it;
             // `next` is the first ruled line whose text can't touch this row.
             function placeMathRow(lineY, above, below) {
-                const sp = settings.lineSpacing, ch = settings.charHeight, clear = ch * 0.12;
+                const sp = settings.lineSpacing, ch = settings.charHeight;
+                // roomy: generous margins. compact: the handwriting's real ink extents (descenders end at the ruled
+                // line, capitals of the next line rise 1.25 letter heights above theirs) plus a small clearance.
+                const [descender, nextTop, clear] = settings.mathCompact ? [ch * 0.05, ch * 1.25, 0.3] : [ch * 0.3, ch * 0.8, ch * 0.12];
                 let base = lineY;
                 if (lineY > settings.topLineOffset + 0.01) {
-                    while (base - above < (lineY - sp) + ch * 0.3 + clear) base += sp;
+                    while (base - above < (lineY - sp) + descender + clear) base += sp;
                 }
                 let next = base + sp;
-                while (next - ch * 0.8 - clear < base + below) next += sp;
+                while (next - nextTop - clear < base + below) next += sp;
                 return { base, next };
             }
 
@@ -12464,6 +12472,15 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
 
         document.getElementById('btnSplitPage').addEventListener('click', splitPageOverflow);
 
+        const mathCompactToggle = document.getElementById('mathCompact');
+        if (mathCompactToggle) {
+            mathCompactToggle.addEventListener('change', () => {
+                window.handwritingLayoutDirty = true;
+                triggerPreviewUpdate();
+                saveCachedWebData();
+            });
+        }
+
         // --- PAGES & GROUPS DIALOG: organize, import text as pages, export pages as text ---
         // Text format shared by export and import:
         //   === Group: Chapter 1 ===      starts a group (and a page)
@@ -13070,6 +13087,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 mathLineWobble: document.getElementById('mathLineWobble').value,
                 mathLineTilt: document.getElementById('mathLineTilt').value,
                 mathLeftOffset: document.getElementById('mathLeftOffset').value,
+                mathCompact: document.getElementById('mathCompact') ? document.getElementById('mathCompact').checked : false,
                 
                 wobbleStrength: document.getElementById('wobbleStrength').value,
                 baselineDrift: document.getElementById('baselineDrift').value,
@@ -13191,6 +13209,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 if (data.mathLineWobble !== undefined) document.getElementById('mathLineWobble').value = data.mathLineWobble;
                 if (data.mathLineTilt !== undefined) document.getElementById('mathLineTilt').value = data.mathLineTilt;
                 if (data.mathLeftOffset !== undefined) document.getElementById('mathLeftOffset').value = data.mathLeftOffset;
+                if (data.mathCompact !== undefined && document.getElementById('mathCompact')) document.getElementById('mathCompact').checked = !!data.mathCompact;
                 
                 if (data.wobbleStrength !== undefined) document.getElementById('wobbleStrength').value = data.wobbleStrength;
                 if (data.baselineDrift !== undefined) document.getElementById('baselineDrift').value = data.baselineDrift;
