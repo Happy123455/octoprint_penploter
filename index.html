@@ -324,11 +324,14 @@
                                 <span class="link" id="loadDemoBtn">Load demo story</span>
                             </div>
                             <div class="card-bd">
-                                <div class="flex items-center justify-between gap-2">
-                                    <div class="flex items-center gap-1 overflow-x-auto min-w-0 pr-1 scrollbar-none" id="pageTabsContainer">
+                                <div class="flex flex-col-reverse gap-2">
+                                    <div class="flex flex-wrap items-center gap-1 min-w-0" id="pageTabsContainer">
                                         <!-- Dynamic page tabs go here -->
                                     </div>
-                                    <div class="flex items-center gap-1 shrink-0">
+                                    <div class="flex items-center justify-end gap-1 flex-wrap">
+                                        <button id="btnPagesManager" class="btn btn-sm btn-ghost" title="Organize pages into groups, import text as pages, or export pages as text">
+                                            <svg class="i-sm"><use href="#i-layers"/></svg>Pages
+                                        </button>
                                         <button id="btnCompactText" class="btn btn-sm btn-ghost" title="Compact markdown: remove blank lines, dividers (---), and fit equations to notebook paper">
                                             <svg class="i-sm"><use href="#i-compact"/></svg>Compact
                                         </button>
@@ -1693,6 +1696,94 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             <div class="flex justify-end gap-2">
                 <button id="btnConfirmCancel" class="btn btn-secondary">Cancel</button>
                 <button id="btnConfirmOk" class="btn btn-primary">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pages & groups: organize, import text as pages, export pages as text -->
+    <div id="pagesModal" class="hidden fixed inset-0 z-[190] flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-sm">
+        <div class="card bg-slate-900 max-w-2xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="card-hd">
+                <h2 class="card-title"><svg class="i"><use href="#i-layers"/></svg>Pages &amp; groups</h2>
+                <button id="btnPagesClose" class="btn btn-sm btn-ghost btn-icon" title="Close"><svg class="i-sm"><use href="#i-x"/></svg></button>
+            </div>
+            <div class="px-4 pt-3">
+                <div class="seg" id="pagesModalTabs">
+                    <button class="seg-btn seg-on" data-pages-tab="organize">Organize</button>
+                    <button class="seg-btn" data-pages-tab="import">Import text</button>
+                    <button class="seg-btn" data-pages-tab="export">Export text</button>
+                </div>
+            </div>
+            <div class="card-bd overflow-y-auto flex-1 min-h-0">
+
+                <div data-pages-panel="organize" class="space-y-3">
+                    <p class="hint">Groups keep related pages together, like chapters or subjects. Rename a group by editing its name, and use <b>Move to</b> to put a page in another group.</p>
+                    <div id="pagesGroupList" class="space-y-2"></div>
+                    <button id="btnAddPageGroup" class="btn btn-sm btn-secondary"><svg class="i-sm"><use href="#i-plus"/></svg>New group</button>
+                </div>
+
+                <div data-pages-panel="import" class="space-y-3 hidden">
+                    <p class="hint">Paste text or open a <b>.txt</b> / <b>.md</b> file. It is split into pages that fit your current paper, font and spacing settings, without cutting words. Files exported from here keep their groups and page breaks.</p>
+                    <div class="flex items-center gap-2">
+                        <label class="btn btn-sm btn-secondary cursor-pointer"><svg class="i-sm"><use href="#i-upload"/></svg>Open file…
+                            <input type="file" id="pagesImportFile" accept=".txt,.md,.markdown,text/plain,text/markdown" class="hidden" />
+                        </label>
+                        <span id="pagesImportFileName" class="muted text-[11px] truncate"></span>
+                    </div>
+                    <textarea id="pagesImportText" rows="8" class="field text-[12px] select-text" placeholder="…or paste your text here"></textarea>
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <span class="lbl">Put the pages</span>
+                            <select id="pagesImportTarget" class="field field-sm">
+                                <option value="group">In a new group</option>
+                                <option value="append">After the current group's pages</option>
+                                <option value="replace">Replace all pages</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="lbl">New group name</span>
+                            <input id="pagesImportGroupName" class="field field-sm" placeholder="Imported" />
+                        </div>
+                        <div class="space-y-1">
+                            <span class="lbl">Also start a new page at</span>
+                            <select id="pagesImportBreaks" class="field field-sm">
+                                <option value="none">Only when the page is full</option>
+                                <option value="rule">Lines with just --- </option>
+                                <option value="blank">Every blank line (one paragraph per page)</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1 flex flex-col justify-end">
+                            <label class="check-row"><input type="checkbox" id="pagesImportHeadings" class="check" />Headings (# Title) start a new group</label>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between gap-2">
+                        <span id="pagesImportStatus" class="muted text-[11px]"></span>
+                        <button id="btnPagesImport" class="btn btn-primary"><svg class="i-sm"><use href="#i-upload"/></svg>Import as pages</button>
+                    </div>
+                </div>
+
+                <div data-pages-panel="export" class="space-y-3 hidden">
+                    <p class="hint">Exports pages as one text file with group and page markers, so you can edit it anywhere and import it back.</p>
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <span class="lbl">What to export</span>
+                            <select id="pagesExportScope" class="field field-sm">
+                                <option value="all">All pages</option>
+                                <option value="group">Current group</option>
+                                <option value="page">Current page</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1 flex flex-col justify-end">
+                            <label class="check-row"><input type="checkbox" id="pagesExportMarkers" checked class="check" />Include group &amp; page markers</label>
+                        </div>
+                    </div>
+                    <textarea id="pagesExportText" rows="8" readonly class="field field-mono text-[11px] select-text"></textarea>
+                    <div class="flex justify-end gap-2">
+                        <button id="btnPagesExportCopy" class="btn btn-secondary"><svg class="i-sm"><use href="#i-copy"/></svg>Copy</button>
+                        <button id="btnPagesExportDownload" class="btn btn-primary"><svg class="i-sm"><use href="#i-download"/></svg>Download .txt</button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -11531,13 +11622,155 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         let pagesText = ["Dear Student,\n\nThis is a demonstration of writing on standard Indian ruled paper using your Anycubic Kobra Neo.\n\nWe solved the outline \"bubble\" text issue by rendering true single-stroke vectors, even with custom TTF fonts! Plus, we added realistic human hand jitters."];
         let currentPageIdx = 0;
 
+        // --- PAGE GROUPS ---
+        // pageGroupOf[i] is the group id of pagesText[i]. Pages are kept contiguous by group, in the order of
+        // pageGroups, so the global "Page N" numbers always match the order the tabs show.
+        let pageGroups = [{ id: 'g1', name: 'Pages', collapsed: false }];
+        let pageGroupOf = ['g1'];
+
+        function newPageGroupId() {
+            let n = 1;
+            while (pageGroups.some(g => g.id === 'g' + n)) n++;
+            return 'g' + n;
+        }
+
+        function nextPageGroupName() {
+            let n = pageGroups.length + 1;
+            while (pageGroups.some(g => g.name === `Group ${n}`)) n++;
+            return `Group ${n}`;
+        }
+
+        function pageGroupById(id) {
+            return pageGroups.find(g => g.id === id) || pageGroups[0];
+        }
+
+        function syncPageGroups() {
+            if (!Array.isArray(pagesText) || pagesText.length === 0) pagesText = [""];
+            if (!Array.isArray(pageGroups) || pageGroups.length === 0) pageGroups = [{ id: 'g1', name: 'Pages', collapsed: false }];
+            if (!Array.isArray(pageGroupOf)) pageGroupOf = [];
+            const known = new Set(pageGroups.map(g => g.id));
+            pageGroupOf = pagesText.map((_, i) => known.has(pageGroupOf[i]) ? pageGroupOf[i] : null);
+            for (let i = 0; i < pageGroupOf.length; i++) {
+                if (!pageGroupOf[i]) pageGroupOf[i] = i > 0 ? pageGroupOf[i - 1] : pageGroups[0].id;
+            }
+            // groups without pages disappear (a new group is always created with a page)
+            const used = new Set(pageGroupOf);
+            pageGroups = pageGroups.filter(g => used.has(g.id));
+            // stable-sort pages by group order, carrying the current page along
+            const order = new Map(pageGroups.map((g, i) => [g.id, i]));
+            const idx = pagesText.map((_, i) => i).sort((a, b) => (order.get(pageGroupOf[a]) - order.get(pageGroupOf[b])) || (a - b));
+            if (idx.some((v, i) => v !== i)) {
+                currentPageIdx = idx.indexOf(currentPageIdx);
+                pagesText = idx.map(i => pagesText[i]);
+                pageGroupOf = idx.map(i => pageGroupOf[i]);
+            }
+            currentPageIdx = Math.min(Math.max(0, currentPageIdx), pagesText.length - 1);
+        }
+
+        function makePageGroupHeader(g, count, first) {
+            const b = document.createElement('button');
+            b.className = `h-7 pl-1 pr-2 rounded-md text-[10px] font-semibold uppercase tracking-wide flex items-center gap-1 shrink-0 whitespace-nowrap text-slate-300 bg-slate-800/60 border border-slate-700/70 hover:text-white transition-all${first ? '' : ' ml-2'}`;
+            b.title = g.collapsed ? 'Show this group\'s pages' : 'Hide this group\'s pages';
+            b.innerHTML = `<svg class="i-sm transition-transform ${g.collapsed ? '-rotate-90' : ''}"><use href="#i-chev-down"/></svg>`;
+            const s = document.createElement('span');
+            s.textContent = `${g.name} · ${count}`;
+            b.appendChild(s);
+            b.addEventListener('click', () => {
+                g.collapsed = !g.collapsed;
+                rebuildPageTabs();
+                saveCachedWebData();
+            });
+            return b;
+        }
+
+        // After any change to pages or groups: refresh tabs, editor, preview, storage and the organizer.
+        function commitPagesChange() {
+            syncPageGroups();
+            textInput.value = pagesText[currentPageIdx];
+            rebuildPageTabs();
+            triggerPreviewUpdate();
+            saveCachedWebData();
+            const modal = document.getElementById('pagesModal');
+            if (modal && !modal.classList.contains('hidden')) renderPagesOrganizer();
+        }
+
+        // Does this text fit on one sheet with the current settings? Runs the real layout engine and applies the
+        // same off-bed test as "Split overflow".
+        function pageTextFits(text, settings, calibMatrix) {
+            computeHandwritingLayout(Object.assign({}, settings, { text }));
+            return !renderedCharactersOnSheet.some(char => {
+                const cy = (char.minY + char.maxY) / 2;
+                const y = calibMatrix ? mapDesignToBed(char.minX, cy, calibMatrix).y
+                    : (297 - cy) + settings.paperYShift - settings.penOffsetY;
+                return y < 0 || y > 220;
+            });
+        }
+
+        // Split text into pages that each fit the sheet. Whole lines first; a paragraph that doesn't fit is
+        // continued on the next page at a word boundary. Table rows and math lines are never split mid-line.
+        async function paginateText(text, onProgress) {
+            const settings = getSettings();
+            const calib = settings.use3PointCalib ? getCalibMapping() : null;
+            const fits = (lines) => pageTextFits(lines.join('\n'), settings, calib);
+            const cap = (getBedLayoutStats().ruledLines || 24) + 4;
+            let lines = text.split('\n');
+            if (fits(lines)) return [text];
+            const pages = [];
+            while (lines.length) {
+                if (pages.length) {
+                    while (lines.length && lines[0].trim() === '') lines.shift();
+                    if (!lines.length) break;
+                }
+                // largest n whose first n lines fit (lo always fits, hi never does)
+                let lo = 0, hi = Math.min(lines.length, cap);
+                if (fits(lines.slice(0, hi))) lo = hi;
+                else while (hi - lo > 1) {
+                    const mid = (lo + hi) >> 1;
+                    if (fits(lines.slice(0, mid))) lo = mid; else hi = mid;
+                }
+                let page = lines.slice(0, lo);
+                let rest = lines.slice(lo);
+                // fill the remaining space with the start of the next paragraph
+                const next = rest[0];
+                const splittable = next !== undefined && next.trim() !== '' && !/^\s*[|$]/.test(next);
+                if (lo < cap && (splittable || (lo === 0 && next !== undefined))) {
+                    const words = next.split(' ');
+                    let a = 0, b = words.length;
+                    while (b - a > 1) {
+                        const mid = (a + b) >> 1;
+                        if (fits(page.concat(words.slice(0, mid).join(' ')))) a = mid; else b = mid;
+                    }
+                    if (lo === 0) a = Math.max(1, a);   // always make progress
+                    if (a > 0) {
+                        page = page.concat(words.slice(0, a).join(' '));
+                        const remainder = words.slice(a).join(' ').replace(/^\s+/, '');
+                        rest = remainder ? [remainder].concat(rest.slice(1)) : rest.slice(1);
+                    }
+                }
+                if (page.length === 0) { page = [rest[0]]; rest = rest.slice(1); }
+                pages.push(page.join('\n'));
+                lines = rest;
+                if (onProgress) onProgress(pages.length);
+                await new Promise(r => setTimeout(r, 0));
+            }
+            return pages.length ? pages : [""];
+        }
+
         function rebuildPageTabs() {
             const container = document.getElementById('pageTabsContainer');
             if (!container) return;
-            
+
+            syncPageGroups();
             container.innerHTML = "";
-            
+            const showGroups = pageGroups.length > 1;
+
             pagesText.forEach((pText, idx) => {
+                const group = pageGroupById(pageGroupOf[idx]);
+                if (showGroups && (idx === 0 || pageGroupOf[idx] !== pageGroupOf[idx - 1])) {
+                    container.appendChild(makePageGroupHeader(group, pageGroupOf.filter(g => g === group.id).length, idx === 0));
+                }
+                if (showGroups && group.collapsed) return;
+
                 const btn = document.createElement('button');
                 const isActive = (idx === currentPageIdx);
                 
@@ -11563,6 +11796,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                             `Are you sure you want to delete Page ${idx + 1}?`,
                             () => {
                                 pagesText.splice(idx, 1);
+                                pageGroupOf.splice(idx, 1);
                                 currentPageIdx = Math.max(0, currentPageIdx - 1);
                                 textInput.value = pagesText[currentPageIdx];
                                 rebuildPageTabs();
@@ -11589,10 +11823,15 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             const addBtn = document.createElement('button');
             addBtn.className = "btn btn-sm btn-ghost btn-icon shrink-0";
             addBtn.innerHTML = '<svg class="i-sm"><use href="#i-plus"/></svg>';
-            addBtn.title = "Add New Page";
+            addBtn.title = showGroups ? "Add a page to the current group" : "Add New Page";
             addBtn.addEventListener('click', () => {
-                pagesText.push("");
-                currentPageIdx = pagesText.length - 1;
+                // new page goes at the end of the current page's group
+                const gid = pageGroupOf[currentPageIdx];
+                const at = pageGroupOf.lastIndexOf(gid) + 1;
+                pagesText.splice(at, 0, "");
+                pageGroupOf.splice(at, 0, gid);
+                pageGroupById(gid).collapsed = false;
+                currentPageIdx = at;
                 textInput.value = "";
                 rebuildPageTabs();
                 triggerPreviewUpdate();
@@ -11641,8 +11880,10 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             pagesText[currentPageIdx] = page1Text;
             
             const nextPageIdx = currentPageIdx + 1;
-            if (nextPageIdx >= pagesText.length) {
-                pagesText.push(overflowText);
+            if (nextPageIdx >= pagesText.length || pageGroupOf[nextPageIdx] !== pageGroupOf[currentPageIdx]) {
+                // no next page in this group: the overflow becomes a new page in the same group
+                pagesText.splice(nextPageIdx, 0, overflowText);
+                pageGroupOf.splice(nextPageIdx, 0, pageGroupOf[currentPageIdx]);
             } else {
                 pagesText[nextPageIdx] = overflowText + (pagesText[nextPageIdx] ? '\n' + pagesText[nextPageIdx] : '');
             }
@@ -11656,6 +11897,326 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         }
 
         document.getElementById('btnSplitPage').addEventListener('click', splitPageOverflow);
+
+        // --- PAGES & GROUPS DIALOG: organize, import text as pages, export pages as text ---
+        // Text format shared by export and import:
+        //   === Group: Chapter 1 ===      starts a group (and a page)
+        //   --- page break ---            starts the next page in the same group
+        const PAGE_GROUP_MARK = /^\s*={2,}\s*group\s*:\s*(.*?)\s*={2,}\s*$/i;
+        const PAGE_BREAK_MARK = /^\s*(-{2,}\s*page\s*break\s*-{2,}|\f)\s*$/i;
+
+        function openPagesModal(tab) {
+            pagesText[currentPageIdx] = textInput.value;
+            document.getElementById('pagesModal').classList.remove('hidden');
+            showPagesTab(tab || 'organize');
+        }
+
+        function showPagesTab(tab) {
+            document.querySelectorAll('[data-pages-tab]').forEach(b => b.classList.toggle('seg-on', b.dataset.pagesTab === tab));
+            document.querySelectorAll('[data-pages-panel]').forEach(p => p.classList.toggle('hidden', p.dataset.pagesPanel !== tab));
+            if (tab === 'organize') renderPagesOrganizer();
+            if (tab === 'export') refreshPagesExport();
+        }
+
+        document.getElementById('btnPagesManager').addEventListener('click', () => openPagesModal());
+        document.getElementById('btnPagesClose').addEventListener('click', () => document.getElementById('pagesModal').classList.add('hidden'));
+        document.getElementById('pagesModal').addEventListener('click', (e) => {
+            if (e.target.id === 'pagesModal') e.target.classList.add('hidden');
+        });
+        document.querySelectorAll('[data-pages-tab]').forEach(b => b.addEventListener('click', () => showPagesTab(b.dataset.pagesTab)));
+
+        function pagesEl(tag, cls, text) {
+            const e = document.createElement(tag);
+            if (cls) e.className = cls;
+            if (text !== undefined) e.textContent = text;
+            return e;
+        }
+
+        function pagesIconBtn(icon, title, onClick, disabled) {
+            const b = pagesEl('button', 'btn btn-sm btn-ghost btn-icon');
+            b.innerHTML = `<svg class="i-sm"><use href="#${icon}"/></svg>`;
+            b.title = title;
+            b.disabled = !!disabled;
+            if (disabled) b.classList.add('opacity-30', 'pointer-events-none');
+            b.addEventListener('click', onClick);
+            return b;
+        }
+
+        function addPageGroup(name) {
+            const g = { id: newPageGroupId(), name: name || nextPageGroupName(), collapsed: false };
+            pageGroups.push(g);
+            return g;
+        }
+
+        function renderPagesOrganizer() {
+            syncPageGroups();
+            const list = document.getElementById('pagesGroupList');
+            list.innerHTML = '';
+            pageGroups.forEach((g, gi) => {
+                const idxs = pagesText.map((_, i) => i).filter(i => pageGroupOf[i] === g.id);
+                const box = pagesEl('div', 'rounded-lg border border-slate-800 bg-slate-950/40');
+
+                const hd = pagesEl('div', 'flex items-center gap-1.5 p-2 border-b border-slate-800/80');
+                const name = pagesEl('input', 'field field-sm flex-1 min-w-0 font-semibold');
+                name.value = g.name;
+                name.title = 'Group name';
+                name.addEventListener('change', () => {
+                    g.name = name.value.trim() || 'Untitled';
+                    commitPagesChange();
+                });
+                hd.appendChild(name);
+                hd.appendChild(pagesEl('span', 'chip chip-muted shrink-0', `${idxs.length} page${idxs.length === 1 ? '' : 's'}`));
+                hd.appendChild(pagesIconBtn('i-arrow-up', 'Move group up', () => {
+                    [pageGroups[gi - 1], pageGroups[gi]] = [pageGroups[gi], pageGroups[gi - 1]];
+                    commitPagesChange();
+                }, gi === 0));
+                hd.appendChild(pagesIconBtn('i-arrow-down', 'Move group down', () => {
+                    [pageGroups[gi + 1], pageGroups[gi]] = [pageGroups[gi], pageGroups[gi + 1]];
+                    commitPagesChange();
+                }, gi === pageGroups.length - 1));
+                hd.appendChild(pagesIconBtn('i-plus', 'Add a page to this group', () => {
+                    const at = pageGroupOf.lastIndexOf(g.id) + 1;
+                    pagesText.splice(at, 0, "");
+                    pageGroupOf.splice(at, 0, g.id);
+                    currentPageIdx = at;
+                    commitPagesChange();
+                }));
+                hd.appendChild(pagesIconBtn('i-trash', 'Remove group (its pages move to a neighbouring group)', () => {
+                    const into = pageGroups[gi - 1] || pageGroups[gi + 1];
+                    showConfirmModal('Remove group',
+                        `Remove "${g.name}"? Its ${idxs.length} page${idxs.length === 1 ? '' : 's'} will move to "${into.name}". No text is deleted.`,
+                        () => {
+                            pageGroupOf = pageGroupOf.map(id => id === g.id ? into.id : id);
+                            commitPagesChange();
+                            showToast(`Moved pages to "${into.name}"`, "success");
+                        });
+                }, pageGroups.length === 1));
+                box.appendChild(hd);
+
+                const rows = pagesEl('div', 'p-1.5 space-y-0.5');
+                idxs.forEach((i, k) => {
+                    const row = pagesEl('div', `flex items-center gap-1.5 px-1.5 py-1 rounded-md ${i === currentPageIdx ? 'bg-indigo-600/15 ring-1 ring-inset ring-indigo-500/40' : 'hover:bg-slate-800/50'}`);
+                    const open = pagesEl('button', 'text-[11px] font-medium text-slate-200 hover:text-white shrink-0 w-14 text-left', `Page ${i + 1}`);
+                    open.title = 'Open this page';
+                    open.addEventListener('click', () => {
+                        currentPageIdx = i;
+                        g.collapsed = false;
+                        commitPagesChange();
+                        document.getElementById('pagesModal').classList.add('hidden');
+                    });
+                    row.appendChild(open);
+                    const first = (pagesText[i].split('\n').find(l => l.trim()) || '').trim();
+                    row.appendChild(pagesEl('span', 'muted text-[11px] truncate flex-1 min-w-0', first || '(empty page)'));
+                    row.appendChild(pagesIconBtn('i-chev-up', 'Move page up', () => {
+                        const j = idxs[k - 1];
+                        [pagesText[i], pagesText[j]] = [pagesText[j], pagesText[i]];
+                        if (currentPageIdx === i) currentPageIdx = j; else if (currentPageIdx === j) currentPageIdx = i;
+                        commitPagesChange();
+                    }, k === 0));
+                    row.appendChild(pagesIconBtn('i-chev-down', 'Move page down', () => {
+                        const j = idxs[k + 1];
+                        [pagesText[i], pagesText[j]] = [pagesText[j], pagesText[i]];
+                        if (currentPageIdx === i) currentPageIdx = j; else if (currentPageIdx === j) currentPageIdx = i;
+                        commitPagesChange();
+                    }, k === idxs.length - 1));
+                    const move = pagesEl('select', 'field field-sm w-auto max-w-[9rem] shrink-0');
+                    move.title = 'Move this page to another group';
+                    move.appendChild(new Option('Move to…', ''));
+                    pageGroups.filter(o => o.id !== g.id).forEach(o => move.appendChild(new Option(o.name, o.id)));
+                    move.appendChild(new Option('New group', '__new'));
+                    move.addEventListener('change', () => {
+                        if (!move.value) return;
+                        const target = move.value === '__new' ? addPageGroup() : pageGroupById(move.value);
+                        pageGroupOf[i] = target.id;
+                        target.collapsed = false;
+                        commitPagesChange();
+                    });
+                    row.appendChild(move);
+                    rows.appendChild(row);
+                });
+                box.appendChild(rows);
+                list.appendChild(box);
+            });
+        }
+
+        document.getElementById('btnAddPageGroup').addEventListener('click', () => {
+            const g = addPageGroup();
+            pagesText.push("");
+            pageGroupOf.push(g.id);
+            currentPageIdx = pagesText.length - 1;
+            commitPagesChange();
+            showToast(`Created "${g.name}"`, "success");
+        });
+
+        // Import: split the text into sections (groups) and explicit page chunks, then auto-fit every chunk.
+        function parsePagesImport(text, breaks, headings) {
+            const lines = text.replace(/\r\n?/g, '\n').split('\n');
+            const marked = lines.some(l => PAGE_GROUP_MARK.test(l) || PAGE_BREAK_MARK.test(l));
+            const sections = [{ name: null, chunks: [] }];
+            let chunk = [];
+            const endChunk = () => {
+                let c = chunk;
+                if (!marked) {
+                    while (c.length && !c[0].trim()) c = c.slice(1);
+                    while (c.length && !c[c.length - 1].trim()) c = c.slice(0, -1);
+                }
+                if (c.some(l => l.trim())) sections[sections.length - 1].chunks.push(c.join('\n'));
+                chunk = [];
+            };
+            const startSection = (name) => {
+                endChunk();
+                sections.push({ name: name || 'Untitled', chunks: [] });
+            };
+            lines.forEach(line => {
+                const gm = line.match(PAGE_GROUP_MARK);
+                if (gm) return startSection(gm[1]);
+                if (PAGE_BREAK_MARK.test(line)) return endChunk();
+                if (breaks === 'rule' && /^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) return endChunk();
+                if (breaks === 'blank' && !line.trim()) return endChunk();
+                const hm = headings && line.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/);
+                if (hm) startSection(hm[1]);
+                chunk.push(line);
+            });
+            endChunk();
+            return sections.filter(s => s.chunks.length);
+        }
+
+        document.getElementById('pagesImportFile').addEventListener('change', async (e) => {
+            const f = e.target.files && e.target.files[0];
+            if (!f) return;
+            document.getElementById('pagesImportText').value = await f.text();
+            document.getElementById('pagesImportFileName').textContent = f.name;
+            const nameEl = document.getElementById('pagesImportGroupName');
+            if (!nameEl.value.trim()) nameEl.value = f.name.replace(/\.[^.]+$/, '');
+            e.target.value = '';
+        });
+
+        let pagesImportBusy = false;
+        async function runPagesImport(target) {
+            const text = document.getElementById('pagesImportText').value;
+            const status = document.getElementById('pagesImportStatus');
+            const btn = document.getElementById('btnPagesImport');
+            const sections = parsePagesImport(text,
+                document.getElementById('pagesImportBreaks').value,
+                document.getElementById('pagesImportHeadings').checked);
+            const baseName = document.getElementById('pagesImportGroupName').value.trim();
+            pagesImportBusy = true;
+            btn.disabled = true;
+            btn.classList.add('btn-disabled');
+            try {
+                pagesText[currentPageIdx] = textInput.value;
+                // lay out every chunk first, so nothing changes if something goes wrong
+                const laidOut = [];
+                let count = 0;
+                for (const s of sections) {
+                    const pages = [];
+                    for (const c of s.chunks) {
+                        pages.push(...await paginateText(c, n => { status.textContent = `Fitting text… ${count + n} pages`; }));
+                        count = laidOut.reduce((a, x) => a + x.pages.length, 0) + pages.length;
+                    }
+                    laidOut.push({ name: s.name, pages });
+                }
+                if (target === 'replace') {
+                    pagesText = [];
+                    pageGroupOf = [];
+                    pageGroups = [];
+                }
+                let firstNew = -1;
+                laidOut.forEach((s, k) => {
+                    let gid;
+                    if (!s.name && target === 'append') {
+                        gid = pageGroupOf[currentPageIdx];
+                    } else {
+                        gid = addPageGroup(s.name || baseName || (target === 'replace' ? 'Pages' : 'Imported')).id;
+                    }
+                    const at = target === 'append' && !s.name ? pageGroupOf.lastIndexOf(gid) + 1 : pagesText.length;
+                    pagesText.splice(at, 0, ...s.pages);
+                    pageGroupOf.splice(at, 0, ...s.pages.map(() => gid));
+                    if (firstNew < 0) firstNew = at;
+                });
+                currentPageIdx = Math.max(0, firstNew);
+                commitPagesChange();
+                status.textContent = '';
+                showToast(`Imported ${count} page${count === 1 ? '' : 's'}${laidOut.length > 1 ? ` in ${laidOut.length} groups` : ''}`, "success");
+                document.getElementById('pagesModal').classList.add('hidden');
+            } catch (err) {
+                console.error(err);
+                status.textContent = '';
+                triggerPreviewUpdate();
+                showToast("Import failed: " + err.message, "error");
+            } finally {
+                pagesImportBusy = false;
+                btn.disabled = false;
+                btn.classList.remove('btn-disabled');
+            }
+        }
+
+        document.getElementById('btnPagesImport').addEventListener('click', () => {
+            if (pagesImportBusy) return;
+            if (!document.getElementById('pagesImportText').value.trim()) {
+                showToast("Paste some text or open a file first", "info");
+                return;
+            }
+            const target = document.getElementById('pagesImportTarget').value;
+            if (target === 'replace') {
+                showConfirmModal("Replace all pages",
+                    `This replaces all ${pagesText.length} current page${pagesText.length === 1 ? '' : 's'} and their groups with the imported text. Export them first if you want a copy.`,
+                    () => runPagesImport(target));
+            } else {
+                runPagesImport(target);
+            }
+        });
+
+        // Export
+        function buildPagesExport(scope, markers) {
+            syncPageGroups();
+            pagesText[currentPageIdx] = textInput.value;
+            let idxs = pagesText.map((_, i) => i);
+            if (scope === 'page') idxs = [currentPageIdx];
+            else if (scope === 'group') idxs = idxs.filter(i => pageGroupOf[i] === pageGroupOf[currentPageIdx]);
+            if (!markers) return idxs.map(i => pagesText[i]).join('\n\n');
+            const out = [];
+            idxs.forEach((i, k) => {
+                if (k === 0 || pageGroupOf[i] !== pageGroupOf[idxs[k - 1]]) out.push(`=== Group: ${pageGroupById(pageGroupOf[i]).name} ===`);
+                else out.push('--- page break ---');
+                out.push(pagesText[i]);
+            });
+            return out.join('\n');
+        }
+
+        function refreshPagesExport() {
+            document.getElementById('pagesExportText').value = buildPagesExport(
+                document.getElementById('pagesExportScope').value,
+                document.getElementById('pagesExportMarkers').checked);
+        }
+
+        document.getElementById('pagesExportScope').addEventListener('change', refreshPagesExport);
+        document.getElementById('pagesExportMarkers').addEventListener('change', refreshPagesExport);
+        document.getElementById('btnPagesExportCopy').addEventListener('click', async () => {
+            refreshPagesExport();
+            try {
+                await navigator.clipboard.writeText(document.getElementById('pagesExportText').value);
+                showToast("Copied to clipboard", "success");
+            } catch (err) {
+                document.getElementById('pagesExportText').select();
+                showToast("Press Cmd+C to copy the selected text", "info");
+            }
+        });
+        document.getElementById('btnPagesExportDownload').addEventListener('click', () => {
+            refreshPagesExport();
+            const scope = document.getElementById('pagesExportScope').value;
+            const base = scope === 'all' ? 'pages'
+                : scope === 'group' ? pageGroupById(pageGroupOf[currentPageIdx]).name
+                : `page-${currentPageIdx + 1}`;
+            const blob = new Blob([document.getElementById('pagesExportText').value], { type: 'text/plain;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = base.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        });
 
         // Compact Markdown / Text formatter
         // Removes empty/blank lines, markdown horizontal rules (---, ***, ___), strips \mathbf and \cdotm,
@@ -11887,6 +12448,8 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             const data = {
                 text: document.getElementById('textInput').value,
                 pagesText: pagesText,
+                pageGroups: pageGroups,
+                pageGroupOf: pageGroupOf,
                 currentPageIdx: currentPageIdx,
                 geminiApiKey: document.getElementById('geminiApiKey').value,
                 geminiModel: document.getElementById('geminiModelSelect').value,
@@ -11976,7 +12539,11 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 } else {
                     currentPageIdx = 0;
                 }
-                
+                if (Array.isArray(data.pageGroups) && Array.isArray(data.pageGroupOf)) {
+                    pageGroups = data.pageGroups;
+                    pageGroupOf = data.pageGroupOf;
+                }
+
                 rebuildPageTabs();
                 if (pagesText[currentPageIdx] !== undefined) {
                     document.getElementById('textInput').value = pagesText[currentPageIdx];
