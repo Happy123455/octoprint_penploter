@@ -11675,12 +11675,51 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             const s = document.createElement('span');
             s.textContent = `${g.name} · ${count}`;
             b.appendChild(s);
+            const del = document.createElement('span');
+            del.className = "text-[9px] text-slate-500 hover:text-red-400 ml-0.5 select-none cursor-pointer font-bold transition-all px-0.5 normal-case";
+            del.textContent = "✕";
+            del.title = "Delete this group and its pages";
+            del.addEventListener('click', (e) => {
+                e.stopPropagation();
+                confirmDeletePageGroup(g);
+            });
+            b.appendChild(del);
             b.addEventListener('click', () => {
                 g.collapsed = !g.collapsed;
                 rebuildPageTabs();
                 saveCachedWebData();
             });
             return b;
+        }
+
+        // Delete one page, or a whole group with all its pages. There is always at least one (empty) page left.
+        function deletePageAt(i) {
+            pagesText.splice(i, 1);
+            pageGroupOf.splice(i, 1);
+            if (currentPageIdx > i || currentPageIdx >= pagesText.length) currentPageIdx--;
+            commitPagesChange();
+        }
+
+        function deletePageGroup(gid) {
+            const first = pageGroupOf.indexOf(gid);
+            const keep = pagesText.map((_, i) => pageGroupOf[i] !== gid);
+            const removedBefore = keep.slice(0, currentPageIdx).filter(k => !k).length;
+            const wasInside = !keep[currentPageIdx];
+            pagesText = pagesText.filter((_, i) => keep[i]);
+            pageGroupOf = pageGroupOf.filter((_, i) => keep[i]);
+            pageGroups = pageGroups.filter(g => g.id !== gid);
+            currentPageIdx = wasInside ? Math.max(0, first - 1) : currentPageIdx - removedBefore;
+            commitPagesChange();
+        }
+
+        function confirmDeletePageGroup(g) {
+            const n = pageGroupOf.filter(id => id === g.id).length;
+            showConfirmModal("Delete group",
+                `Delete "${g.name}" and its ${n} page${n === 1 ? '' : 's'}? This can't be undone. (To keep the pages, use Ungroup in the Pages dialog.)`,
+                () => {
+                    deletePageGroup(g.id);
+                    showToast(`Deleted "${g.name}" and its ${n} page${n === 1 ? '' : 's'}`, "success");
+                });
         }
 
         // After any change to pages or groups: refresh tabs, editor, preview, storage and the organizer.
@@ -11981,16 +12020,19 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                     currentPageIdx = at;
                     commitPagesChange();
                 }));
-                hd.appendChild(pagesIconBtn('i-trash', 'Remove group (its pages move to a neighbouring group)', () => {
+                hd.appendChild(pagesIconBtn('i-layers', 'Ungroup: keep the pages, move them to a neighbouring group', () => {
                     const into = pageGroups[gi - 1] || pageGroups[gi + 1];
-                    showConfirmModal('Remove group',
-                        `Remove "${g.name}"? Its ${idxs.length} page${idxs.length === 1 ? '' : 's'} will move to "${into.name}". No text is deleted.`,
+                    showConfirmModal('Ungroup',
+                        `Remove the group "${g.name}"? Its ${idxs.length} page${idxs.length === 1 ? '' : 's'} will move to "${into.name}". No text is deleted.`,
                         () => {
                             pageGroupOf = pageGroupOf.map(id => id === g.id ? into.id : id);
                             commitPagesChange();
                             showToast(`Moved pages to "${into.name}"`, "success");
                         });
                 }, pageGroups.length === 1));
+                const delGroup = pagesIconBtn('i-trash', 'Delete this group and its pages', () => confirmDeletePageGroup(g));
+                delGroup.classList.add('hover:text-red-400');
+                hd.appendChild(delGroup);
                 box.appendChild(hd);
 
                 const rows = pagesEl('div', 'p-1.5 space-y-0.5');
@@ -12032,6 +12074,14 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                         commitPagesChange();
                     });
                     row.appendChild(move);
+                    const delPage = pagesIconBtn('i-trash', 'Delete this page', () => {
+                        showConfirmModal("Delete page", `Delete Page ${i + 1}${first ? ` ("${first.slice(0, 40)}${first.length > 40 ? '…' : ''}")` : ''}? This can't be undone.`, () => {
+                            deletePageAt(i);
+                            showToast(`Deleted Page ${i + 1}`, "success");
+                        });
+                    });
+                    delPage.classList.add('hover:text-red-400');
+                    row.appendChild(delPage);
                     rows.appendChild(row);
                 });
                 box.appendChild(rows);
