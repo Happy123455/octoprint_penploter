@@ -101,6 +101,9 @@
                         <!-- Dynamic page tabs go here -->
                     </div>
                     <div class="flex items-center gap-1">
+                        <button id="btnCompactText" class="px-2.5 py-1 bg-emerald-700/80 hover:bg-emerald-600 border border-emerald-600/50 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1" title="Compact markdown: remove blank lines, dividers (---), and fit equations to notebook paper">
+                            🧹 Compact Text
+                        </button>
                         <button id="btnSplitPage" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold shadow transition flex items-center gap-1" title="Split overflow to next page">
                             ✂️ Split Page Overflow
                         </button>
@@ -294,16 +297,47 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         </div>
                     </div>
                 </div>
-                <div class="mt-3">
-                    <label class="block text-[10px] text-slate-400 mb-1 leading-tight">Table Column Width Weights</label>
-                    <input type="text" id="tableColWidths" placeholder="e.g. 1, 2, 2 (comma separated ratio, or blank for auto)" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                </div>
-                <div class="mt-3">
-                    <div class="flex justify-between text-xs mb-1">
-                        <span class="text-slate-400 text-[10px]">Table Column 1 Width Ratio</span>
-                        <span class="text-indigo-400 font-semibold" id="tableCol1WidthVal">25%</span>
+                <div class="mt-3 border-t border-slate-800/60 pt-3" id="tableSettingsContainer">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="block text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Table Settings</span>
+                        <span id="detectedTablesCountBadge" class="text-[9.5px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-semibold border border-slate-700/50">0 tables</span>
                     </div>
-                    <input type="range" id="tableCol1Width" min="10" max="60" step="1" value="25" class="w-full accent-indigo-500" />
+
+                    <div id="tableSelectorGroup" class="mb-2.5">
+                        <label class="block text-[10px] text-slate-400 mb-1 leading-tight">Configuring Table:</label>
+                        <div class="flex items-center gap-1.5">
+                            <select id="activeTableSelect" class="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="default">Default / Global (All Tables)</option>
+                            </select>
+                            <button type="button" id="btnResetTableSettings" class="px-2 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 rounded text-[10px] font-medium transition cursor-pointer" title="Reset this table's settings to default">Reset</button>
+                        </div>
+                        <div id="activeTableSummary" class="text-[9.5px] text-indigo-300 mt-1 italic hidden flex items-center gap-1">
+                            <span>ℹ️</span><span id="activeTableSummaryText"></span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center text-[10px] text-slate-400 mb-1 leading-tight">
+                            <span>Column Width Weights</span>
+                            <span id="tableWidthHint" class="text-[9px] text-indigo-400 font-mono"></span>
+                        </div>
+                        <input type="text" id="tableColWidths" placeholder="e.g. 1, 2, 2 (comma separated ratio, or blank for auto)" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                        <div class="flex flex-wrap gap-1 mt-1.5">
+                            <button type="button" class="table-preset-btn text-[9px] px-1.5 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-indigo-300 transition" data-val="auto">Auto Fit</button>
+                            <button type="button" class="table-preset-btn text-[9px] px-1.5 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-indigo-300 transition" data-val="1, 1">Equal (1:1)</button>
+                            <button type="button" class="table-preset-btn text-[9px] px-1.5 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-indigo-300 transition" data-val="1, 2">1:2</button>
+                            <button type="button" class="table-preset-btn text-[9px] px-1.5 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-indigo-300 transition" data-val="1, 2, 2">1:2:2</button>
+                            <button type="button" class="table-preset-btn text-[9px] px-1.5 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-indigo-300 transition" data-val="1, 1, 1">1:1:1</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-2.5">
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400 text-[10px]">Table Column 1 Width Ratio</span>
+                            <span class="text-indigo-400 font-semibold" id="tableCol1WidthVal">25%</span>
+                        </div>
+                        <input type="range" id="tableCol1Width" min="10" max="60" step="1" value="25" class="w-full accent-indigo-500" />
+                    </div>
                 </div>
                 <div class="mt-3 border-t border-slate-800/60 pt-3">
                     <span class="block text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-2">Math Fraction Settings</span>
@@ -1295,11 +1329,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <h5 class="text-[10px] font-bold text-indigo-400 mb-1">Numbers & Symbols</h5>
                                     <div class="grid grid-cols-7 sm:grid-cols-9 gap-1" id="charGridSymbols"></div>
                                 </div>
+                                <div>
+                                    <h5 class="text-[10px] font-bold text-indigo-400 mb-1">Greek & Math Symbols</h5>
+                                    <div class="grid grid-cols-7 sm:grid-cols-9 gap-1" id="charGridGreek"></div>
+                                </div>
                                 <div class="mt-2.5 pt-2.5 border-t border-slate-800/60">
-                                    <h5 class="text-[10px] font-bold text-indigo-400 mb-1">➕ Add Custom Character</h5>
+                                    <h5 class="text-[10px] font-bold text-indigo-400 mb-1">➕ Add / Open Custom Character</h5>
                                     <div class="flex gap-2">
-                                        <input type="text" id="inputNewChar" placeholder="e.g., @, {, •" maxlength="1" class="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 text-center" />
-                                        <button id="btnAddNewChar" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-1 px-3 rounded shadow-md transition-all">Add</button>
+                                        <input type="text" id="inputNewChar" placeholder="e.g. \tau, τ, •, @" maxlength="10" class="flex-1 bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 text-center" />
+                                        <button id="btnAddNewChar" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-1 px-3 rounded shadow-md transition-all">Add / Open</button>
                                     </div>
                                 </div>
                             </div>
@@ -1333,6 +1371,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             <div class="flex gap-1">
                                 <button id="btnDesignerUndo" class="text-[11px] bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded transition">Undo Stroke</button>
                                 <button id="btnDesignerClear" class="text-[11px] bg-red-950 hover:bg-red-900 border border-red-900 text-red-300 px-2.5 py-1 rounded transition">Clear Active Variant</button>
+                                <button id="btnDesignerClearAll" class="text-[11px] bg-red-950/70 hover:bg-red-900 border border-red-900/80 text-red-400 px-2.5 py-1 rounded transition" title="Clear all variants for this character to draw completely from scratch">Clear All</button>
                             </div>
                         </div>
 
@@ -1967,7 +2006,64 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             '=': [[[2,3], [8,3]], [[2,7], [8,7]]],
             '(': [[[7,0], [3,5], [7,10]]],
             ')': [[[3,0], [7,5], [3,10]]],
-            '/': [[[9,0], [1,10]]]
+            '/': [[[9,0], [1,10]]],
+            '°': [[[3.5, 0.5], [5.5, 1.0], [6.5, 2.2], [6.0, 3.5], [4.5, 4.0], [3.0, 3.5], [2.0, 2.2], [2.5, 1.0], [3.5, 0.5]]],
+            '·': [[[4.5, 5], [5.5, 5]]],
+            '•': [[[4, 4.5], [6, 4.5], [6, 6], [4, 6], [4, 4.5]]],
+            '±': [[[5, 1], [5, 6]], [[2, 3.5], [8, 3.5]], [[2, 8.5], [8, 8.5]]],
+            'τ': [[[1, 3.5], [9, 3.5]], [[5, 3.5], [5, 9], [7.5, 10]]],
+            'φ': [[[5, 1], [5, 13]], [[5, 3.5], [8.5, 5], [8.5, 7.5], [5, 9], [1.5, 7.5], [1.5, 5], [5, 3.5]]],
+            'σ': [[[5, 4], [1.5, 6], [1.5, 8.5], [5, 10], [8.5, 8.5], [8.5, 6], [5, 4], [9.5, 4]]],
+            'π': [[[1, 3.5], [9, 3.5]], [[3, 3.5], [3, 10]], [[7, 3.5], [7, 9.5], [8.5, 10]]],
+            'θ': [[[5, 0], [9, 3], [9, 7], [5, 10], [1, 7], [1, 3], [5, 0]], [[2, 5], [8, 5]]],
+            'α': [[[8.5, 4.5], [3, 10], [1.5, 7.5], [3, 4.5], [7, 7.5], [8.5, 10]]],
+            'β': [[[2, 13], [2, 0]], [[2, 0], [6.5, 1.5], [6.5, 4.5], [2, 5.5], [7.5, 7], [7.5, 9.5], [2, 10]]],
+            'λ': [[[7.5, 0], [1.5, 10]], [[4.5, 5], [8.5, 10]]],
+            'μ': [[[1.5, 4], [1.5, 13]], [[1.5, 6], [3.5, 10], [6.5, 10], [7.5, 6], [7.5, 10]]]
+        };
+
+        // Built-in fallback handwriting stroke definitions for special math & degree symbols
+        const BUILTIN_FALLBACK_GLYPHS = {
+            '°': [
+                [[[150.0, 82.0], [162.0, 85.0], [168.0, 96.0], [166.0, 108.0], [158.0, 116.0], [146.0, 118.0], [135.0, 112.0], [132.0, 101.0], [136.0, 89.0], [147.0, 83.0], [153.0, 82.0]]],
+                [[[148.0, 84.0], [158.0, 86.0], [165.0, 95.0], [165.0, 106.0], [157.0, 115.0], [146.0, 116.0], [137.0, 111.0], [133.0, 102.0], [136.0, 91.0], [145.0, 85.0], [150.0, 84.0]]],
+                [[[151.0, 83.0], [160.0, 87.0], [166.0, 97.0], [164.0, 109.0], [156.0, 117.0], [145.0, 117.0], [136.0, 110.0], [133.0, 99.0], [138.0, 88.0], [148.0, 83.0], [154.0, 83.0]]]
+            ],
+            '·': [
+                [[[147.0, 147.0], [153.0, 147.0], [155.0, 152.0], [152.0, 155.0], [147.0, 155.0], [145.0, 150.0], [147.0, 147.0]]],
+                [[[148.0, 148.0], [153.0, 148.0], [154.0, 153.0], [151.0, 155.0], [147.0, 154.0], [146.0, 150.0], [148.0, 148.0]]],
+                [[[147.0, 146.0], [152.0, 147.0], [155.0, 151.0], [153.0, 155.0], [148.0, 155.0], [145.0, 151.0], [147.0, 146.0]]]
+            ],
+            '•': [
+                [[[142.0, 142.0], [154.0, 142.0], [160.0, 150.0], [155.0, 158.0], [143.0, 158.0], [138.0, 150.0], [142.0, 142.0]], [[146.0, 146.0], [151.0, 152.0]]],
+                [[[141.0, 143.0], [153.0, 143.0], [159.0, 150.0], [154.0, 158.0], [142.0, 157.0], [138.0, 150.0], [141.0, 143.0]], [[145.0, 147.0], [150.0, 153.0]]],
+                [[[143.0, 142.0], [155.0, 143.0], [160.0, 151.0], [155.0, 159.0], [144.0, 158.0], [139.0, 150.0], [143.0, 142.0]], [[147.0, 146.0], [152.0, 152.0]]]
+            ],
+            '±': [
+                [[[150.0, 105.0], [150.0, 155.0]], [[132.0, 130.0], [168.0, 130.0]], [[132.0, 185.0], [168.0, 185.0]]],
+                [[[149.0, 106.0], [149.0, 154.0]], [[133.0, 131.0], [167.0, 131.0]], [[133.0, 186.0], [167.0, 186.0]]],
+                [[[151.0, 104.0], [151.0, 156.0]], [[131.0, 129.0], [169.0, 129.0]], [[131.0, 184.0], [169.0, 184.0]]]
+            ],
+            'τ': [
+                [[[128.0, 158.0], [138.0, 156.8], [150.5, 156.2], [163.5, 157.0], [170.0, 158.5]], [[149.0, 157.0], [148.2, 172.5], [147.5, 192.0], [147.0, 211.5], [147.8, 224.0], [150.5, 231.5], [155.8, 233.8], [162.5, 231.5], [166.0, 226.0]]],
+                [[[126.0, 156.5], [136.5, 155.2], [149.0, 155.0], [162.0, 156.2], [168.0, 158.0]], [[147.0, 155.5], [146.5, 170.0], [146.0, 189.5], [145.8, 209.0], [146.5, 222.5], [149.0, 230.0], [154.2, 233.0], [160.8, 231.0], [164.5, 225.5]]],
+                [[[130.0, 159.0], [140.0, 157.5], [152.0, 157.0], [164.5, 157.8], [171.0, 159.2]], [[150.5, 157.5], [150.0, 174.0], [149.2, 194.5], [148.8, 213.0], [149.5, 225.5], [152.0, 232.5], [157.2, 234.5], [163.8, 232.0], [167.5, 226.5]]]
+            ],
+            'φ': [
+                [[[149.0, 102.0], [148.5, 130.0], [148.0, 160.0], [147.8, 195.0], [147.5, 230.0], [147.0, 260.0], [146.5, 282.0]], [[148.0, 156.0], [136.5, 162.0], [128.0, 176.0], [126.5, 196.0], [130.0, 216.0], [138.5, 228.0], [148.0, 232.0], [157.5, 228.0], [166.0, 216.0], [169.5, 196.0], [167.0, 176.0], [159.5, 162.0], [148.0, 156.0]]],
+                [[[147.5, 100.0], [147.0, 128.0], [146.8, 158.0], [146.5, 193.0], [146.0, 228.0], [145.8, 258.0], [145.0, 280.0]], [[146.5, 155.0], [135.0, 161.0], [127.0, 174.5], [125.0, 194.5], [128.5, 214.5], [137.0, 227.0], [146.5, 231.0], [156.0, 227.0], [164.5, 214.5], [168.0, 194.5], [165.5, 174.5], [158.0, 161.0], [146.5, 155.0]]],
+                [[[150.5, 104.0], [150.0, 132.0], [149.5, 162.0], [149.0, 197.0], [148.8, 232.0], [148.2, 262.0], [147.8, 284.0]], [[149.5, 157.0], [138.0, 163.0], [129.5, 177.5], [127.8, 197.5], [131.2, 217.5], [139.8, 229.0], [149.5, 233.0], [159.0, 229.0], [167.2, 217.5], [171.0, 197.5], [168.2, 177.5], [160.8, 163.0], [149.5, 157.0]]]
+            ],
+            'σ': [
+                [[[148.0, 158.0], [136.0, 164.0], [127.0, 178.0], [125.0, 198.0], [127.5, 218.0], [136.0, 230.0], [147.0, 233.0], [158.0, 228.0], [165.5, 215.0], [167.0, 195.0], [163.5, 176.0], [154.0, 162.0], [148.0, 158.0], [161.0, 157.0], [174.0, 157.5]]],
+                [[[146.0, 156.5], [134.5, 162.5], [125.5, 176.5], [123.5, 196.5], [126.0, 216.5], [134.5, 228.5], [145.5, 231.5], [156.5, 226.5], [164.0, 213.5], [165.5, 193.5], [162.0, 174.5], [152.5, 160.5], [146.0, 156.5], [159.5, 155.5], [172.5, 156.0]]],
+                [[[149.5, 159.0], [137.5, 165.0], [128.5, 179.5], [126.5, 199.5], [129.0, 219.5], [137.5, 231.5], [148.5, 234.5], [159.5, 229.5], [167.0, 216.5], [168.5, 196.5], [165.0, 177.5], [155.5, 163.5], [149.5, 159.0], [162.5, 158.0], [175.5, 158.5]]]
+            ],
+            'π': [
+                [[[128.0, 158.0], [144.0, 157.0], [162.0, 156.5], [174.0, 157.5]], [[140.0, 157.5], [139.0, 180.0], [138.5, 205.0], [138.0, 232.0]], [[162.0, 157.0], [161.5, 180.0], [161.0, 205.0], [161.5, 226.0], [166.0, 232.0], [172.0, 230.5]]],
+                [[[126.0, 156.5], [142.0, 155.5], [160.0, 155.0], [172.0, 156.0]], [[138.5, 156.0], [137.5, 178.0], [137.0, 203.0], [136.5, 230.5]], [[160.5, 155.5], [160.0, 178.0], [159.5, 203.0], [160.0, 224.5], [164.5, 230.5], [170.5, 229.0]]],
+                [[[130.0, 159.0], [146.0, 158.0], [164.0, 157.5], [176.0, 158.5]], [[141.5, 158.5], [140.5, 182.0], [140.0, 207.0], [139.5, 233.5]], [[163.5, 158.0], [163.0, 182.0], [162.5, 207.0], [163.0, 227.5], [167.5, 233.5], [173.5, 232.0]]]
+            ]
         };
 
         // --- CUSTOM TOASTS AND MODALS SYSTEM ---
@@ -2041,6 +2137,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         const charGridUpper = document.getElementById('charGridUpper');
         const charGridLower = document.getElementById('charGridLower');
         const charGridSymbols = document.getElementById('charGridSymbols');
+        const charGridGreek = document.getElementById('charGridGreek');
+        const btnDesignerClearAll = document.getElementById('btnDesignerClearAll');
         
         const btnExportFont = document.getElementById('btnExportFont');
         const btnCopyFontJson = document.getElementById('btnCopyFontJson');
@@ -2059,12 +2157,17 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         let uppercaseList = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         let lowercaseList = "abcdefghijklmnopqrstuvwxyz";
         let symbolsList = "0123456789.,!?-+=()/";
-        let allowedChars = uppercaseList + lowercaseList + symbolsList;
+        let greekList = "τφσπθαβγδλωμ°·•±";
+        let allowedChars = uppercaseList + lowercaseList + symbolsList + greekList;
         
         function initDrawnFont() {
             DrawnFont = {};
             for (let c of allowedChars) {
-                DrawnFont[c] = [[], [], []]; // default 3 variants
+                if (BUILTIN_FALLBACK_GLYPHS && BUILTIN_FALLBACK_GLYPHS[c]) {
+                    DrawnFont[c] = JSON.parse(JSON.stringify(BUILTIN_FALLBACK_GLYPHS[c]));
+                } else {
+                    DrawnFont[c] = [[], [], []]; // default 3 variants
+                }
             }
         }
         initDrawnFont();
@@ -2084,13 +2187,20 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     // Register any custom characters dynamically
                     for (let c in normalized) {
                         if (c.length === 1 && !allowedChars.includes(c)) {
-                            symbolsList += c;
-                            allowedChars = uppercaseList + lowercaseList + symbolsList;
+                            const isGreek = "αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟПРΣΤΥΦΧΨΩ°·•±".includes(c);
+                            if (isGreek) {
+                                greekList += c;
+                            } else {
+                                symbolsList += c;
+                            }
+                            allowedChars = uppercaseList + lowercaseList + symbolsList + greekList;
                         }
                     }
                     for (let c of allowedChars) {
-                        if (normalized[c]) {
+                        if (normalized[c] && normalized[c].some(v => v && v.length > 0)) {
                             DrawnFont[c] = normalized[c];
+                        } else if (BUILTIN_FALLBACK_GLYPHS && BUILTIN_FALLBACK_GLYPHS[c]) {
+                            DrawnFont[c] = JSON.parse(JSON.stringify(BUILTIN_FALLBACK_GLYPHS[c]));
                         } else if (!DrawnFont[c]) {
                             DrawnFont[c] = [[], [], []];
                         }
@@ -2143,12 +2253,27 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     const normalized = normalizeFinlayFont(data);
                     for (let c in normalized) {
                         if (c.length === 1 && !allowedChars.includes(c)) {
-                            symbolsList += c;
-                            allowedChars = uppercaseList + lowercaseList + symbolsList;
+                            const isGreek = "αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟПРΣΤΥΦΧΨΩ°·•±".includes(c);
+                            if (isGreek) {
+                                greekList += c;
+                            } else {
+                                symbolsList += c;
+                            }
+                            allowedChars = uppercaseList + lowercaseList + symbolsList + greekList;
                         }
                     }
-                    if (typeof createCharacterGrid === 'function' && typeof charGridSymbols !== 'undefined' && charGridSymbols) {
-                        createCharacterGrid(charGridSymbols, symbolsList);
+                    for (let c of allowedChars) {
+                        if ((!normalized[c] || !normalized[c].some(v => v && v.length > 0)) && BUILTIN_FALLBACK_GLYPHS && BUILTIN_FALLBACK_GLYPHS[c]) {
+                            normalized[c] = JSON.parse(JSON.stringify(BUILTIN_FALLBACK_GLYPHS[c]));
+                        }
+                    }
+                    if (typeof createCharacterGrid === 'function') {
+                        if (typeof charGridSymbols !== 'undefined' && charGridSymbols) {
+                            createCharacterGrid(charGridSymbols, symbolsList);
+                        }
+                        if (typeof charGridGreek !== 'undefined' && charGridGreek) {
+                            createCharacterGrid(charGridGreek, greekList);
+                        }
                     }
                     
                     DrawnFont = normalized;
@@ -2373,6 +2498,25 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 }
             );
         });
+
+        if (btnDesignerClearAll) {
+            btnDesignerClearAll.addEventListener('click', () => {
+                showConfirmModal(
+                    "Clear All Variants",
+                    `Are you sure you want to clear ALL variants for character '${activeDesignerChar}'? This allows you to draw your custom handwriting for it from scratch.`,
+                    () => {
+                        const numVariants = (DrawnFont[activeDesignerChar] || []).length || 3;
+                        DrawnFont[activeDesignerChar] = Array.from({ length: numVariants }, () => []);
+                        drawDesignerGrid();
+                        rebuildVariantSelectors();
+                        updateCharGridHighlights();
+                        saveDrawnFontToLocalStorage();
+                        triggerPreviewUpdate();
+                        showToast(`Cleared all variants for '${activeDesignerChar}'!`, "info");
+                    }
+                );
+            });
+        }
 
         // Nudge / Move and Scale character strokes
         function nudgeActiveVariant(dx, dy) {
@@ -2613,41 +2757,98 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         createCharacterGrid(charGridUpper, uppercaseList);
         createCharacterGrid(charGridLower, lowercaseList);
         createCharacterGrid(charGridSymbols, symbolsList);
+        if (charGridGreek) {
+            createCharacterGrid(charGridGreek, greekList);
+        }
 
-        // Add custom character listener
+        // Helper to scroll a character button into view in the sidebar
+        function scrollCharIntoView(char) {
+            const btn = document.querySelector(`[data-char="${char}"]`);
+            if (btn) {
+                btn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Add / Open custom character listener
         document.getElementById('btnAddNewChar').addEventListener('click', () => {
-            const inputVal = document.getElementById('inputNewChar').value.trim();
-            if (!inputVal || inputVal.length !== 1) {
-                showToast("Please enter exactly one character to add!", "error");
+            let inputVal = document.getElementById('inputNewChar').value.trim();
+            if (!inputVal) {
+                showToast("Please enter a character or symbol command (e.g., \\tau, τ, •)", "error");
                 return;
             }
-            const newChar = inputVal[0];
+            if (inputVal.startsWith('\\')) {
+                const mapped = preprocessLaTeX(inputVal).trim();
+                if (mapped && mapped.length === 1) {
+                    inputVal = mapped;
+                }
+            }
+            if (inputVal.length > 1) {
+                const mapped = preprocessLaTeX('\\' + inputVal).trim();
+                if (mapped && mapped.length === 1 && mapped !== ('\\' + inputVal)) {
+                    inputVal = mapped;
+                }
+            }
+            if (inputVal.length !== 1) {
+                showToast("Please enter a single character or valid symbol command!", "error");
+                return;
+            }
+            const targetChar = inputVal;
             
-            if (allowedChars.includes(newChar)) {
-                showToast(`Character '${newChar}' is already in the drawing board!`, "error");
+            if (allowedChars.includes(targetChar)) {
+                activeDesignerChar = targetChar;
+                activeVariant = 0;
+                activeCharLabel.textContent = targetChar;
+                rebuildVariantSelectors();
+                updateCharGridHighlights();
+                drawDesignerGrid();
+                scrollCharIntoView(targetChar);
+                document.getElementById('inputNewChar').value = "";
+                showToast(`Loaded character '${targetChar}' in Font Designer!`, "success");
                 return;
             }
             
-            symbolsList += newChar;
-            allowedChars = uppercaseList + lowercaseList + symbolsList;
+            const isGreek = "αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟПРΣΤΥΦΧΨΩ°·•±".includes(targetChar);
+            if (isGreek) {
+                greekList += targetChar;
+                if (charGridGreek) {
+                    createCharacterGrid(charGridGreek, greekList);
+                }
+            } else {
+                symbolsList += targetChar;
+                if (charGridSymbols) {
+                    createCharacterGrid(charGridSymbols, symbolsList);
+                }
+            }
+            allowedChars = uppercaseList + lowercaseList + symbolsList + greekList;
             
-            if (!DrawnFont[newChar]) {
-                DrawnFont[newChar] = [[], [], []];
+            if (!DrawnFont[targetChar]) {
+                DrawnFont[targetChar] = [[], [], []];
             }
             
-            createCharacterGrid(charGridSymbols, symbolsList);
-            activeDesignerChar = newChar;
-            activeCharLabel.textContent = newChar;
+            activeDesignerChar = targetChar;
+            activeCharLabel.textContent = targetChar;
             activeVariant = 0;
             
             rebuildVariantSelectors();
             updateCharGridHighlights();
             drawDesignerGrid();
+            scrollCharIntoView(targetChar);
             saveDrawnFontToLocalStorage();
             
             document.getElementById('inputNewChar').value = "";
-            showToast(`Added custom character '${newChar}' to drawing board!`, "success");
+            showToast(`Added character '${targetChar}' to drawing board!`, "success");
         });
+
+        // Allow pressing Enter in inputNewChar
+        const inputNewCharEl = document.getElementById('inputNewChar');
+        if (inputNewCharEl) {
+            inputNewCharEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    document.getElementById('btnAddNewChar').click();
+                }
+            });
+        }
 
         // Prepopulate with Built-in guides as stencil starts
         btnPrepopulateFont.addEventListener('click', () => {
@@ -2747,11 +2948,19 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             // Scrape and register any custom characters dynamically
             for (let c in parsed) {
                 if (c.length === 1 && !allowedChars.includes(c)) {
-                    symbolsList += c;
-                    allowedChars = uppercaseList + lowercaseList + symbolsList;
+                    const isGreek = "αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟПРΣΤΥΦΧΨΩ°·•±".includes(c);
+                    if (isGreek) {
+                        greekList += c;
+                    } else {
+                        symbolsList += c;
+                    }
+                    allowedChars = uppercaseList + lowercaseList + symbolsList + greekList;
                 }
             }
             createCharacterGrid(charGridSymbols, symbolsList);
+            if (charGridGreek) {
+                createCharacterGrid(charGridGreek, greekList);
+            }
 
             let validKeys = 0;
             const tallCharsList = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789bdfhklt";
@@ -3210,8 +3419,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 penOffsetX: (parseFloat(document.getElementById('penOffsetX').value) || 0.0) * 10.0,
                 penOffsetY: (parseFloat(document.getElementById('penOffsetY').value) || 0.0) * 10.0,
                 showCalibBox: document.getElementById('showCalibBox').checked,
-                tableColWidths: document.getElementById('tableColWidths') ? document.getElementById('tableColWidths').value.trim() : "",
-                tableCol1Width: parseFloat(document.getElementById('tableCol1Width').value) || 25,
+                tableColWidths: (typeof globalTableColWidths !== 'undefined' && globalTableColWidths !== "" ? globalTableColWidths : (document.getElementById('tableColWidths') ? document.getElementById('tableColWidths').value.trim() : "")),
+                tableCol1Width: (typeof globalTableCol1Width !== 'undefined' ? globalTableCol1Width : (parseFloat(document.getElementById('tableCol1Width').value) || 25)),
+                perTableSettings: (typeof perTableSettings !== 'undefined' ? perTableSettings : {}),
                 mathLineWobble: parseFloat(document.getElementById('mathLineWobble').value) || 0.15,
                 mathLineTilt: parseFloat(document.getElementById('mathLineTilt').value) || 0.30,
                 mathLeftOffset: parseFloat(document.getElementById('mathLeftOffset').value) || 0.0,
@@ -3229,11 +3439,25 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             if (char === ' ') {
                 return 3.0 * (localHeight / 14.5); // default word spacing scaled
             }
-            if (!DrawnFont[char] || DrawnFont[char].length === 0) {
+            let variants = DrawnFont[char];
+            if ((!variants || variants.length === 0 || !variants.some(v => v && v.length > 0)) && typeof BUILTIN_FALLBACK_GLYPHS !== 'undefined' && BUILTIN_FALLBACK_GLYPHS[char]) {
+                variants = BUILTIN_FALLBACK_GLYPHS[char];
+            }
+            if (!variants || variants.length === 0) {
+                if (char === '°') return localHeight * 0.40;
+                if (char === '·' || char === '•') return localHeight * 0.30;
+                if (char === 'τ' || char === 'σ' || char === 'π' || char === 'α') return localHeight * 0.55;
+                if (char === 'φ' || char === 'θ' || char === 'β' || char === 'λ' || char === 'μ') return localHeight * 0.60;
                 return localHeight * 0.8;
             }
-            const variant = DrawnFont[char][0];
-            if (!variant || variant.length === 0) return localHeight * 0.8;
+            const variant = variants[0];
+            if (!variant || variant.length === 0) {
+                if (char === '°') return localHeight * 0.40;
+                if (char === '·' || char === '•') return localHeight * 0.30;
+                if (char === 'τ' || char === 'σ' || char === 'π' || char === 'α') return localHeight * 0.55;
+                if (char === 'φ' || char === 'θ' || char === 'β' || char === 'λ' || char === 'μ') return localHeight * 0.60;
+                return localHeight * 0.8;
+            }
             
             let minX = Infinity;
             let maxX = -Infinity;
@@ -3252,6 +3476,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             });
             
             if (!hasPoints || maxX <= minX) {
+                if (char === '°') return localHeight * 0.40;
+                if (char === '·' || char === '•') return localHeight * 0.30;
+                if (char === 'τ' || char === 'σ' || char === 'π' || char === 'α') return localHeight * 0.55;
+                if (char === 'φ' || char === 'θ' || char === 'β' || char === 'λ' || char === 'μ') return localHeight * 0.60;
                 return localHeight * 0.8;
             }
             
@@ -3265,15 +3493,23 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 return settings.wordSpacing;
             }
             if (activeFontMode === 'stroke') {
+                if (char === '°') return localHeight * 0.45;
+                if (char === '·' || char === '•') return localHeight * 0.35;
+                if (char === 'τ' || char === 'σ' || char === 'π' || char === 'α') return localHeight * 0.55;
+                if (char === 'φ' || char === 'θ' || char === 'β' || char === 'λ' || char === 'μ') return localHeight * 0.60;
                 return localHeight * 0.8;
             } else if (activeFontMode === 'drawn') {
                 return getDrawnCharWidth(char, localHeight);
             } else if (activeFontMode === 'custom' && uploadedFont) {
                 const glyph = uploadedFont.charToGlyph(char);
-                if (glyph) {
+                if (glyph && glyph.unicode !== undefined && glyph.unicode !== 0) {
                     const fontScale = 1 / uploadedFont.unitsPerEm;
                     return (glyph.advanceWidth || 0) * fontScale * localHeight;
                 }
+                if (char === '°') return localHeight * 0.45;
+                if (char === '·' || char === '•') return localHeight * 0.35;
+                if (char === 'τ' || char === 'σ' || char === 'π' || char === 'α') return localHeight * 0.55;
+                if (char === 'φ' || char === 'θ' || char === 'β' || char === 'λ' || char === 'μ') return localHeight * 0.60;
             }
             return localHeight * 0.8;
         }
@@ -3353,9 +3589,22 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             
             const colWidths = new Array(numCols).fill(0);
             let hasCustomWidths = false;
+
+            // Check if this specific table has custom width/ratio settings
+            let activeColWidths = settings.tableColWidths;
+            let activeCol1Width = settings.tableCol1Width;
+            if (settings.perTableSettings && tableBlock.tableIdx !== undefined && settings.perTableSettings[tableBlock.tableIdx]) {
+                const custom = settings.perTableSettings[tableBlock.tableIdx];
+                if (custom.colWidths !== undefined && custom.colWidths !== "") {
+                    activeColWidths = custom.colWidths.trim();
+                }
+                if (custom.col1Width !== undefined && !isNaN(custom.col1Width)) {
+                    activeCol1Width = custom.col1Width;
+                }
+            }
             
-            if (settings.tableColWidths) {
-                const parts = settings.tableColWidths.split(',').map(p => parseFloat(p.trim())).filter(p => !isNaN(p) && p > 0);
+            if (activeColWidths && activeColWidths !== 'auto') {
+                const parts = activeColWidths.split(',').map(p => parseFloat(p.trim())).filter(p => !isNaN(p) && p > 0);
                 if (parts.length > 0) {
                     hasCustomWidths = true;
                     while (parts.length < numCols) {
@@ -3369,7 +3618,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             }
             
             if (!hasCustomWidths) {
-                if (!settings.tableColWidths || settings.tableColWidths === 'auto') {
+                if (!activeColWidths || activeColWidths === 'auto') {
                     for (let r = 0; r < rows.length; r++) {
                         const row = rows[r];
                         for (let c = 0; c < numCols; c++) {
@@ -3408,8 +3657,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     if (numCols === 1) {
                         colWidths[0] = maxTableWidth;
                     } else {
-                        colWidths[0] = maxTableWidth * (settings.tableCol1Width / 100.0);
-                        const remainingWidth = maxTableWidth * (1.0 - settings.tableCol1Width / 100.0);
+                        colWidths[0] = maxTableWidth * (activeCol1Width / 100.0);
+                        const remainingWidth = maxTableWidth * (1.0 - activeCol1Width / 100.0);
                         const otherColWidth = remainingWidth / (numCols - 1);
                         for (let c = 1; c < numCols; c++) {
                             colWidths[c] = otherColWidth;
@@ -3543,7 +3792,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                                 });
                                             }
                                         } else if (activeFontMode === 'drawn') {
-                                            const variants = DrawnFont[char];
+                                            let variants = DrawnFont[char];
+                                            if ((!variants || !variants.some(v => v && v.length > 0)) && typeof BUILTIN_FALLBACK_GLYPHS !== 'undefined' && BUILTIN_FALLBACK_GLYPHS[char]) {
+                                                variants = BUILTIN_FALLBACK_GLYPHS[char];
+                                            }
                                             if (variants) {
                                                 const indices = [];
                                                 variants.forEach((v, idx) => {
@@ -3575,7 +3827,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                             }
                                         } else if (activeFontMode === 'custom' && uploadedFont) {
                                             const glyph = uploadedFont.charToGlyph(char);
-                                            if (glyph) {
+                                            if (glyph && glyph.commands && glyph.commands.length > 0) {
                                                 const fontScale = 1 / uploadedFont.unitsPerEm;
                                                 const path = glyph.getPath(0, 0, localHeight / fontScale);
                                                 let activeStroke = [];
@@ -3601,6 +3853,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                                     const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
                                                     characterStrokes = characterStrokes.concat(hatches);
                                                 }
+                                            } else if (StrokeFont[char]) {
+                                                const strokeDef = StrokeFont[char];
+                                                characterStrokes = strokeDef.map(stroke => {
+                                                    return stroke.map(pt => {
+                                                        const normX = pt[0] / 10.0;
+                                                        const normY = pt[1] / 10.0;
+                                                        return { x: normX * charWidthMM, y: normY * localHeight };
+                                                    });
+                                                });
                                             }
                                         }
                                         
@@ -3638,7 +3899,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 currentY = rowTopY + linesUsed * settings.lineSpacing;
             }
             
-            return currentY;
+            return currentY + settings.lineSpacing;
         }
 
         function preprocessLaTeX(text) {
@@ -3665,6 +3926,17 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             // 2.8. Strip \text{...} wrappers in math equations
             processed = processed.replace(/\\text\{([^\}]+?)\}/g, '$1');
 
+            // 2.85. Strip \mathbf{...} wrappers and bare \mathbf
+            let prevMb;
+            do {
+                prevMb = processed;
+                processed = processed.replace(/\\mathbf\{([^{}]*)\}/g, '$1');
+            } while (processed !== prevMb);
+            processed = processed.replace(/\\mathbf(?![a-zA-Z])/g, '');
+
+            // 2.86. Remove \cdotm artifact
+            processed = processed.replace(/\\cdotm(?![a-zA-Z])/g, '');
+
             // 2.9. Map unicode superscripts and subscripts to standard carets/underscores
             const supersMap = {
                 '⁰': '^0', '¹': '^1', '²': '^2', '³': '^3', '⁴': '^4',
@@ -3681,34 +3953,62 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 processed = processed.replaceAll(sub, subsMap[sub]);
             }
             
+            // 2.95. Degree and dot representations in LaTeX
+            // Handle degree: ^\circ, ^{\circ}, \circ, ^\degree, ^{\degree}, \degree, ^°, ^{°}
+            processed = processed.replace(/\^\{\\circ\}/g, '°');
+            processed = processed.replace(/\^\\circ(?![a-zA-Z])/g, '°');
+            processed = processed.replace(/\\circ(?![a-zA-Z])/g, '°');
+            processed = processed.replace(/\^\{\\degree\}/g, '°');
+            processed = processed.replace(/\^\\degree(?![a-zA-Z])/g, '°');
+            processed = processed.replace(/\\degree(?![a-zA-Z])/g, '°');
+            processed = processed.replace(/\^\{?°\}?/g, '°');
+
+            // Handle dots: \cdot, \cdotp, \bullet, \ldots, \dots
+            processed = processed.replace(/\\cdotp?(?![a-zA-Z])/g, '·');
+            processed = processed.replace(/\\bullet(?![a-zA-Z])/g, '•');
+            processed = processed.replace(/\\l?dots(?![a-zA-Z])/g, '...');
+
             // 3. Replace common LaTeX math commands with unicode/standard symbols
             const symbols = {
-                '\\\\times': '×',
-                '\\\\cdot': '·',
-                '\\\\approx': '≈',
-                '\\\\neq': '≠',
-                '\\\\leq': '≤',
-                '\\\\geq': '≥',
-                '\\\\le': '≤',
-                '\\\\ge': '≥',
-                '\\\\pm': '±',
-                '\\\\div': '÷',
-                '\\\\alpha': 'α',
-                '\\\\beta': 'β',
-                '\\\\gamma': 'γ',
-                '\\\\delta': 'δ',
-                '\\\\Delta': 'Δ',
-                '\\\\theta': 'θ',
-                '\\\\pi': 'π',
-                '\\\\phi': 'φ',
-                '\\\\Phi': 'Φ',
-                '\\\\omega': 'ω',
-                '\\\\sigma': 'σ',
-                '\\\\Sigma': 'Σ',
-                '\\\\sum': 'Σ',
-                '\\\\epsilon': 'ε',
-                '\\\\eta': 'η',
-                '\\\\infty': '∞'
+                '\\\\times(?![a-zA-Z])': '×',
+                '\\\\cdotp?(?![a-zA-Z])': '·',
+                '\\\\approx(?![a-zA-Z])': '≈',
+                '\\\\neq(?![a-zA-Z])': '≠',
+                '\\\\leq(?![a-zA-Z])': '≤',
+                '\\\\geq(?![a-zA-Z])': '≥',
+                '\\\\le(?![a-zA-Z])': '≤',
+                '\\\\ge(?![a-zA-Z])': '≥',
+                '\\\\pm(?![a-zA-Z])': '±',
+                '\\\\div(?![a-zA-Z])': '÷',
+                '\\\\alpha(?![a-zA-Z])': 'α',
+                '\\\\beta(?![a-zA-Z])': 'β',
+                '\\\\gamma(?![a-zA-Z])': 'γ',
+                '\\\\delta(?![a-zA-Z])': 'δ',
+                '\\\\Delta(?![a-zA-Z])': 'Δ',
+                '\\\\theta(?![a-zA-Z])': 'θ',
+                '\\\\pi(?![a-zA-Z])': 'π',
+                '\\\\phi(?![a-zA-Z])': 'φ',
+                '\\\\Phi(?![a-zA-Z])': 'Φ',
+                '\\\\omega(?![a-zA-Z])': 'ω',
+                '\\\\sigma(?![a-zA-Z])': 'σ',
+                '\\\\Sigma(?![a-zA-Z])': 'Σ',
+                '\\\\sum(?![a-zA-Z])': 'Σ',
+                '\\\\epsilon(?![a-zA-Z])': 'ε',
+                '\\\\eta(?![a-zA-Z])': 'η',
+                '\\\\tau(?![a-zA-Z])': 'τ',
+                '\\\\mu(?![a-zA-Z])': 'μ',
+                '\\\\lambda(?![a-zA-Z])': 'λ',
+                '\\\\Lambda(?![a-zA-Z])': 'Λ',
+                '\\\\rho(?![a-zA-Z])': 'ρ',
+                '\\\\nu(?![a-zA-Z])': 'ν',
+                '\\\\zeta(?![a-zA-Z])': 'ζ',
+                '\\\\xi(?![a-zA-Z])': 'ξ',
+                '\\\\psi(?![a-zA-Z])': 'ψ',
+                '\\\\Psi(?![a-zA-Z])': 'Ψ',
+                '\\\\kappa(?![a-zA-Z])': 'κ',
+                '\\\\chi(?![a-zA-Z])': 'χ',
+                '\\\\Omega(?![a-zA-Z])': 'Ω',
+                '\\\\infty(?![a-zA-Z])': '∞'
             };
             
             for (let latex in symbols) {
@@ -3920,7 +4220,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 for (let i = 0; i < cleanText.length; i++) {
                     const char = cleanText[i];
                     if (char !== ' ' && char !== '\n' && char !== '\r' && char !== '\t') {
-                        const variants = DrawnFont[char];
+                        let variants = DrawnFont[char];
+                        if ((!variants || !variants.some(v => v && v.length > 0)) && typeof BUILTIN_FALLBACK_GLYPHS !== 'undefined' && BUILTIN_FALLBACK_GLYPHS[char]) {
+                            variants = BUILTIN_FALLBACK_GLYPHS[char];
+                        }
                         const hasVariant = variants && variants.some(v => v && v.length > 0);
                         if (!hasVariant) {
                             missingChars.add(char);
@@ -3955,6 +4258,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 if (char === ' ') return;
                 
                 let characterStrokes = [];
+                let chosenVariantIdx = 0;
                 let charWidthMM = getCharWidth(char, localHeight, settings);
                 
                 if (activeFontMode === 'stroke') {
@@ -3969,14 +4273,17 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         });
                     }
                 } else if (activeFontMode === 'drawn') {
-                    const variants = DrawnFont[char];
+                    let variants = DrawnFont[char];
+                    if ((!variants || !variants.some(v => v && v.length > 0)) && typeof BUILTIN_FALLBACK_GLYPHS !== 'undefined' && BUILTIN_FALLBACK_GLYPHS[char]) {
+                        variants = BUILTIN_FALLBACK_GLYPHS[char];
+                    }
                     if (variants) {
                         const indices = [];
                         variants.forEach((v, idx) => {
                             if (v && v.length > 0) indices.push(idx);
                         });
                         if (indices.length > 0) {
-                            let chosenVariantIdx = 0;
+                            chosenVariantIdx = 0;
                             const lastIdx = window.lastCharVariant ? window.lastCharVariant[char] : undefined;
                             if (indices.length > 1 && lastIdx !== undefined) {
                                 const allowedIndices = indices.filter(idx => idx !== lastIdx);
@@ -4014,7 +4321,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     }
                 } else if (activeFontMode === 'custom' && uploadedFont) {
                     const glyph = uploadedFont.charToGlyph(char);
-                    if (glyph) {
+                    if (glyph && glyph.commands && glyph.commands.length > 0) {
                         const fontScale = 1 / uploadedFont.unitsPerEm;
                         const path = glyph.getPath(0, 0, localHeight / fontScale);
                         let activeStroke = [];
@@ -4040,6 +4347,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
                             characterStrokes = characterStrokes.concat(hatches);
                         }
+                    } else if (StrokeFont[char]) {
+                        const strokeDef = StrokeFont[char];
+                        characterStrokes = strokeDef.map(stroke => {
+                            return stroke.map(pt => {
+                                const normX = pt[0] / 10.0;
+                                const normY = pt[1] / 10.0;
+                                return { x: normX * charWidthMM, y: normY * localHeight };
+                            });
+                        });
                     }
                 }
                 
@@ -4055,17 +4371,16 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         compiledStroke.isSlowStart = false;
                         paths.push(compiledStroke);
                         
-                        compiledStroke.forEach(pt => {
-                            renderedCharactersOnSheet.push({
-                                char: char,
-                                minX: pt.x,
-                                maxX: pt.x,
-                                minY: pt.y,
-                                maxY: pt.y,
-                                lineIdx: window.currentRenderingLineIdx || 0
-                            });
-                        });
                     }
+                    renderedCharactersOnSheet.push({
+                        char: char,
+                        variantIndex: chosenVariantIdx,
+                        minX: x,
+                        maxX: x + charWidthMM,
+                        minY: y - settings.letterYOffset - localHeight + yOffset,
+                        maxY: y - settings.letterYOffset + yOffset,
+                        lineIdx: window.currentRenderingLineIdx || 0
+                    });
                 }
             }
 
@@ -4199,6 +4514,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             // Group lines into table blocks vs text blocks
             const blocks = [];
             let currentTable = null;
+            let tableIndexCounter = 0;
             
             lines.forEach((lineText, idx) => {
                 const trimmed = lineText.trim();
@@ -4206,7 +4522,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 
                 if (isTableRow) {
                     if (!currentTable) {
-                        currentTable = { type: 'table', rows: [], startLineIdx: idx };
+                        currentTable = { type: 'table', rows: [], startLineIdx: idx, tableIdx: tableIndexCounter++ };
                         blocks.push(currentTable);
                     }
                     const cells = lineText.split('|').map(c => c.trim());
@@ -4472,7 +4788,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                             });
                                         }
                                     } else if (activeFontMode === 'drawn') {
-                                        const variants = DrawnFont[char];
+                                        let variants = DrawnFont[char];
+                                        if ((!variants || !variants.some(v => v && v.length > 0)) && typeof BUILTIN_FALLBACK_GLYPHS !== 'undefined' && BUILTIN_FALLBACK_GLYPHS[char]) {
+                                            variants = BUILTIN_FALLBACK_GLYPHS[char];
+                                        }
                                         if (variants) {
                                             const indices = [];
                                             variants.forEach((v, idx) => {
@@ -4517,7 +4836,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                         }
                                     } else if (activeFontMode === 'custom' && uploadedFont) {
                                         const glyph = uploadedFont.charToGlyph(char);
-                                        if (glyph) {
+                                        if (glyph && glyph.commands && glyph.commands.length > 0) {
                                             const fontScale = 1 / uploadedFont.unitsPerEm;
                                             const path = glyph.getPath(0, 0, localHeight / fontScale);
                                             let activeStroke = [];
@@ -4543,6 +4862,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                                 const hatches = generateGlyphHatchFill(characterStrokes, charWidthMM, localHeight, settings);
                                                 characterStrokes = characterStrokes.concat(hatches);
                                             }
+                                        } else if (StrokeFont[char]) {
+                                            const strokeDef = StrokeFont[char];
+                                            characterStrokes = strokeDef.map(stroke => {
+                                                return stroke.map(pt => {
+                                                    const normX = pt[0] / 10.0;
+                                                    const normY = pt[1] / 10.0;
+                                                    return { x: normX * charWidthMM, y: normY * localHeight };
+                                                });
+                                            });
                                         }
                                     }
                                     
@@ -7484,11 +7812,219 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             triggerPreviewUpdate();
         });
 
+        // ==========================================
+        // INDIVIDUAL PER-TABLE SETTINGS MANAGEMENT
+        // ==========================================
+        let perTableSettings = {};
+        let activeTableConfigKey = "default";
+        let globalTableColWidths = "";
+        let globalTableCol1Width = 25;
+
+        function detectTablesInText(text) {
+            if (!text) return [];
+            const lines = text.split(/\r?\n/);
+            const tables = [];
+            let curTable = null;
+            let tableCounter = 0;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const trimmed = lines[i].trim();
+                const isTableRow = trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.length >= 2;
+                if (isTableRow) {
+                    const cells = trimmed.split('|').map(c => c.trim());
+                    cells.shift();
+                    if (cells.length > 0) cells.pop();
+                    const isSeparator = cells.every(c => /^[:\- ]+$/.test(c));
+                    
+                    if (!curTable) {
+                        curTable = { tableIdx: tableCounter++, startLine: i + 1, rows: [], headers: [] };
+                        tables.push(curTable);
+                    }
+                    if (!isSeparator) {
+                        if (curTable.rows.length === 0) {
+                            curTable.headers = cells;
+                        }
+                        curTable.rows.push(cells);
+                    }
+                } else {
+                    curTable = null;
+                }
+            }
+            return tables;
+        }
+
+        function updateTableSelectorUI() {
+            const elText = document.getElementById('textInput');
+            const text = elText ? elText.value : "";
+            const tables = detectTablesInText(text);
+            const badge = document.getElementById('detectedTablesCountBadge');
+            const select = document.getElementById('activeTableSelect');
+            const summary = document.getElementById('activeTableSummary');
+            const summaryText = document.getElementById('activeTableSummaryText');
+            
+            if (badge) {
+                if (tables.length === 0) {
+                    badge.textContent = "0 tables";
+                    badge.className = "text-[9.5px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-semibold border border-slate-700/50";
+                } else if (tables.length === 1) {
+                    badge.textContent = "1 table detected";
+                    badge.className = "text-[9.5px] px-2 py-0.5 rounded-full bg-indigo-900/60 text-indigo-300 font-semibold border border-indigo-700/50";
+                } else {
+                    badge.textContent = `${tables.length} tables detected`;
+                    badge.className = "text-[9.5px] px-2 py-0.5 rounded-full bg-indigo-900/60 text-indigo-300 font-semibold border border-indigo-700/50";
+                }
+            }
+            
+            if (!select) return;
+            
+            const prevVal = select.value;
+            select.innerHTML = '<option value="default">Default / Global (All Tables)</option>';
+            
+            tables.forEach(t => {
+                const colCount = Math.max(...t.rows.map(r => r.length), 0);
+                const headerPreview = t.headers.length > 0 ? t.headers.slice(0, 2).join(' | ') : `Table ${t.tableIdx + 1}`;
+                const opt = document.createElement('option');
+                opt.value = String(t.tableIdx);
+                opt.textContent = `Table ${t.tableIdx + 1} (${colCount} cols, ${t.rows.length} rows): ${headerPreview}`;
+                select.appendChild(opt);
+            });
+            
+            if (prevVal !== "default" && tables.some(t => String(t.tableIdx) === prevVal)) {
+                select.value = prevVal;
+                activeTableConfigKey = prevVal;
+            } else {
+                select.value = "default";
+                activeTableConfigKey = "default";
+            }
+            
+            syncInputsFromActiveTable();
+        }
+
+        function syncInputsFromActiveTable() {
+            const select = document.getElementById('activeTableSelect');
+            const inputColWidths = document.getElementById('tableColWidths');
+            const inputCol1Width = document.getElementById('tableCol1Width');
+            const inputCol1WidthVal = document.getElementById('tableCol1WidthVal');
+            const summary = document.getElementById('activeTableSummary');
+            const summaryText = document.getElementById('activeTableSummaryText');
+            const widthHint = document.getElementById('tableWidthHint');
+            const btnReset = document.getElementById('btnResetTableSettings');
+            
+            if (!select || !inputColWidths || !inputCol1Width) return;
+            
+            activeTableConfigKey = select.value;
+            
+            if (activeTableConfigKey === "default") {
+                inputColWidths.value = globalTableColWidths;
+                inputCol1Width.value = globalTableCol1Width;
+                if (inputCol1WidthVal) inputCol1WidthVal.textContent = globalTableCol1Width + "%";
+                if (summary) summary.classList.add('hidden');
+                if (widthHint) widthHint.textContent = "(applies globally)";
+                if (btnReset) btnReset.classList.add('opacity-50');
+            } else {
+                const tableIdx = parseInt(activeTableConfigKey);
+                const custom = perTableSettings[tableIdx] || {};
+                inputColWidths.value = custom.colWidths !== undefined ? custom.colWidths : (globalTableColWidths || "");
+                const c1 = custom.col1Width !== undefined ? custom.col1Width : globalTableCol1Width;
+                inputCol1Width.value = c1;
+                if (inputCol1WidthVal) inputCol1WidthVal.textContent = c1 + "%";
+                
+                if (summary && summaryText) {
+                    const hasCustom = custom.colWidths !== undefined || custom.col1Width !== undefined;
+                    summaryText.textContent = hasCustom ? `Editing Table ${tableIdx + 1} (Custom settings saved)` : `Editing Table ${tableIdx + 1} (Using global default)`;
+                    summary.classList.remove('hidden');
+                }
+                if (widthHint) widthHint.textContent = `(Table ${tableIdx + 1})`;
+                if (btnReset) btnReset.classList.remove('opacity-50');
+            }
+        }
+
+        function onTableSettingInput() {
+            const inputColWidths = document.getElementById('tableColWidths');
+            const inputCol1Width = document.getElementById('tableCol1Width');
+            if (!inputColWidths || !inputCol1Width) return;
+            
+            if (activeTableConfigKey === "default") {
+                globalTableColWidths = inputColWidths.value;
+                globalTableCol1Width = parseFloat(inputCol1Width.value) || 25;
+            } else {
+                const tableIdx = parseInt(activeTableConfigKey);
+                if (!perTableSettings[tableIdx]) perTableSettings[tableIdx] = {};
+                perTableSettings[tableIdx].colWidths = inputColWidths.value;
+                perTableSettings[tableIdx].col1Width = parseFloat(inputCol1Width.value) || 25;
+                
+                const summary = document.getElementById('activeTableSummary');
+                const summaryText = document.getElementById('activeTableSummaryText');
+                if (summary && summaryText) {
+                    summaryText.textContent = `Editing Table ${tableIdx + 1} (Custom settings saved)`;
+                    summary.classList.remove('hidden');
+                }
+            }
+        }
+
+        const activeTableSelectEl = document.getElementById('activeTableSelect');
+        if (activeTableSelectEl) {
+            activeTableSelectEl.addEventListener('change', () => {
+                syncInputsFromActiveTable();
+                triggerPreviewUpdate();
+            });
+        }
+
+        const tableColWidthsInput = document.getElementById('tableColWidths');
+        if (tableColWidthsInput) {
+            tableColWidthsInput.addEventListener('input', () => {
+                onTableSettingInput();
+            });
+        }
+
         const tableCol1WidthSlider = document.getElementById('tableCol1Width');
-        tableCol1WidthSlider.addEventListener('input', (e) => {
-            document.getElementById('tableCol1WidthVal').textContent = e.target.value + "%";
-            triggerPreviewUpdate();
+        if (tableCol1WidthSlider) {
+            tableCol1WidthSlider.addEventListener('input', (e) => {
+                document.getElementById('tableCol1WidthVal').textContent = e.target.value + "%";
+                onTableSettingInput();
+            });
+        }
+
+        const btnResetTable = document.getElementById('btnResetTableSettings');
+        if (btnResetTable) {
+            btnResetTable.addEventListener('click', () => {
+                if (activeTableConfigKey !== "default") {
+                    const tableIdx = parseInt(activeTableConfigKey);
+                    delete perTableSettings[tableIdx];
+                    syncInputsFromActiveTable();
+                    triggerPreviewUpdate();
+                    saveCachedWebData();
+                    showToast(`Reset Table ${tableIdx + 1} to default settings`, "info");
+                } else {
+                    globalTableColWidths = "";
+                    globalTableCol1Width = 25;
+                    syncInputsFromActiveTable();
+                    triggerPreviewUpdate();
+                    saveCachedWebData();
+                    showToast("Reset default table settings", "info");
+                }
+            });
+        }
+
+        document.querySelectorAll('.table-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const val = btn.getAttribute('data-val');
+                const inputColWidths = document.getElementById('tableColWidths');
+                if (inputColWidths) {
+                    inputColWidths.value = val === 'auto' ? '' : val;
+                    onTableSettingInput();
+                    triggerPreviewUpdate();
+                    saveCachedWebData();
+                }
+            });
         });
+
+        const mainTextInput = document.getElementById('textInput');
+        if (mainTextInput) {
+            mainTextInput.addEventListener('input', () => {
+                updateTableSelectorUI();
+            });
+        }
 
         const mathLineWobbleSlider = document.getElementById('mathLineWobble');
         mathLineWobbleSlider.addEventListener('input', (e) => {
@@ -9633,16 +10169,64 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         function updateTextSelectionTarget() {
             if (!textInput) return;
             const start = textInput.selectionStart;
+            const end = textInput.selectionEnd;
             const text = textInput.value;
-            if (start > 0 && start <= text.length) {
-                const char = text[start - 1];
-                if (allowedChars.includes(char)) {
-                    textTargetChar = char;
-                    lblSelectedChar.innerHTML = `Target: character <b class="text-indigo-400 text-sm font-extrabold mx-1">'${char}'</b>`;
-                    btnEditSelectedChar.classList.remove('hidden');
-                    return;
+            
+            let targetChar = null;
+            
+            // 1. If user highlighted a selection, check if selection is LaTeX cmd or single char
+            if (end > start) {
+                const selected = text.slice(start, end).trim();
+                if (selected.startsWith('\\')) {
+                    const mapped = preprocessLaTeX(selected).trim();
+                    if (mapped && mapped.length === 1 && allowedChars.includes(mapped)) {
+                        targetChar = mapped;
+                    }
+                } else if (selected.length === 1 && allowedChars.includes(selected)) {
+                    targetChar = selected;
                 }
             }
+            
+            // 2. If no selection or selection didn't yield a char, check caret position for LaTeX commands
+            if (!targetChar && typeof text === 'string') {
+                const latexCmdRegex = /\\[a-zA-Z]+/g;
+                let m;
+                while ((m = latexCmdRegex.exec(text)) !== null) {
+                    const mStart = m.index;
+                    const mEnd = m.index + m[0].length;
+                    if (start >= mStart && start <= mEnd) {
+                        const mapped = preprocessLaTeX(m[0]).trim();
+                        if (mapped && mapped.length === 1 && allowedChars.includes(mapped)) {
+                            targetChar = mapped;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // 3. If still no LaTeX command, check character right before caret
+            if (!targetChar && start > 0 && start <= text.length) {
+                const cBefore = text[start - 1];
+                if (allowedChars.includes(cBefore)) {
+                    targetChar = cBefore;
+                }
+            }
+            
+            // 4. If still none, check character at caret
+            if (!targetChar && start < text.length) {
+                const cAfter = text[start];
+                if (allowedChars.includes(cAfter)) {
+                    targetChar = cAfter;
+                }
+            }
+            
+            if (targetChar) {
+                textTargetChar = targetChar;
+                lblSelectedChar.innerHTML = `Target: character <b class="text-indigo-400 text-sm font-extrabold mx-1">'${targetChar}'</b>`;
+                btnEditSelectedChar.classList.remove('hidden');
+                return;
+            }
+            
             textTargetChar = null;
             lblSelectedChar.textContent = "Click in textbox to target character for editing...";
             btnEditSelectedChar.classList.add('hidden');
@@ -9660,7 +10244,11 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             activeVariant = 0; // Default to Variant 1
             activeCharLabel.textContent = activeDesignerChar;
             rebuildVariantSelectors();
+            updateCharGridHighlights();
             drawDesignerGrid();
+            if (typeof scrollCharIntoView === 'function') {
+                setTimeout(() => scrollCharIntoView(textTargetChar), 100);
+            }
             
             showToast(`Editing character '${textTargetChar}' (Variant 1) in Designer`, "info");
         });
@@ -10666,13 +11254,17 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                     tabDesigner.click();
                     
                     activeDesignerChar = clickedCharEntry.char;
-                    activeVariant = clickedCharEntry.variantIndex;
+                    activeVariant = clickedCharEntry.variantIndex || 0;
                     
                     activeCharLabel.textContent = clickedCharEntry.char;
                     rebuildVariantSelectors();
+                    updateCharGridHighlights();
                     drawDesignerGrid();
+                    if (typeof scrollCharIntoView === 'function') {
+                        setTimeout(() => scrollCharIntoView(clickedCharEntry.char), 100);
+                    }
                     
-                    showToast(`Loaded character '${clickedCharEntry.char}' (Variant ${clickedCharEntry.variantIndex + 1}) from preview click!`, "success");
+                    showToast(`Loaded character '${clickedCharEntry.char}' (Variant ${(clickedCharEntry.variantIndex || 0) + 1}) from preview click!`, "success");
                 }
             }
         });
@@ -11092,6 +11684,162 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
 
         document.getElementById('btnSplitPage').addEventListener('click', splitPageOverflow);
 
+        // Compact Markdown / Text formatter
+        // Removes empty/blank lines, markdown horizontal rules (---, ***, ___), strips \mathbf and \cdotm,
+        // condenses math blocks, and leaves 1 empty line after detected tables to prevent overlap.
+        function compactMarkdown(text) {
+            if (!text) return "";
+            
+            // Replace 2 or more consecutive $ signs with a single $ (user does not want double $$)
+            text = text.replace(/\${2,}/g, "$");
+
+            // Strip \mathbf{...} wrappers and bare \mathbf
+            let prevMb;
+            do {
+                prevMb = text;
+                text = text.replace(/\\mathbf\{([^{}]*)\}/g, '$1');
+            } while (text !== prevMb);
+            text = text.replace(/\\mathbf(?![a-zA-Z])/g, '');
+
+            // Remove \cdotm artifact
+            text = text.replace(/\\cdotm(?![a-zA-Z])/g, '');
+
+            const rawLines = text.split(/\r?\n/);
+            const nonHrLines = [];
+            const hrRegex = /^(?:[-*_]\s*){3,}$/;
+
+            function isTableLine(str) {
+                const t = str.trim();
+                return t.startsWith('|') && t.endsWith('|') && t.length >= 2;
+            }
+
+            for (let i = 0; i < rawLines.length; i++) {
+                const trimmed = rawLines[i].trim();
+                // Skip markdown horizontal rules (---, ***, ___, - - -, etc.)
+                if (hrRegex.test(trimmed)) continue;
+                // Skip empty or blank lines
+                if (trimmed === "") continue;
+                nonHrLines.push(rawLines[i].trimEnd());
+
+                // If this is a table row, check if the table ends here and is followed by further non-empty content
+                if (isTableLine(trimmed)) {
+                    let nextNonEmpty = null;
+                    for (let j = i + 1; j < rawLines.length; j++) {
+                        const nt = rawLines[j].trim();
+                        if (hrRegex.test(nt) || nt === "") continue;
+                        nextNonEmpty = nt;
+                        break;
+                    }
+                    if (nextNonEmpty !== null && !isTableLine(nextNonEmpty)) {
+                        // Leave one empty line after table so following text won't overlap
+                        nonHrLines.push("");
+                    }
+                }
+            }
+
+            // Merge standalone $ on their own lines: "$\nformula\n$" -> "$formula$"
+            const cleaned = [];
+            for (let i = 0; i < nonHrLines.length; i++) {
+                const curr = nonHrLines[i].trim();
+                if (curr === "$" && i + 2 < nonHrLines.length && nonHrLines[i + 2].trim() === "$" && !nonHrLines[i + 1].trim().startsWith("$")) {
+                    cleaned.push("$" + nonHrLines[i + 1].trim() + "$");
+                    i += 2;
+                } else {
+                    cleaned.push(nonHrLines[i]);
+                }
+            }
+
+            return cleaned.join("\n");
+        }
+
+        const btnCompactText = document.getElementById('btnCompactText');
+        if (btnCompactText && textInput) {
+            let lastPreCompactText = null;
+            let lastCompactedResult = null;
+
+            btnCompactText.addEventListener('click', () => {
+                const currentText = textInput.value;
+                if (!currentText || !currentText.trim()) {
+                    showToast("Text box is empty!", "info");
+                    return;
+                }
+
+                // Check if text has a sub-selection
+                const selStart = textInput.selectionStart;
+                const selEnd = textInput.selectionEnd;
+                const hasSelection = (selEnd > selStart && textInput.selectionStart !== undefined);
+
+                if (hasSelection) {
+                    const selectedText = currentText.substring(selStart, selEnd);
+                    const compacted = compactMarkdown(selectedText);
+                    if (compacted === selectedText) {
+                        showToast("Selected text is already compact!", "info");
+                        return;
+                    }
+                    const newText = currentText.substring(0, selStart) + compacted + currentText.substring(selEnd);
+                    lastPreCompactText = currentText;
+                    lastCompactedResult = newText;
+                    applyTextUpdate(newText);
+                    showToast("Compacted selected text!", "success");
+                    return;
+                }
+
+                // Toggle revert if user clicks again without modifying compacted text
+                if (lastCompactedResult !== null && currentText === lastCompactedResult && lastPreCompactText !== null) {
+                    applyTextUpdate(lastPreCompactText);
+                    lastCompactedResult = null;
+                    btnCompactText.innerHTML = "🧹 Compact Text";
+                    showToast("Reverted text back to previous spacing!", "info");
+                    return;
+                }
+
+                const compacted = compactMarkdown(currentText);
+                if (compacted === currentText) {
+                    showToast("Text is already compact (no empty lines or dividers found)!", "info");
+                    return;
+                }
+
+                const origLines = currentText.split(/\r?\n/).length;
+                const newLines = compacted.split(/\r?\n/).length;
+                const removed = origLines - newLines;
+
+                lastPreCompactText = currentText;
+                lastCompactedResult = compacted;
+
+                applyTextUpdate(compacted);
+                btnCompactText.innerHTML = "↩️ Undo Compact";
+                setTimeout(() => {
+                    if (btnCompactText.innerHTML.includes("Undo")) {
+                        btnCompactText.innerHTML = "🧹 Compact Text";
+                    }
+                }, 8000);
+
+                showToast(`Compacted text! Removed ${removed} blank lines & dividers (Click again to Undo)`, "success");
+            });
+
+            function applyTextUpdate(newText) {
+                textInput.focus();
+                textInput.select();
+                let execSuccess = false;
+                try {
+                    execSuccess = document.execCommand('insertText', false, newText);
+                } catch (e) {
+                    execSuccess = false;
+                }
+                if (!execSuccess) {
+                    textInput.value = newText;
+                }
+                
+                if (typeof pagesText !== 'undefined' && typeof currentPageIdx !== 'undefined') {
+                    pagesText[currentPageIdx] = textInput.value;
+                }
+                textInput.dispatchEvent(new Event('input', { bubbles: true }));
+                if (typeof updateTextSelectionTarget === 'function') {
+                    updateTextSelectionTarget();
+                }
+            }
+        }
+
         function rebuildCustomPromptCheckboxes() {
             const container = document.getElementById('geminiCheckboxesContainer');
             if (!container) return;
@@ -11181,6 +11929,9 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 letterYOffset: document.getElementById('letterYOffset').value,
                 tableColWidths: document.getElementById('tableColWidths') ? document.getElementById('tableColWidths').value : "",
                 tableCol1Width: document.getElementById('tableCol1Width').value,
+                perTableSettings: perTableSettings,
+                globalTableColWidths: globalTableColWidths,
+                globalTableCol1Width: globalTableCol1Width,
                 mathLineWobble: document.getElementById('mathLineWobble').value,
                 mathLineTilt: document.getElementById('mathLineTilt').value,
                 mathLeftOffset: document.getElementById('mathLeftOffset').value,
@@ -11235,6 +11986,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 currentPageIdx = 0;
                 rebuildPageTabs();
                 rebuildCustomPromptCheckboxes();
+                if (typeof updateTableSelectorUI === 'function') updateTableSelectorUI();
                 return;
             }
             try {
@@ -11277,6 +12029,22 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 if (data.charSpacing !== undefined) document.getElementById('charSpacing').value = data.charSpacing;
                 if (data.wordSpacing !== undefined) document.getElementById('wordSpacing').value = data.wordSpacing;
                 if (data.letterYOffset !== undefined) document.getElementById('letterYOffset').value = data.letterYOffset;
+                if (data.perTableSettings !== undefined) {
+                    perTableSettings = data.perTableSettings;
+                }
+                if (data.globalTableColWidths !== undefined) {
+                    globalTableColWidths = data.globalTableColWidths;
+                } else if (data.tableColWidths !== undefined) {
+                    globalTableColWidths = data.tableColWidths;
+                }
+                if (data.globalTableCol1Width !== undefined) {
+                    globalTableCol1Width = data.globalTableCol1Width;
+                } else if (data.tableCol1Width !== undefined) {
+                    globalTableCol1Width = parseFloat(data.tableCol1Width) || 25;
+                }
+                if (typeof updateTableSelectorUI === 'function') {
+                    updateTableSelectorUI();
+                }
                 if (data.tableColWidths !== undefined && document.getElementById('tableColWidths')) {
                     document.getElementById('tableColWidths').value = data.tableColWidths;
                 }
