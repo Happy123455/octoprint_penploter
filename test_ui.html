@@ -1092,6 +1092,13 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <input type="password" id="octoprintApiKey" value="" class="field field-mono" placeholder="Paste API Key here..." />
                                 </div>
                                 <div id="octoprintConnStatus" class="text-[11px] text-slate-500 text-center">Not Connected</div>
+                                <div id="keepPrinterRow" class="hidden space-y-1">
+                                    <label class="check-row text-[11px]" title="The computer running sync_server.py checks OctoPrint every 20 s and reconnects the printer only when OctoPrint reports it closed or offline (never while printing). It also asks OctoPrint to auto-connect after a restart.">
+                                        <input type="checkbox" id="keepPrinterConnected" checked class="check" />
+                                        Keep printer connected automatically
+                                    </label>
+                                    <div id="keepPrinterStatus" class="text-[10px] text-slate-500"></div>
+                                </div>
                                 <div class="grid grid-cols-2 gap-2">
                                     <button id="btnOctoprintUpload" class="btn btn-secondary">
                                         <svg class="i-sm"><use href="#i-upload"/></svg>Upload G-code
@@ -1994,7 +2001,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 pending[key] = value;
                 if (!timer) timer = setTimeout(flush, 300);
             }
-            Storage.prototype.setItem = function (k, v) { origSet.call(this, k, v); if (this === store) queue(k, String(v)); };
+            Storage.prototype.setItem = function (k, v) {
+                try { origSet.call(this, k, v); } finally { if (this === store) queue(k, String(v)); }
+            };
             Storage.prototype.removeItem = function (k) { origRemove.call(this, k); if (this === store) queue(k, null); };
 
             // start from the shared state; anything only this browser has is shared with the others
@@ -6706,6 +6715,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         placeNewBlock(nb);
                         imageBlock = nb;
                         imageBlock.img = img;
+                        imageBlock._src = compactImageDataUrl(img);
                         const aspect = img.width / img.height;
                         imageBlock.height = parseFloat((imageBlock.width / aspect).toFixed(1));
 
@@ -9289,6 +9299,9 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         function getCleanOctoprintUrl() {
             let urlVal = octoprintUrlInput.value.trim();
             if (!urlVal) return "";
+            // served by sync_server.py: it forwards /octoprint/... to this address (resolved once on that computer,
+            // so ".local" names, CORS and https/http mixed content stop mattering on phones)
+            if (typeof plotterSync !== 'undefined' && plotterSync) return location.origin + '/octoprint';
             try {
                 if (!/^https?:\/\//i.test(urlVal)) {
                     urlVal = "http://" + urlVal;
@@ -9309,6 +9322,32 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         } else {
             octoprintApiKeyInput.value = "";
             safeSetItem('octoprint_apikey', "");
+        }
+        
+        // Keep printer connected: runs on the computer serving the app; here we only show its status and the switch
+        if (typeof plotterSync !== 'undefined' && plotterSync) {
+            const row = document.getElementById('keepPrinterRow');
+            const box = document.getElementById('keepPrinterConnected');
+            const out = document.getElementById('keepPrinterStatus');
+            row.classList.remove('hidden');
+            box.checked = safeGetItem('plotter_keep_printer_connected') !== '0';
+            box.addEventListener('change', () => safeSetItem('plotter_keep_printer_connected', box.checked ? '1' : '0'));
+            const showPrinterStatus = async () => {
+                try {
+                    const st = await (await fetch('/__sync/printer')).json();
+                    if (!box.checked) { out.textContent = 'Off: the printer connection is left alone.'; out.className = 'text-[10px] text-slate-500'; return; }
+                    if (st.error) { out.textContent = `Printer: ${st.error}`; out.className = 'text-[10px] text-amber-400'; return; }
+                    if (!st.state) { out.textContent = 'Printer: checking…'; out.className = 'text-[10px] text-slate-500'; return; }
+                    const good = /^(Operational|Printing|Paused|Pausing|Resuming|Finishing|Cancelling)/.test(st.state);
+                    out.textContent = `Printer: ${st.state}` + (st.lastAction && Date.now() / 1000 - st.lastActionAt < 120 ? ` · ${st.lastAction}` : '');
+                    out.className = `text-[10px] ${good ? 'text-emerald-400' : 'text-amber-400'}`;
+                } catch (e) {
+                    out.textContent = 'Printer: status unavailable';
+                }
+            };
+            showPrinterStatus();
+            setInterval(() => { if (!document.hidden) showPrinterStatus(); }, 10000);
+            box.addEventListener('change', showPrinterStatus);
         }
         
         // Save values on input change
@@ -9353,7 +9392,9 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             })
             .then(res => {
                 if (res.ok) return res.json();
-                throw new Error("HTTP Status " + res.status);
+                const err = new Error("HTTP Status " + res.status);
+                err.status = res.status;
+                throw err;
             })
             .then(data => {
                 octoprintConnStatus.textContent = `Connected to OctoPrint v${data.server}`;
@@ -9361,9 +9402,23 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 showToast(`Connected to OctoPrint version ${data.server}!`, "success");
             })
             .catch(err => {
+                let msg;
+                if (err.status === 401 || err.status === 403) {
+                    msg = "OctoPrint rejected the API key. Copy a fresh key from OctoPrint → Settings → API (or your user's Application Keys).";
+                } else if (err.status === 502) {
+                    msg = "Can't reach OctoPrint at that address. Check the Raspberry Pi is on and the address (an IP like http://192.168.x.x works best).";
+                } else if (err.status) {
+                    msg = `OctoPrint answered HTTP ${err.status}. Check the API URL.`;
+                } else if (/\.local(:|\/|$)/i.test(octoprintUrlInput.value) && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+                    msg = "Phones often can't find \".local\" names. Use the Raspberry Pi's IP address instead (e.g. http://192.168.1.50).";
+                } else if (location.protocol === 'https:' && /^http:/i.test(url)) {
+                    msg = "This page is https but OctoPrint is http, so the browser blocks it. Open the app from an http:// address.";
+                } else {
+                    msg = "Can't reach OctoPrint. Check the address, that the Pi is on, and CORS in OctoPrint → Settings → API.";
+                }
                 octoprintConnStatus.textContent = "Connection Failed";
                 octoprintConnStatus.className = "text-[11px] text-red-400 text-center";
-                showToast("Connection failed. Check URL, API Key, and CORS in OctoPrint.", "error");
+                showToast(msg, "error");
             });
         });
         
@@ -13685,6 +13740,120 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             try { renderPreview(); } catch(e) {}
         });
 
+        // --- COMPLETE STATE: every setting control and every image / text block ---
+        // Most settings live only in their controls, and blocks weren't saved at all, so neither survived a reload
+        // or reached another device. All controls with an id (minus one-off fields like the import box) are saved
+        // as 'plotter_form_state', blocks as 'plotter_blocks'; both are restored on load and synced live.
+        const FORM_SKIP = /^(textInput|octoprintUrl|octoprintApiKey|geminiApiKey|profileSelect|newProfileName|inputNewChar|txtCustomPrompt|activeTableSelect|textBlockInput|img[A-Z]\w*|jogVirtual\w*|fpsSensitivityRange|keepPrinterConnected|pages(Import|Export)\w*|mathCompact)$/;
+        function syncableControls() {
+            return [...document.querySelectorAll('input[id], select[id], textarea[id]')]
+                .filter(el => el.type !== 'file' && el.type !== 'button' && !FORM_SKIP.test(el.id));
+        }
+        function readFormState() {
+            const o = {};
+            syncableControls().forEach(el => { o[el.id] = el.type === 'checkbox' || el.type === 'radio' ? el.checked : el.value; });
+            return JSON.stringify(o);
+        }
+        let lastFormState = null;
+        function saveFormState() {
+            const json = readFormState();
+            if (json === lastFormState) return;
+            lastFormState = json;
+            safeSetItem('plotter_form_state', json);
+        }
+        // set changed controls and fire their events, so the app updates exactly as if they were edited
+        function applyFormState(json) {
+            let o;
+            try { o = JSON.parse(json || 'null'); } catch (e) { return; }
+            if (!o) return;
+            const run = () => {
+                syncableControls().forEach(el => {
+                    if (!(el.id in o)) return;
+                    const isCheck = el.type === 'checkbox' || el.type === 'radio';
+                    if ((isCheck ? el.checked : el.value) === o[el.id]) return;
+                    if (isCheck) el.checked = !!o[el.id]; else el.value = o[el.id];
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            };
+            if (plotterSync) plotterSync.quietly(run); else run();
+            lastFormState = readFormState();
+        }
+
+        function compactImageDataUrl(img) {
+            const k = Math.min(1, 1400 / Math.max(img.width, img.height));
+            const c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(img.width * k));
+            c.height = Math.max(1, Math.round(img.height * k));
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, c.width, c.height);
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            return c.toDataURL('image/png');
+        }
+        const BLOCK_FIELDS = ['kind', 'text', 'x', 'y', 'width', 'height', 'rotation', 'threshold', 'style', 'invert', 'showUnderlay', 'keepAspect'];
+        function readBlocks() {
+            return JSON.stringify({
+                selected: imageBlocks.indexOf(imageBlock),
+                blocks: imageBlocks.map(b => Object.assign(Object.fromEntries(BLOCK_FIELDS.map(f => [f, b[f]])), b.kind === 'image' ? { src: b._src || null } : {}))
+            });
+        }
+        let lastBlocks = null;
+        function saveBlocks() {
+            const json = readBlocks();
+            if (json === lastBlocks) return;
+            lastBlocks = json;
+            safeSetItem('plotter_blocks', json);
+        }
+        function applyBlocks(json) {
+            let o;
+            try { o = JSON.parse(json || 'null'); } catch (e) { return; }
+            if (!o || !Array.isArray(o.blocks) || json === lastBlocks) return;
+            lastBlocks = json;
+            const built = o.blocks.map(d => {
+                const b = Object.assign(newImageBlock(d.kind === 'text' ? 'text' : 'image'), d);
+                delete b.src;
+                if (b.kind === 'text') {
+                    const w = b.width, h = b.height;
+                    buildTextBlockStrokes(b);
+                    b.width = w; b.height = h;
+                    rescaleImageStrokes(b);
+                } else if (d.src) {
+                    b._src = d.src;
+                    const img = new Image();
+                    img.onload = () => {
+                        b.img = img;
+                        const keep = imageBlock;
+                        imageBlock = b;
+                        try { vectorizeImageBlock(); } finally { imageBlock = keep; }
+                        renderImageBlockList();
+                        triggerPreviewUpdate();
+                    };
+                    img.src = d.src;
+                }
+                return b;
+            });
+            imageBlocks = built;
+            selectImageBlock(built[o.selected] || built[built.length - 1]);
+        }
+
+        // restore on load, then save whenever something changes (events cover edits; the slow poll catches
+        // values the app sets in code, e.g. applying a profile or dragging a block)
+        applyFormState(safeGetItem('plotter_form_state'));
+        applyBlocks(safeGetItem('plotter_blocks'));
+        lastFormState = readFormState();
+        lastBlocks = readBlocks();
+        let stateSaveTimer = null;
+        const queueStateSave = () => {
+            clearTimeout(stateSaveTimer);
+            stateSaveTimer = setTimeout(() => { saveFormState(); saveBlocks(); }, 400);
+        };
+        document.addEventListener('input', queueStateSave, true);
+        document.addEventListener('change', queueStateSave, true);
+        document.addEventListener('mouseup', queueStateSave, true);
+        document.addEventListener('pointerup', queueStateSave, true);
+        setInterval(() => { saveFormState(); saveBlocks(); }, 3000);
+
         // --- Apply changes synced from another device (see plotterSync at the top) ---
         if (plotterSync) {
             let lastLocalEdit = 0;
@@ -13697,12 +13866,21 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 const keys = [...pendingSync];
                 pendingSync = new Set();
                 if (!keys.length) return;
-                if (keys.every(k => k === 'plotter_cached_webdata')) {
-                    // pages, groups and settings: refresh in place
+                const inPlace = ['plotter_cached_webdata', 'plotter_form_state', 'plotter_blocks', 'plotter_keep_printer_connected'];
+                if (keys.every(k => inPlace.includes(k))) {
+                    // pages, groups, settings and blocks: refresh in place
                     plotterSync.quietly(() => {
-                        loadCachedWebData();
-                        if (typeof triggerSliderValueBadgeUpdates === 'function') triggerSliderValueBadgeUpdates();
-                        rebuildPageTabs();
+                        if (keys.includes('plotter_cached_webdata')) {
+                            loadCachedWebData();
+                            if (typeof triggerSliderValueBadgeUpdates === 'function') triggerSliderValueBadgeUpdates();
+                            rebuildPageTabs();
+                        }
+                        if (keys.includes('plotter_form_state')) applyFormState(safeGetItem('plotter_form_state'));
+                        if (keys.includes('plotter_blocks')) applyBlocks(safeGetItem('plotter_blocks'));
+                        if (keys.includes('plotter_keep_printer_connected')) {
+                            const box = document.getElementById('keepPrinterConnected');
+                            if (box) box.checked = safeGetItem('plotter_keep_printer_connected') !== '0';
+                        }
                     });
                     window.handwritingLayoutDirty = true;
                     triggerPreviewUpdate();

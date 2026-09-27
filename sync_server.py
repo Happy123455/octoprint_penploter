@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Serve the pen plotter workbench on your local network and keep every device in sync.
+"""Serve the pen plotter workbench on your local network, keep every device in sync, and keep the printer
+connected.
 
 Open http://<this computer's IP>:8790 on your computer and your phone: both get the same pages, groups,
-settings, calibration and font. A change on one device appears on the other within a second.
+settings, calibration, font and image/text blocks. A change on one device appears on the other within a second.
 
     python3 sync_server.py                 # port 8790
     python3 sync_server.py --port 9000
@@ -10,12 +11,24 @@ settings, calibration and font. A change on one device appears on the other with
 The shared state is kept in ~/Library/Application Support/PenPlotterSync/state.json (outside the project, since
 it includes your OctoPrint and Gemini API keys). Standard library only.
 
+OctoPrint pass-through: requests to /octoprint/... are forwarded to the OctoPrint address saved in the app. This
+computer resolves that address once (an "octopi.local" name takes seconds here and does not resolve at all on
+Android), so every device reaches OctoPrint quickly, with no CORS or https/http mixed-content problems.
+
+Keep printer connected: while the app's "Keep printer connected" option is on (the default), OctoPrint's printer
+connection is checked every 20 s. Only when OctoPrint reports it Closed or Offline, and a serial port is
+available, a connect request is sent (asking OctoPrint to also auto-connect after a restart). Nothing is ever sent
+while the printer is printing, paused, connecting or in any other state.
+
 Endpoints used by the page (index.html enables syncing only when they exist):
     GET  /__sync/state                 -> {"version": n, "data": {key: value}}
     POST /__sync/state                 <- {"client": id, "data": {key: value or null}}
     GET  /__sync/wait?since=n&client=  -> waits up to 25 s for changes after version n
+    GET  /__sync/printer               -> keep-connected status
+    *    /octoprint/<path>             -> forwarded to OctoPrint
 """
 import argparse
+import http.client
 import json
 import os
 import socket
@@ -27,9 +40,14 @@ from urllib.parse import parse_qs, urlparse
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.environ.get('PLOTTER_SYNC_STATE') or os.path.expanduser('~/Library/Application Support/PenPlotterSync/state.json')
 STATE_DIR = os.path.dirname(STATE_FILE)
+WATCH_INTERVAL = float(os.environ.get('PLOTTER_WATCH_INTERVAL', '20'))
+RECONNECT_STATES = {'Closed', 'Offline', 'Offline after error'}
+HOP_HEADERS = {'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers',
+               'transfer-encoding', 'upgrade', 'host', 'content-length', 'origin', 'referer'}
 
 lock = threading.Condition()
 state = {'version': 0, 'data': {}, 'keyVersion': {}, 'keyClient': {}}
+printer = {'enabled': True, 'state': None, 'error': None, 'lastCheck': 0, 'lastAction': None, 'lastActionAt': 0}
 
 
 def load_state():
@@ -57,6 +75,82 @@ def changes_since(since):
     }
 
 
+# ---------------------------------------------------------------- OctoPrint target
+_resolved = {'host': None, 'ip': None, 'at': 0}
+
+
+def octoprint_target():
+    """(scheme, ip, port, host) of the OctoPrint address saved in the app, resolved here and cached for 10 min."""
+    with lock:
+        raw = (state['data'].get('octoprint_url') or '').strip()
+    if not raw:
+        return None
+    if '://' not in raw:
+        raw = 'http://' + raw
+    u = urlparse(raw)
+    if not u.hostname:
+        return None
+    port = u.port or (443 if u.scheme == 'https' else 80)
+    if _resolved['host'] != u.hostname or time.time() - _resolved['at'] > 600 or not _resolved['ip']:
+        try:
+            _resolved.update(host=u.hostname, ip=socket.getaddrinfo(u.hostname, port, socket.AF_INET)[0][4][0], at=time.time())
+        except OSError:
+            _resolved.update(host=u.hostname, ip=None, at=time.time())
+            return None
+    return u.scheme, _resolved['ip'], port, u.hostname
+
+
+def octoprint_request(method, path, body=None, headers=None, timeout=30):
+    t = octoprint_target()
+    if not t:
+        raise OSError('OctoPrint address is not set or cannot be resolved')
+    scheme, ip, port, host = t
+    conn = (http.client.HTTPSConnection if scheme == 'https' else http.client.HTTPConnection)(ip, port, timeout=timeout)
+    try:
+        conn.request(method, path, body=body, headers=dict(headers or {}, Host=f'{host}:{port}' if port not in (80, 443) else host))
+        r = conn.getresponse()
+        return r.status, r.getheaders(), r.read()
+    except OSError:
+        _resolved['ip'] = None   # re-resolve next time (the Pi may have a new address)
+        raise
+    finally:
+        conn.close()
+
+
+def api_key():
+    with lock:
+        return (state['data'].get('octoprint_apikey') or '').strip()
+
+
+# ---------------------------------------------------------------- keep printer connected
+def watch_printer():
+    while True:
+        time.sleep(WATCH_INTERVAL)
+        with lock:
+            printer['enabled'] = state['data'].get('plotter_keep_printer_connected', '1') != '0'
+        if not printer['enabled'] or not api_key() or not octoprint_target():
+            continue
+        try:
+            code, _, body = octoprint_request('GET', '/api/connection', headers={'X-Api-Key': api_key()}, timeout=8)
+            printer['lastCheck'] = time.time()
+            if code != 200:
+                printer.update(state=None, error=f'OctoPrint answered HTTP {code}' + (' (API key rejected)' if code in (401, 403) else ''))
+                continue
+            info = json.loads(body)
+            current = info.get('current', {}).get('state')
+            printer.update(state=current, error=None)
+            ports = info.get('options', {}).get('ports') or []
+            # only a closed / offline connection is ever touched, and not more than once a minute
+            if current in RECONNECT_STATES and ports and time.time() - printer['lastActionAt'] > 60:
+                payload = json.dumps({'command': 'connect', 'save': True, 'autoconnect': True}).encode()
+                code, _, _ = octoprint_request('POST', '/api/connection', body=payload,
+                                               headers={'X-Api-Key': api_key(), 'Content-Type': 'application/json'}, timeout=15)
+                printer.update(lastAction=f'reconnect requested (HTTP {code})', lastActionAt=time.time())
+        except (OSError, ValueError) as e:
+            printer.update(state=None, error=f'cannot reach OctoPrint: {e}', lastCheck=time.time())
+
+
+# ---------------------------------------------------------------- HTTP
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=HERE, **kw)
@@ -77,11 +171,33 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def proxy(self):
+        path = self.path[len('/octoprint'):] or '/'
+        length = int(self.headers.get('Content-Length') or 0)
+        body = self.rfile.read(length) if length else None
+        headers = {k: v for k, v in self.headers.items() if k.lower() not in HOP_HEADERS}
+        try:
+            code, rheaders, data = octoprint_request(self.command, path, body=body, headers=headers,
+                                                     timeout=120 if length > 100000 else 30)
+        except OSError as e:
+            return self.send_json({'error': f'cannot reach OctoPrint: {e}'}, 502)
+        self.send_response(code)
+        for k, v in rheaders:
+            if k.lower() not in HOP_HEADERS and not k.lower().startswith('access-control-'):
+                self.send_header(k, v)
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self):
         url = urlparse(self.path)
+        if url.path.startswith('/octoprint/'):
+            return self.proxy()
         if url.path == '/__sync/state':
             with lock:
                 return self.send_json({'version': state['version'], 'data': state['data']})
+        if url.path == '/__sync/printer':
+            return self.send_json(printer)
         if url.path == '/__sync/wait':
             q = parse_qs(url.query)
             since = int(q.get('since', ['0'])[0])
@@ -95,6 +211,8 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        if urlparse(self.path).path.startswith('/octoprint/'):
+            return self.proxy()
         if urlparse(self.path).path != '/__sync/state':
             return self.send_json({'error': 'not found'}, 404)
         try:
@@ -120,6 +238,15 @@ class Handler(SimpleHTTPRequestHandler):
                 lock.notify_all()
             return self.send_json({'version': state['version']})
 
+    def do_PUT(self):
+        return self.proxy() if self.path.startswith('/octoprint/') else self.send_json({'error': 'not found'}, 404)
+
+    def do_DELETE(self):
+        return self.proxy() if self.path.startswith('/octoprint/') else self.send_json({'error': 'not found'}, 404)
+
+    def do_PATCH(self):
+        return self.proxy() if self.path.startswith('/octoprint/') else self.send_json({'error': 'not found'}, 404)
+
 
 def lan_ip():
     try:
@@ -135,6 +262,7 @@ def main():
     ap.add_argument('--port', type=int, default=8790)
     port = ap.parse_args().port
     load_state()
+    threading.Thread(target=watch_printer, daemon=True).start()
     server = ThreadingHTTPServer(('0.0.0.0', port), Handler)
     server.daemon_threads = True
     print(f'Pen plotter workbench: http://localhost:{port}  |  other devices: http://{lan_ip()}:{port}', flush=True)
