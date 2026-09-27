@@ -1956,6 +1956,76 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
     <!-- Script Block -->
     <script>
+        // --- DEVICE SYNC (active only when the page is served by sync_server.py) ---
+        // Before anything reads saved state, pull the shared state from the local server, so every device starts
+        // from the same pages, settings, calibration and font. Afterwards local changes are pushed, and changes
+        // made on another device are written to this browser's storage and announced with a 'plotter-sync' event.
+        // Opened any other way (GitHub Pages, the file itself) this does nothing.
+        const plotterSync = (function () {
+            const SYNCED = /^(plotter_|octoprint_|gemini_api_key$)/;
+            if (!/^https?:$/.test(location.protocol) || /\.github\.io$/.test(location.hostname)) return null;
+            let initial;
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', '/__sync/state', false);   // synchronous on purpose: must finish before the app reads storage
+                xhr.send();
+                if (xhr.status !== 200) return null;
+                initial = JSON.parse(xhr.responseText);
+            } catch (e) {
+                return null;
+            }
+            const client = Math.random().toString(36).slice(2);
+            let version = initial.version || 0;
+            let muted = 0;
+            const store = window.localStorage;
+            const origSet = Storage.prototype.setItem, origRemove = Storage.prototype.removeItem;
+            const pending = {};
+            let timer = null;
+
+            function flush() {
+                timer = null;
+                const data = Object.assign({}, pending);
+                Object.keys(pending).forEach(k => delete pending[k]);
+                fetch('/__sync/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client, data }) })
+                    .catch(() => { Object.keys(data).forEach(k => { if (!(k in pending)) pending[k] = data[k]; }); if (!timer) timer = setTimeout(flush, 3000); });
+            }
+            function queue(key, value) {
+                if (muted || !SYNCED.test(key)) return;
+                pending[key] = value;
+                if (!timer) timer = setTimeout(flush, 300);
+            }
+            Storage.prototype.setItem = function (k, v) { origSet.call(this, k, v); if (this === store) queue(k, String(v)); };
+            Storage.prototype.removeItem = function (k) { origRemove.call(this, k); if (this === store) queue(k, null); };
+
+            // start from the shared state; anything only this browser has is shared with the others
+            const shared = initial.data || {};
+            Object.keys(shared).forEach(k => origSet.call(store, k, shared[k]));
+            for (let i = 0; i < store.length; i++) {
+                const k = store.key(i);
+                if (SYNCED.test(k) && !(k in shared)) queue(k, store.getItem(k));
+            }
+
+            async function listen() {
+                for (;;) {
+                    try {
+                        const r = await fetch(`/__sync/wait?since=${version}&client=${client}`);
+                        const j = await r.json();
+                        version = j.version;
+                        const keys = Object.keys(j.data || {}).filter(k => j.from[k] !== client && SYNCED.test(k));
+                        if (keys.length) {
+                            keys.forEach(k => j.data[k] === null ? origRemove.call(store, k) : origSet.call(store, k, j.data[k]));
+                            window.dispatchEvent(new CustomEvent('plotter-sync', { detail: { keys } }));
+                        }
+                    } catch (e) {
+                        await new Promise(res => setTimeout(res, 3000));
+                    }
+                }
+            }
+            setTimeout(listen, 0);
+            // run fn without pushing what it saves (used while applying another device's changes)
+            return { client, quietly(fn) { muted++; try { return fn(); } finally { muted--; } } };
+        })();
+
         // Safe localStorage wrappers to prevent private browsing or local file crashes
         function safeGetItem(key) {
             try {
@@ -13614,6 +13684,39 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             try { resizeDesignerCanvas(); } catch(e) {}
             try { renderPreview(); } catch(e) {}
         });
+
+        // --- Apply changes synced from another device (see plotterSync at the top) ---
+        if (plotterSync) {
+            let lastLocalEdit = 0;
+            let pendingSync = new Set();
+            document.addEventListener('input', () => { lastLocalEdit = Date.now(); }, true);
+            const typing = () => Date.now() - lastLocalEdit < 1500;
+
+            function applySynced() {
+                if (typing()) { setTimeout(applySynced, 800); return; }
+                const keys = [...pendingSync];
+                pendingSync = new Set();
+                if (!keys.length) return;
+                if (keys.every(k => k === 'plotter_cached_webdata')) {
+                    // pages, groups and settings: refresh in place
+                    plotterSync.quietly(() => {
+                        loadCachedWebData();
+                        if (typeof triggerSliderValueBadgeUpdates === 'function') triggerSliderValueBadgeUpdates();
+                        rebuildPageTabs();
+                    });
+                    window.handwritingLayoutDirty = true;
+                    triggerPreviewUpdate();
+                } else {
+                    // calibration, profiles, font or connection settings are read at startup: reload to pick them up
+                    showToast("Updated from your other device", "info");
+                    setTimeout(() => location.reload(), 400);
+                }
+            }
+            window.addEventListener('plotter-sync', (e) => {
+                e.detail.keys.forEach(k => pendingSync.add(k));
+                applySynced();
+            });
+        }
     </script>
 
     <!-- Workbench shell: section rail, profile menu, header connection pill.
