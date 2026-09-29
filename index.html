@@ -8250,13 +8250,13 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     pCtx.font = 'bold 9px sans-serif';
                     pCtx.textAlign = 'left';
                     pCtx.fillText("P1 Target (Shift+Click to Lock)", hoverBedX * mmToPx + 12, (220 - hoverBedY) * mmToPx - 6);
-                } else if (p1 && !p2) {
+                } else if (!isCalibTwoPoint() && p1 && !p2) {
                     // Hovering for Point 2: Show top margin line from P1 to mouse cursor
                     pCtx.beginPath();
                     pCtx.moveTo(p1.x * mmToPx, (220 - p1.y) * mmToPx);
                     pCtx.lineTo(hoverBedX * mmToPx, (220 - hoverBedY) * mmToPx);
                     pCtx.stroke();
-                } else if (p1 && p2 && !p3) {
+                } else if (!isCalibTwoPoint() && p1 && p2 && !p3) {
                     // Hovering for Point 3: Show left margin and estimated ruled lines down to cursor height
                     const theta_temp = Math.atan2(p2.y - p1.y, p2.x - p1.x);
                     const perpX = -Math.sin(theta_temp);
@@ -8294,6 +8294,79 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 pCtx.setLineDash([]);
             }
             
+            // Quick 2-point: draw the page frame the two points define (both margins and all 20 ruled lines). While
+            // aiming for Point 4 it follows the pen in FPS mode (the mouse otherwise), so you can see the right margin
+            // meet the 20th line; after Point 4 is captured it shows the final map with the computed P2 and P3.
+            if (isCalibTwoPoint() && p1) {
+                const xL = settings.leftMargin, xR = 210 - settings.rightMargin;
+                const yTop = settings.topLineOffset, y20 = settings.topLineOffset + 20 * settings.lineSpacing;
+                let m = null;
+                const live = !p4;
+                if (p4) {
+                    m = getCalibMapping();
+                } else {
+                    const aim = isFpsCalibMode ? { x: jogVirtualX, y: jogVirtualY }
+                        : (hoverBedX !== null && hoverBedY !== null ? { x: hoverBedX, y: hoverBedY } : null);
+                    const target = aim || predictCalibP4(p1);
+                    const d1f = { x: xL, y: 297 - yTop }, d4f = { x: xR, y: 297 - y20 };
+                    m = { d1_f: d1f, p1, theta: Math.atan2(target.y - p1.y, target.x - p1.x) - Math.atan2(d4f.y - d1f.y, d4f.x - d1f.x) };
+                    // where Point 4 should be for a straight sheet
+                    const pr = predictCalibP4(p1);
+                    pCtx.strokeStyle = 'rgba(236, 72, 153, 0.6)';
+                    pCtx.lineWidth = 1.5;
+                    pCtx.setLineDash([6, 4]);
+                    pCtx.beginPath();
+                    pCtx.arc(pr.x * mmToPx, (220 - pr.y) * mmToPx, 9.0, 0, 2 * Math.PI);
+                    pCtx.stroke();
+                    pCtx.setLineDash([]);
+                    pCtx.fillStyle = 'rgba(236, 72, 153, 0.9)';
+                    pCtx.font = 'bold 9px sans-serif';
+                    pCtx.textAlign = 'left';
+                    pCtx.fillText('P4 target: right margin × 20th line', pr.x * mmToPx + 13, (220 - pr.y) * mmToPx + 3);
+                }
+                if (m) {
+                    const P = (x, y) => { const q = mapDesignToBed(x, y, m); return [q.x * mmToPx, (220 - q.y) * mmToPx]; };
+                    pCtx.save();
+                    if (live) pCtx.setLineDash([5, 4]);
+                    // the 20 ruled lines (the 20th, which Point 4 sits on, drawn stronger)
+                    for (let k = 0; k <= 20; k++) {
+                        const y = yTop + k * settings.lineSpacing;
+                        pCtx.strokeStyle = k === 0 || k === 20 ? 'rgba(59, 130, 246, 0.85)' : 'rgba(59, 130, 246, 0.35)';
+                        pCtx.lineWidth = k === 0 || k === 20 ? 1.8 : 1.0;
+                        pCtx.beginPath();
+                        pCtx.moveTo(...P(xL, y));
+                        pCtx.lineTo(...P(xR, y));
+                        pCtx.stroke();
+                    }
+                    // left and right margins
+                    pCtx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
+                    pCtx.lineWidth = 2.0;
+                    for (const x of [xL, xR]) {
+                        pCtx.beginPath();
+                        pCtx.moveTo(...P(x, yTop));
+                        pCtx.lineTo(...P(x, y20));
+                        pCtx.stroke();
+                    }
+                    pCtx.setLineDash([]);
+                    // computed corners
+                    if (!live) {
+                        [[xR, yTop, 'P2 (computed)'], [xL, y20, 'P3 (computed)']].forEach(([x, y, label]) => {
+                            const [cx, cy] = P(x, y);
+                            pCtx.strokeStyle = '#64748b';
+                            pCtx.lineWidth = 1.5;
+                            pCtx.beginPath();
+                            pCtx.arc(cx, cy, 6.0, 0, 2 * Math.PI);
+                            pCtx.stroke();
+                            pCtx.fillStyle = '#475569';
+                            pCtx.font = 'bold 9px sans-serif';
+                            pCtx.textAlign = 'left';
+                            pCtx.fillText(label, cx + 10, cy - 8);
+                        });
+                    }
+                    pCtx.restore();
+                }
+            }
+
             // Draw points dots and text overlays
             for (let i = 0; i < 4; i++) {
                 const pt = points[i];
