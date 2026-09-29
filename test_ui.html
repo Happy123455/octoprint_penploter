@@ -10146,6 +10146,15 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         });
 
         // Capture functions and automation helper
+        // Once every point of the current mode is captured, switch the map on (it's what calibrating is for)
+        function autoEnableCalibMap() {
+            const box = document.getElementById('use3PointCalib');
+            if (!box || box.checked || !calibPointOrder().every(i => getLiveCalibPoint(i)) || !getCalibMapping()) return;
+            box.checked = true;
+            box.dispatchEvent(new Event('change', { bubbles: true }));
+            showToast("Calibration complete: map enabled", "success");
+        }
+
         function captureCalibPoint(index) {
             document.getElementById(`calibP${index}X`).value = jogVirtualX.toFixed(2);
             document.getElementById(`calibP${index}Y`).value = jogVirtualY.toFixed(2);
@@ -10153,6 +10162,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             saveCalibPointsToLocalStorage();
             showToast(`Point ${index} captured successfully!`, "success");
             triggerPreviewUpdate();
+            autoEnableCalibMap();
 
             // Run automation if enabled
             const autoEnabled = document.getElementById('enableCalibAutomation') ? document.getElementById('enableCalibAutomation').checked : true;
@@ -11275,6 +11285,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             updateCalibLabels();
             saveCalibPointsToLocalStorage();
             triggerPreviewUpdate();
+            autoEnableCalibMap();
         }
 
         function checkCalibrationStateConflict() {
