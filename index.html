@@ -909,13 +909,16 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <label class="check-row text-[11px] text-emerald-300" title="Automatically step to the next point after capturing">
                                         <input type="checkbox" id="enableCalibAutomation" checked class="check accent-emerald-500" />Auto-step
                                     </label>
+                                    <label class="check-row text-[11px] text-sky-300" title="Capture only Point 1 (top-left) and Point 4 (bottom-right). The map is a rigid rotation + shift, which these two points determine exactly; the page diagonal between them gives the most precise angle. Points 2 and 3 are computed.">
+                                        <input type="checkbox" id="calibTwoPoint" checked class="check" />Quick 2-point
+                                    </label>
                                     <label class="check-row text-[11px] text-indigo-300" title="Apply the calibration map to generated G-code">
                                         <input type="checkbox" id="use3PointCalib" class="check" />Enable map
                                     </label>
                                 </div>
                             </div>
                             <div class="card-bd">
-                                <p class="hint">Jog to 3 reference points on your paper (forms a parallelogram) or all 4 (enables bilinear warping), then capture their physical coordinates.</p>
+                                <p class="hint" id="calibHint">Jog to the reference points on your paper and capture their physical coordinates. <b>Quick 2-point</b> needs only Point 1 (top-left) and Point 4 (bottom-right); turn it off to capture all four and average the angle over every edge.</p>
 
                                 <div class="callout callout-bad">
                                     <b>Home the printer first.</b> Home the carriage (button below or LCD) <b>before</b> jogging and recording, so the software's coordinates match the printer's physical ones.
@@ -998,7 +1001,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                         <button id="btnSetP1" class="btn btn-sm btn-primary" title="Capture current jog position">Capture</button>
                                         <button id="btnGoToP1" class="btn btn-sm btn-secondary" title="Travel to this point"><svg class="i-sm"><use href="#i-send"/></svg>Travel</button>
                                     </div>
-                                    <div class="pt-row">
+                                    <div class="pt-row" data-calib-row="2">
                                         <span class="pt-dot">2</span>
                                         <div class="min-w-0 flex-1">
                                             <div class="text-[11px] font-medium text-slate-200 truncate">Top-right margin corner</div>
@@ -1011,7 +1014,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                         <button id="btnSetP2" class="btn btn-sm btn-primary" title="Capture current jog position">Capture</button>
                                         <button id="btnGoToP2" class="btn btn-sm btn-secondary" title="Travel to this point"><svg class="i-sm"><use href="#i-send"/></svg>Travel</button>
                                     </div>
-                                    <div class="pt-row">
+                                    <div class="pt-row" data-calib-row="3">
                                         <span class="pt-dot">3</span>
                                         <div class="min-w-0 flex-1">
                                             <div class="text-[11px] font-medium text-slate-200 truncate">Left margin × 20th line</div>
@@ -2317,7 +2320,13 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 'Ω': [join([[110, 240], [136, 240]], bez([136, 240], [94, 204], [100, 64], [150, 62]), bez([150, 62], [200, 64], [206, 204], [164, 240]),
                            [[164, 240], [190, 240]])],
                 '∞': [lemniscate],
-                '√': [[[112, 196], [124, 186], [140, 240], [168, 60], [196, 60]]]
+                '√': [[[112, 196], [124, 186], [140, 240], [168, 60], [196, 60]]],
+                '⇒': [[[108, 178], [178, 178]], [[108, 206], [178, 206]], [[160, 158], [192, 192], [160, 226]]],
+                '⇐': [[[122, 178], [192, 178]], [[122, 206], [192, 206]], [[140, 158], [108, 192], [140, 226]]],
+                '⇔': [[[112, 178], [188, 178]], [[112, 206], [188, 206]], [[134, 158], [104, 192], [134, 226]], [[166, 158], [196, 192], [166, 226]]],
+                '∴': [dot(150, 150), dot(124, 226), dot(176, 226)],
+                '∵': [dot(124, 150), dot(176, 150), dot(150, 226)],
+                '∝': [join(bez([188, 172], [150, 150], [118, 160], [118, 192]), bez([118, 192], [118, 224], [150, 234], [188, 212]))]
             };
             const variant = (strokes, k) => {
                 const [skew, sc, dx, dy] = [[0, 1, 0, 0], [0.05, 0.97, 2, -1], [-0.04, 1.03, -2, 1]][k];
@@ -4189,6 +4198,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             // 1.6. Markdown structure: headings lose their #'s, "* " / "+ " list markers become bullets
             processed = processed.replace(/^[ \t]*#{1,6}[ \t]+/gm, '');
             processed = processed.replace(/^([ \t]*)[*+][ \t]+/gm, '$1• ');
+            // stray list markers left inside bullets by chat exports ("• * text", "• *  *  * text")
+            processed = processed.replace(/^([ \t]*•[ \t]+)(?:\*[ \t]*)+(?=\S|$)/gm, '$1');
 
             // 2. Convert inline math $...$ by stripping the $ signs
             processed = processed.replace(/\$([^\$]+?)\$/g, (match, inline) => {
@@ -4303,13 +4314,30 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 '\\\\varepsilon(?![a-zA-Z])': 'ε',
                 '\\\\vartheta(?![a-zA-Z])': 'θ',
                 '\\\\varphi(?![a-zA-Z])': 'φ',
-                '\\\\%': '%'
+                '\\\\%': '%',
+                '\\\\implies(?![a-zA-Z])': '⇒',
+                '\\\\Rightarrow(?![a-zA-Z])': '⇒',
+                '\\\\Leftarrow(?![a-zA-Z])': '⇐',
+                '\\\\impliedby(?![a-zA-Z])': '⇐',
+                '\\\\iff(?![a-zA-Z])': '⇔',
+                '\\\\Leftrightarrow(?![a-zA-Z])': '⇔',
+                '\\\\therefore(?![a-zA-Z])': '∴',
+                '\\\\because(?![a-zA-Z])': '∵',
+                '\\\\cdots(?![a-zA-Z])': '...',
+                '\\\\propto(?![a-zA-Z])': '∝'
             };
             
             for (let latex in symbols) {
                 const re = new RegExp(latex, 'g');
                 processed = processed.replace(re, symbols[latex]);
             }
+
+            // function names are written as plain words
+            processed = processed.replace(/\\(min|max|log|ln|sin|cos|tan|exp|lim|sec|csc|cot|arcsin|arccos|arctan)(?![a-zA-Z])/g, '$1');
+
+            // grouping braces outside math, e.g. "{99.07 kN}", are dropped; braces that belong to \frac{..}{..},
+            // \sqrt{..}, sub/superscripts or another command are kept (preceded by a letter, _, ^, } or \)
+            processed = processed.replace(/(^|[^\\\w_^}])\{([^{}\n]*)\}/g, '$1$2');
             
             return processed;
         }
@@ -7665,10 +7693,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         if (photoCalibration.targetMode === 'bedCalib') {
                             const p1x = parseFloat(document.getElementById('calibP1X').value);
                             const p1y = parseFloat(document.getElementById('calibP1Y').value);
-                            const p2x = parseFloat(document.getElementById('calibP2X').value);
-                            const p2y = parseFloat(document.getElementById('calibP2Y').value);
-                            const p3x = parseFloat(document.getElementById('calibP3X').value);
-                            const p3y = parseFloat(document.getElementById('calibP3Y').value);
+                            const cm = isCalibTwoPoint() ? getCalibMapping() : null;
+                            const p2x = cm ? cm.p2.x : parseFloat(document.getElementById('calibP2X').value);
+                            const p2y = cm ? cm.p2.y : parseFloat(document.getElementById('calibP2Y').value);
+                            const p3x = cm ? cm.p3.x : parseFloat(document.getElementById('calibP3X').value);
+                            const p3y = cm ? cm.p3.y : parseFloat(document.getElementById('calibP3Y').value);
                             const p4x = parseFloat(document.getElementById('calibP4X').value);
                             const p4y = parseFloat(document.getElementById('calibP4Y').value);
                             if (!isNaN(p1x) && !isNaN(p1y) && !isNaN(p2x) && !isNaN(p2y) && !isNaN(p3x) && !isNaN(p3y) && !isNaN(p4x) && !isNaN(p4y)) {
@@ -9806,6 +9835,21 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const p4X = parseFloat(document.getElementById('calibP4X').value);
             const p4Y = parseFloat(document.getElementById('calibP4Y').value);
             
+            // Quick 2-point: the map is rigid (rotation + shift), so Point 1 fixes the shift and the page diagonal
+            // P1 -> P4 fixes the angle. Points 2 and 3 are then computed. The difference between the measured and
+            // the true diagonal length is reported as the calibration error.
+            if (isCalibTwoPoint()) {
+                if (isNaN(p1.x) || isNaN(p1.y) || isNaN(p4X) || isNaN(p4Y)) return null;
+                const d1f = { x: d1.x, y: 297 - d1.y }, d4f = { x: d4.x, y: 297 - d4.y };
+                const theta = Math.atan2(p4Y - p1.y, p4X - p1.x) - Math.atan2(d4f.y - d1f.y, d4f.x - d1f.x);
+                const m = { d1_f: d1f, p1, theta };
+                const q2 = mapDesignToBed(d2.x, d2.y, m), q3 = mapDesignToBed(d3.x, d3.y, m);
+                return Object.assign(m, {
+                    p2: q2, p3: q3, p4: { x: p4X, y: p4Y }, twoPoint: true,
+                    diagError: Math.hypot(p4X - p1.x, p4Y - p1.y) - Math.hypot(d4f.x - d1f.x, d4f.y - d1f.y)
+                });
+            }
+            
             if (isNaN(p1.x) || isNaN(p1.y) || isNaN(p2.x) || isNaN(p2.y) || isNaN(p3.x) || isNaN(p3.y)) {
                 return null;
             }
@@ -10033,7 +10077,13 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             // Run automation if enabled
             const autoEnabled = document.getElementById('enableCalibAutomation') ? document.getElementById('enableCalibAutomation').checked : true;
             if (autoEnabled) {
-                if (index === 1) {
+                if (index === 1 && isCalibTwoPoint()) {
+                    // Quick 2-point: travel straight to where Point 4 should be
+                    setTimeout(() => {
+                        const t = predictCalibP4({ x: jogVirtualX, y: jogVirtualY });
+                        travelToPoint(t.x, t.y);
+                    }, 500);
+                } else if (index === 1) {
                     // Rule 2: when 1st point is set then automate the "C" button action (Jump X Right)
                     setTimeout(() => {
                         performJumpXRight();
@@ -10068,19 +10118,9 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         }
 
         function triggerCalibrationCapture() {
-            const p1 = getLiveCalibPoint(1);
-            const p2 = getLiveCalibPoint(2);
-            const p3 = getLiveCalibPoint(3);
-            const p4 = getLiveCalibPoint(4);
-            
-            if (!p1) {
-                captureCalibPoint(1);
-            } else if (!p2) {
-                captureCalibPoint(2);
-            } else if (!p3) {
-                captureCalibPoint(3);
-            } else if (!p4) {
-                captureCalibPoint(4);
+            const next = getNextUnsetCalibPointIndex();
+            if (next) {
+                captureCalibPoint(next);
             } else {
                 showToast("All calibration points are already set! Reset them first to capture again.", "warning");
             }
@@ -10235,10 +10275,10 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const p2 = getLiveCalibPoint(2);
             const p3 = getLiveCalibPoint(3);
             const p4 = getLiveCalibPoint(4);
-            if (p1 && p2 && p3 && p4) {
+            if (calibPointOrder().every(i => getLiveCalibPoint(i))) {
                 btn.disabled = true;
                 btn.className = "btn btn-disabled flex-1";
-                btn.title = "All 4 points calibrated. Reset points first to recalibrate.";
+                btn.title = "All calibration points captured. Reset points first to recalibrate.";
             } else {
                 btn.disabled = false;
                 btn.className = "btn btn-primary flex-1";
@@ -10246,12 +10286,37 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             }
         }
 
+        function applyCalibModeUI() {
+            const quick = isCalibTwoPoint();
+            document.querySelectorAll('[data-calib-row="2"], [data-calib-row="3"]').forEach(r => r.classList.toggle('hidden', quick));
+            if (typeof updateFpsCalibButtonState === 'function') updateFpsCalibButtonState();
+            if (typeof updateCalibrationErrorBadge === 'function') updateCalibrationErrorBadge();
+        }
+        document.getElementById('calibTwoPoint').addEventListener('change', () => {
+            applyCalibModeUI();
+            window.handwritingLayoutDirty = true;
+            triggerPreviewUpdate();
+        });
+        setTimeout(applyCalibModeUI, 0);
+
+        function isCalibTwoPoint() {
+            const el = document.getElementById('calibTwoPoint');
+            return !el || el.checked;
+        }
+        function calibPointOrder() {
+            return isCalibTwoPoint() ? [1, 4] : [1, 2, 3, 4];
+        }
+        // Point 4 predicted from Point 1 and the page geometry (paper assumed square to the bed)
+        function predictCalibP4(p1) {
+            const s = getSettings();
+            return {
+                x: Math.max(-16.6, Math.min(220.0, p1.x + (210 - s.rightMargin - s.leftMargin))),
+                y: Math.max(0.0, Math.min(220.0, p1.y - 20.0 * s.lineSpacing))
+            };
+        }
+
         function getNextUnsetCalibPointIndex() {
-            if (!getLiveCalibPoint(1)) return 1;
-            if (!getLiveCalibPoint(2)) return 2;
-            if (!getLiveCalibPoint(3)) return 3;
-            if (!getLiveCalibPoint(4)) return 4;
-            return null;
+            return calibPointOrder().find(i => !getLiveCalibPoint(i)) || null;
         }
 
         const pointNames = {
@@ -10377,7 +10442,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             
             setTimeout(() => {
                 fpsIsAutomatingJump = false;
-                fpsActivePointIndex = currentIdx + 1;
+                fpsActivePointIndex = getNextUnsetCalibPointIndex() || 4;
                 updateFpsHud();
                 
                 if (!fpsIsTouch && document.pointerLockElement !== previewCanvas) {
@@ -11066,7 +11131,13 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const badge = document.getElementById('calibrationErrorBadge');
             const valueText = document.getElementById('calibrationErrorValue');
             
-            if (p1 && p2 && p3 && p4 && badge && valueText) {
+            const quick = isCalibTwoPoint() && p1 && p4 && badge && valueText ? getCalibMapping() : null;
+            if (quick && quick.twoPoint) {
+                const error = Math.abs(quick.diagError);
+                badge.classList.remove('hidden');
+                valueText.textContent = `${error.toFixed(2)} mm`;
+                valueText.className = `text-sm font-mono font-bold ${error < 1.0 ? 'text-emerald-400' : error < 2.0 ? 'text-amber-400' : 'text-red-400 animate-pulse'}`;
+            } else if (p1 && p2 && p3 && p4 && badge && valueText) {
                 const projectedP4 = {
                     x: p2.x + p3.x - p1.x,
                     y: p2.y + p3.y - p1.y
@@ -11096,7 +11167,11 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const p3 = getLiveCalibPoint(3);
             const p4 = getLiveCalibPoint(4);
             
-            if (!p1) {
+            if (isCalibTwoPoint() && p1 && !p4) {
+                document.getElementById('calibP4X').value = x.toFixed(2);
+                document.getElementById('calibP4Y').value = y.toFixed(2);
+                showToast("Point 4 (Bottom-Right) set at cursor!", "success");
+            } else if (!p1) {
                 document.getElementById('calibP1X').value = x.toFixed(2);
                 document.getElementById('calibP1Y').value = y.toFixed(2);
                 showToast("Point 1 (Top-Left) set at cursor!", "success");
