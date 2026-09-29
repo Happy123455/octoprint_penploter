@@ -5588,9 +5588,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             // Flip Y axis of design coordinate: Y_flipped = 297 - Y
             const y_f = 297 - y;
             
-            // Translate relative to design Point 1
-            const rx = x - mapping.d1_f.x;
-            const ry = y_f - mapping.d1_f.y;
+            // Translate relative to design Point 1 (and scale, when the map has one)
+            const k = mapping.scale || 1;
+            const rx = (x - mapping.d1_f.x) * k;
+            const ry = (y_f - mapping.d1_f.y) * k;
             
             // Rotate by theta (rigid rotation)
             const cosT = Math.cos(mapping.theta);
@@ -5620,8 +5621,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             const cosT = Math.cos(mapping.theta);
             const sinT = Math.sin(mapping.theta);
             
-            const rx = rx_rot * cosT + ry_rot * sinT;
-            const ry = -rx_rot * sinT + ry_rot * cosT;
+            const k = mapping.scale || 1;
+            const rx = (rx_rot * cosT + ry_rot * sinT) / k;
+            const ry = (-rx_rot * sinT + ry_rot * cosT) / k;
             
             const x = rx + mapping.d1_f.x;
             const y_f = ry + mapping.d1_f.y;
@@ -8309,7 +8311,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         : (hoverBedX !== null && hoverBedY !== null ? { x: hoverBedX, y: hoverBedY } : null);
                     const target = aim || predictCalibP4(p1);
                     const d1f = { x: xL, y: 297 - yTop }, d4f = { x: xR, y: 297 - y20 };
-                    m = { d1_f: d1f, p1, theta: Math.atan2(target.y - p1.y, target.x - p1.x) - Math.atan2(d4f.y - d1f.y, d4f.x - d1f.x) };
+                    m = {
+                        d1_f: d1f, p1,
+                        theta: Math.atan2(target.y - p1.y, target.x - p1.x) - Math.atan2(d4f.y - d1f.y, d4f.x - d1f.x),
+                        scale: Math.hypot(target.x - p1.x, target.y - p1.y) / (Math.hypot(d4f.x - d1f.x, d4f.y - d1f.y) || 1)
+                    };
                     // where Point 4 should be for a straight sheet
                     const pr = predictCalibP4(p1);
                     pCtx.strokeStyle = 'rgba(236, 72, 153, 0.6)';
@@ -9908,14 +9914,15 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const p4X = parseFloat(document.getElementById('calibP4X').value);
             const p4Y = parseFloat(document.getElementById('calibP4Y').value);
             
-            // Quick 2-point: the map is rigid (rotation + shift), so Point 1 fixes the shift and the page diagonal
-            // P1 -> P4 fixes the angle. Points 2 and 3 are then computed. The difference between the measured and
-            // the true diagonal length is reported as the calibration error.
+            // Quick 2-point: Point 1 fixes the shift, the page diagonal P1 -> P4 fixes the angle, and its length fixes a
+            // uniform scale, so the top-left margin corner lands exactly on Point 1 and the right margin × 20th line
+            // exactly on Point 4. The scale shows how far the paper differs from the margin / line-spacing settings.
             if (isCalibTwoPoint()) {
                 if (isNaN(p1.x) || isNaN(p1.y) || isNaN(p4X) || isNaN(p4Y)) return null;
                 const d1f = { x: d1.x, y: 297 - d1.y }, d4f = { x: d4.x, y: 297 - d4.y };
                 const theta = Math.atan2(p4Y - p1.y, p4X - p1.x) - Math.atan2(d4f.y - d1f.y, d4f.x - d1f.x);
-                const m = { d1_f: d1f, p1, theta };
+                const measured = Math.hypot(p4X - p1.x, p4Y - p1.y), designed = Math.hypot(d4f.x - d1f.x, d4f.y - d1f.y);
+                const m = { d1_f: d1f, p1, theta, scale: designed > 0 ? measured / designed : 1 };
                 const q2 = mapDesignToBed(d2.x, d2.y, m), q3 = mapDesignToBed(d3.x, d3.y, m);
                 return Object.assign(m, {
                     p2: q2, p3: q3, p4: { x: p4X, y: p4Y }, twoPoint: true,
@@ -11208,7 +11215,8 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             if (quick && quick.twoPoint) {
                 const error = Math.abs(quick.diagError);
                 badge.classList.remove('hidden');
-                valueText.textContent = `${error.toFixed(2)} mm`;
+                valueText.textContent = `${error.toFixed(2)} mm · ×${quick.scale.toFixed(3)}`;
+                valueText.title = `Your P1→P4 diagonal is ${error.toFixed(2)} mm ${quick.diagError > 0 ? 'longer' : 'shorter'} than the margins and line spacing in the settings, so the page is scaled ×${quick.scale.toFixed(3)} to pass exactly through both points (text is scaled with it). A big difference usually means the line spacing or margins don't match your paper.`;
                 valueText.className = `text-sm font-mono font-bold ${error < 1.0 ? 'text-emerald-400' : error < 2.0 ? 'text-amber-400' : 'text-red-400 animate-pulse'}`;
             } else if (p1 && p2 && p3 && p4 && badge && valueText) {
                 const projectedP4 = {
