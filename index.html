@@ -684,21 +684,41 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         <!-- Graph paper photo overlay (visible in graph mode) -->
                         <div id="graphModeSection" class="card border-emerald-900/60 hidden">
                             <div class="card-hd">
-                                <h2 class="card-title"><svg class="i !text-emerald-400"><use href="#i-graph"/></svg>Graph photo overlay</h2>
-                                <span class="chip chip-ok">1 cm grid · 20 cm travel</span>
+                                <h2 class="card-title"><svg class="i !text-emerald-400"><use href="#i-graph"/></svg>Graph paper</h2>
+                                <span class="chip chip-ok" id="graphBoxChip">1 cm grid · 20 × 20 cm</span>
                             </div>
                             <div class="card-bd">
-                                <p class="hint">Overlay a tilted phone photo of a graph. Use the 4 corner alignment pins to stretch and straighten it onto the 1 cm bed grid.</p>
+                                <p class="hint">The <b>grid box</b> is the printed grid you calibrate on: Point 1 is its top-left corner, Point 4 its bottom-right corner. If the sheet's real corner is out of the pen's reach, set a smaller box ending on a bold 1 cm crossing you can reach.</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="lbl" for="graphBoxW">Grid box width</label>
+                                        <div class="relative"><input type="number" id="graphBoxW" value="20" min="2" max="22" step="1" class="field field-mono pr-8" /><span class="unit">cm</span></div>
+                                    </div>
+                                    <div>
+                                        <label class="lbl" for="graphBoxH">Grid box height</label>
+                                        <div class="relative"><input type="number" id="graphBoxH" value="20" min="2" max="30" step="1" class="field field-mono pr-8" /><span class="unit">cm</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Page photo overlay (ruled and graph paper) -->
+                        <div class="card border-emerald-900/40">
+                            <div class="card-hd">
+                                <h2 class="card-title"><svg class="i !text-emerald-400"><use href="#i-image"/></svg>Page photo overlay</h2>
+                            </div>
+                            <div class="card-bd">
+                                <p class="hint">Photograph the page you'll print on, upload it, and mark the same two points you calibrate the bed with (Point 1 and Point 4). The photo then lines up with the preview, so you can place writing, graphs and blocks exactly. For photos taken at an angle, switch the studio to 4 points.</p>
                                 <div class="file-drop">
-                                    <label class="lbl" for="graphPhotoInput">Upload graph photo</label>
+                                    <label class="lbl" for="graphPhotoInput">Upload page photo</label>
                                     <input type="file" id="graphPhotoInput" accept="image/*" class="file" />
                                 </div>
 
                                 <div id="graphOverlayControls" class="space-y-3 hidden">
                                     <button id="btnOpenPhotoCalibStudio" type="button" class="btn btn-go w-full">
-                                        <svg class="i-sm"><use href="#i-pin"/></svg>Calibrate 4 photo corners (studio)
+                                        <svg class="i-sm"><use href="#i-pin"/></svg>Align photo points (studio)
                                     </button>
-                                    <div class="row">
+                                    <div class="row" data-photo-four>
                                         <label for="selPhotoTargetMode" class="text-[11px] text-slate-400">Target mapping</label>
                                         <select id="selPhotoTargetMode" class="field field-sm w-auto">
                                             <option value="graph200">1cm Graph (200x200mm)</option>
@@ -714,7 +734,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                         <input type="range" id="graphOpacityRange" min="0" max="100" step="5" value="60" class="slider accent-emerald-500" />
                                     </div>
                                     <div class="flex items-center gap-2">
-                                        <button id="btnResetGraphAlignment" type="button" class="btn btn-secondary flex-1"><svg class="i-sm"><use href="#i-rotate-ccw"/></svg>Reset 4 alignment pins</button>
+                                        <button id="btnResetGraphAlignment" type="button" class="btn btn-secondary flex-1"><svg class="i-sm"><use href="#i-rotate-ccw"/></svg>Reset alignment</button>
                                         <button id="btnClearGraphPhoto" type="button" class="btn btn-danger"><svg class="i-sm"><use href="#i-trash"/></svg>Remove</button>
                                     </div>
                                 </div>
@@ -991,7 +1011,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <div class="pt-row">
                                         <span class="pt-dot">1</span>
                                         <div class="min-w-0 flex-1">
-                                            <div class="text-[11px] font-medium text-slate-200 truncate">Top-left margin corner</div>
+                                            <div class="text-[11px] font-medium text-slate-200 truncate" id="calibP1Name">Top-left margin corner</div>
                                             <span class="block text-[10px] font-mono text-slate-500" id="calibP1Label">Not set</span>
                                         </div>
                                         <div class="flex gap-1 hidden">
@@ -1004,7 +1024,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <div class="pt-row" data-calib-row="2">
                                         <span class="pt-dot">2</span>
                                         <div class="min-w-0 flex-1">
-                                            <div class="text-[11px] font-medium text-slate-200 truncate">Top-right margin corner</div>
+                                            <div class="text-[11px] font-medium text-slate-200 truncate" id="calibP2Name">Top-right margin corner</div>
                                             <span class="block text-[10px] font-mono text-slate-500" id="calibP2Label">Not set</span>
                                         </div>
                                         <div class="flex gap-1 hidden">
@@ -1017,7 +1037,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <div class="pt-row" data-calib-row="3">
                                         <span class="pt-dot">3</span>
                                         <div class="min-w-0 flex-1">
-                                            <div class="text-[11px] font-medium text-slate-200 truncate">Left margin × 20th line</div>
+                                            <div class="text-[11px] font-medium text-slate-200 truncate" id="calibP3Name">Left margin × 20th line</div>
                                             <span class="block text-[10px] font-mono text-slate-500" id="calibP3Label">Not set</span>
                                         </div>
                                         <div class="flex gap-1 hidden">
@@ -1030,7 +1050,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <div class="pt-row">
                                         <span class="pt-dot">4</span>
                                         <div class="min-w-0 flex-1">
-                                            <div class="text-[11px] font-medium text-slate-200 truncate">Right margin × 20th line</div>
+                                            <div class="text-[11px] font-medium text-slate-200 truncate" id="calibP4Name">Right margin × 20th line</div>
                                             <span class="block text-[10px] font-mono text-slate-500" id="calibP4Label">Not set</span>
                                         </div>
                                         <div class="flex gap-1 hidden">
@@ -1832,10 +1852,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center shrink-0"><svg class="i"><use href="#i-pin"/></svg></div>
                     <div class="min-w-0">
                         <h3 class="text-sm font-semibold text-white flex items-center gap-2">
-                            Photo corner alignment studio
-                            <span class="chip chip-ok">10×10 bilinear homography</span>
+                            Photo alignment studio
+                            <span class="chip chip-ok" data-photo-four>perspective correction</span>
                         </h3>
-                        <p class="text-[11px] text-slate-400 truncate">Drag the 4 coloured pins onto the 4 corners of the graph paper. Use the loupe for pixel precision.</p>
+                        <p class="text-[11px] text-slate-400 truncate">Mark the page's Point 1 and Point 4 (or all 4 corners for an angled photo). Use the loupe for pixel precision.</p>
                     </div>
                 </div>
                 <button id="btnClosePhotoCalibModal" class="btn btn-ghost btn-icon" title="Close"><svg class="i"><use href="#i-x"/></svg></button>
@@ -1855,7 +1875,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     </div>
 
                     <div class="absolute bottom-4 left-4 z-10 bg-slate-900/85 border border-slate-800 rounded-lg px-3 py-1.5 text-[11px] text-slate-300 pointer-events-none shadow-xl backdrop-blur-sm">
-                        <b class="text-emerald-400">Scroll</b> to zoom · <b class="text-emerald-400">Drag</b> to pan · <b class="text-emerald-400">Drag pins</b> onto graph corners
+                        <b class="text-emerald-400">Scroll</b> to zoom · <b class="text-emerald-400">Drag</b> to pan · <b class="text-emerald-400">Drag pins</b> onto the page points
                     </div>
 
                     <div id="photoLoupeContainer" class="absolute top-4 left-4 bg-slate-900/95 border border-slate-700 rounded-xl p-2 shadow-2xl pointer-events-none hidden flex flex-col items-center z-20 backdrop-blur-sm">
@@ -1868,8 +1888,13 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 <div class="w-full md:w-80 bg-slate-900/95 border-t md:border-t-0 md:border-l border-slate-800 p-4 flex flex-col justify-between gap-4 overflow-y-auto">
                     <div class="space-y-4">
                         <div class="space-y-2">
-                            <span class="sub-title">4 photo alignment pins</span>
+                            <span class="sub-title">Photo alignment points</span>
                             <p class="hint">Click a pin to activate it, then click or drag directly on the photo.</p>
+                            <div class="seg" id="photoStudioModeSeg">
+                                <button type="button" class="seg-btn seg-on-go" data-photo-mode="two" title="Mark Point 1 and Point 4 only: the photo is rotated, scaled and shifted onto the page. Best for photos taken straight from above.">2 points</button>
+                                <button type="button" class="seg-btn" data-photo-mode="four" title="Mark all four corners: also corrects the perspective of a photo taken at an angle.">4 points (angled photo)</button>
+                            </div>
+                            <p class="text-[10px] text-slate-400" id="photoStudioModeHint">Click the photo to place the selected point: <b>Point 1</b> then <b>Point 4</b>, exactly where you calibrate the bed.</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="btnPinSelectP1" type="button" class="p-2.5 rounded-lg border border-emerald-500/50 bg-emerald-950/40 hover:bg-emerald-900/50 text-left transition flex flex-col cursor-pointer">
                                     <div class="flex items-center gap-1.5">
@@ -1878,14 +1903,14 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     </div>
                                     <span id="lblPhotoPinP1" class="text-[10px] font-mono text-emerald-300 mt-0.5">X: 0, Y: 0</span>
                                 </button>
-                                <button id="btnPinSelectP2" type="button" class="p-2.5 rounded-lg border border-sky-500/50 bg-sky-950/40 hover:bg-sky-900/50 text-left transition flex flex-col cursor-pointer">
+                                <button id="btnPinSelectP2" data-photo-four type="button" class="p-2.5 rounded-lg border border-sky-500/50 bg-sky-950/40 hover:bg-sky-900/50 text-left transition flex flex-col cursor-pointer">
                                     <div class="flex items-center gap-1.5">
                                         <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
                                         <span class="text-[11px] font-bold text-white">2. Top-Right</span>
                                     </div>
                                     <span id="lblPhotoPinP2" class="text-[10px] font-mono text-sky-300 mt-0.5">X: 0, Y: 0</span>
                                 </button>
-                                <button id="btnPinSelectP3" type="button" class="p-2.5 rounded-lg border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/50 text-left transition flex flex-col cursor-pointer">
+                                <button id="btnPinSelectP3" data-photo-four type="button" class="p-2.5 rounded-lg border border-amber-500/50 bg-amber-950/40 hover:bg-amber-900/50 text-left transition flex flex-col cursor-pointer">
                                     <div class="flex items-center gap-1.5">
                                         <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
                                         <span class="text-[11px] font-bold text-white">3. Bottom-Left</span>
@@ -1902,7 +1927,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             </div>
                         </div>
 
-                        <div class="pt-3 border-t border-slate-800 space-y-2">
+                        <div class="pt-3 border-t border-slate-800 space-y-2" data-photo-four>
                             <span class="sub-title">Map photo points onto</span>
                             <div class="space-y-1.5 text-xs">
                                 <label class="flex items-start gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer">
@@ -1934,7 +1959,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
                     <div class="pt-3 border-t border-slate-800 flex gap-2">
                         <button id="btnCancelPhotoCalib" type="button" class="btn btn-secondary flex-1">Cancel</button>
-                        <button id="btnApplyPhotoCalib" type="button" class="btn btn-go flex-1"><svg class="i-sm"><use href="#i-sparkles"/></svg>Apply &amp; warp</button>
+                        <button id="btnApplyPhotoCalib" type="button" class="btn btn-go flex-1"><svg class="i-sm"><use href="#i-sparkles"/></svg>Apply</button>
                     </div>
                 </div>
             </div>
@@ -5872,8 +5897,48 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         const lblLeftMargin = document.getElementById('lblLeftMargin');
         const lblRightMargin = document.getElementById('lblRightMargin');
 
+        // Graph paper: the printed grid box, Point 1 = its top-left corner, Point 4 = its bottom-right corner
+        function graphBoxMM() {
+            const w = parseFloat((document.getElementById('graphBoxW') || {}).value);
+            const h = parseFloat((document.getElementById('graphBoxH') || {}).value);
+            return { w: (w > 0 ? w : 20) * 10, h: (h > 0 ? h : 20) * 10 };
+        }
+
+        // The page's reference points in design mm (y down): P1 top-left, P2 top-right, P3 bottom-left, P4 bottom-right.
+        // Ruled paper: margin corners on the top line and the 20th line. Graph paper: the grid box corners.
+        function calibDesignPoints(settings) {
+            if (currentPaperType === 'graph') {
+                const b = graphBoxMM();
+                return { d1: { x: 0, y: 0 }, d2: { x: b.w, y: 0 }, d3: { x: 0, y: b.h }, d4: { x: b.w, y: b.h } };
+            }
+            const s = settings || getSettings();
+            const xL = s.leftMargin, xR = 210 - s.rightMargin, yT = s.topLineOffset, yB = s.topLineOffset + 20.0 * s.lineSpacing;
+            return { d1: { x: xL, y: yT }, d2: { x: xR, y: yT }, d3: { x: xL, y: yB }, d4: { x: xR, y: yB } };
+        }
+
+        const CALIB_POINT_NAMES = {
+            ruled: ['Top-left margin corner', 'Top-right margin corner', 'Left margin × 20th line', 'Right margin × 20th line'],
+            graph: ['Grid box top-left corner', 'Grid box top-right corner', 'Grid box bottom-left corner', 'Grid box bottom-right corner']
+        };
+        function updateCalibPointNames() {
+            const names = CALIB_POINT_NAMES[currentPaperType === 'graph' ? 'graph' : 'ruled'];
+            names.forEach((n, i) => { const el = document.getElementById(`calibP${i + 1}Name`); if (el) el.textContent = n; });
+            const b = graphBoxMM(), chip = document.getElementById('graphBoxChip');
+            if (chip) chip.textContent = `1 cm grid · ${b.w / 10} × ${b.h / 10} cm`;
+        }
+        ['graphBoxW', 'graphBoxH'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', () => {
+                updateCalibPointNames();
+                const jy = document.getElementById('jumpYDistanceInput');
+                if (jy && currentPaperType === 'graph') jy.value = graphBoxMM().h.toFixed(2);
+                triggerPreviewUpdate();
+            });
+        });
+
         function setPaperType(type) {
             currentPaperType = type;
+            updateCalibPointNames();
             const jumpYInput = document.getElementById('jumpYDistanceInput');
             
             if (type === 'graph') {
@@ -5887,9 +5952,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 if (topClickModeGraphPins) topClickModeGraphPins.classList.remove('hidden');
                 if (topOpacityContainer && graphOverlayImg) topOpacityContainer.classList.remove('hidden');
                 
-                // Jump Y Down value is tuned to exactly 200mm (20cm) for Graph paper!
-                if (jumpYInput) jumpYInput.value = "200.00";
-                showToast("📈 1cm Graph Mode: 20cm Travel active (Jump Y set to 200mm)", "info");
+                // Jump Y Down matches the grid box height
+                if (jumpYInput) jumpYInput.value = graphBoxMM().h.toFixed(2);
+                showToast(`📈 1cm Graph Mode: grid box ${graphBoxMM().w / 10} × ${graphBoxMM().h / 10} cm (Jump Y set to ${graphBoxMM().h} mm)`, "info");
             } else {
                 if (btnPaperModeRuled) btnPaperModeRuled.className = "seg-btn seg-on-accent";
                 if (btnPaperModeGraph) btnPaperModeGraph.className = "seg-btn";
@@ -5899,7 +5964,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 }
                 if (graphModeSection) graphModeSection.classList.add('hidden');
                 if (topClickModeGraphPins) topClickModeGraphPins.classList.add('hidden');
-                if (topOpacityContainer) topOpacityContainer.classList.add('hidden');
+                if (topOpacityContainer) topOpacityContainer.classList.toggle('hidden', !graphOverlayImg);
                 
                 // Restore Jump Y Down to standard notebook spacing (146mm)
                 if (jumpYInput) jumpYInput.value = "146.00";
@@ -6974,8 +7039,30 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         const lblPhotoPinP3 = document.getElementById('lblPhotoPinP3');
         const lblPhotoPinP4 = document.getElementById('lblPhotoPinP4');
 
+        // 'two': Point 1 + Point 4 (rotate, scale, shift); 'four': all corners with perspective correction
+        if (!photoCalibration.mode) photoCalibration.mode = 'two';
+        let tempPhotoMode = photoCalibration.mode;
         let tempPhotoPoints = JSON.parse(JSON.stringify(photoCalibration.photoPoints));
         let activePhotoPin = 'p1';
+        const photoPinIds = () => tempPhotoMode === 'four' ? ['p1', 'p2', 'p3', 'p4'] : ['p1', 'p4'];
+
+        // show / hide the 4-point-only controls (studio and overlay card) for a mode
+        function applyPhotoStudioModeUI(mode) {
+            document.querySelectorAll('[data-photo-four]').forEach(el => el.classList.toggle('hidden', mode !== 'four'));
+            document.querySelectorAll('[data-photo-mode]').forEach(b => b.className = `seg-btn ${b.dataset.photoMode === mode ? 'seg-on-go' : ''}`);
+            const hint = document.getElementById('photoStudioModeHint');
+            if (hint) hint.innerHTML = mode === 'four'
+                ? 'Select a point, then click or drag it onto the matching corner in the photo.'
+                : 'Click the photo to place the selected point: <b>Point 1</b> then <b>Point 4</b>, exactly where you calibrate the bed. The dashed frame shows the page they imply.';
+        }
+        document.querySelectorAll('[data-photo-mode]').forEach(b => b.addEventListener('click', () => {
+            tempPhotoMode = b.dataset.photoMode;
+            if (!photoPinIds().includes(activePhotoPin)) activePhotoPin = 'p1';
+            applyPhotoStudioModeUI(tempPhotoMode);
+            updatePinSelectionUI();
+            renderPhotoCalibCanvas();
+        }));
+        setTimeout(() => applyPhotoStudioModeUI(photoCalibration.mode), 0);
         let draggingPhotoPin = null;
 
         // Zoom & Pan navigation state for Photo Studio
@@ -7095,10 +7182,12 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
         function openPhotoCalibStudio() {
             if (!graphOverlayImg) {
-                showToast("Please upload a graph photo first", "info");
+                showToast("Please upload a page photo first", "info");
                 return;
             }
             tempPhotoPoints = JSON.parse(JSON.stringify(photoCalibration.photoPoints));
+            tempPhotoMode = photoCalibration.mode || 'two';
+            applyPhotoStudioModeUI(tempPhotoMode);
             
             // Sync radio buttons
             const rads = document.querySelectorAll('input[name="radPhotoTargetMode"]');
@@ -7169,6 +7258,47 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             const p3 = { x: photoStudioPanX + tempPhotoPoints.p3.x * iw * photoStudioZoom, y: photoStudioPanY + tempPhotoPoints.p3.y * ih * photoStudioZoom };
             const p4 = { x: photoStudioPanX + tempPhotoPoints.p4.x * iw * photoStudioZoom, y: photoStudioPanY + tempPhotoPoints.p4.y * ih * photoStudioZoom };
             
+            if (tempPhotoMode !== 'four') {
+                // page frame implied by Point 1 + Point 4: design mm -> photo pixels by one rotation + scale + shift
+                const r = calibDesignPoints();
+                const P1 = { x: tempPhotoPoints.p1.x * iw, y: tempPhotoPoints.p1.y * ih };
+                const P4 = { x: tempPhotoPoints.p4.x * iw, y: tempPhotoPoints.p4.y * ih };
+                const dLen = Math.hypot(r.d4.x - r.d1.x, r.d4.y - r.d1.y) || 1;
+                const k = Math.hypot(P4.x - P1.x, P4.y - P1.y) / dLen;
+                const phi = Math.atan2(P4.y - P1.y, P4.x - P1.x) - Math.atan2(r.d4.y - r.d1.y, r.d4.x - r.d1.x);
+                const cosP = Math.cos(phi), sinP = Math.sin(phi);
+                const S = (q) => {
+                    const dx = (q.x - r.d1.x) * k, dy = (q.y - r.d1.y) * k;
+                    return { x: photoStudioPanX + (P1.x + dx * cosP - dy * sinP) * photoStudioZoom, y: photoStudioPanY + (P1.y + dx * sinP + dy * cosP) * photoStudioZoom };
+                };
+                ctx.save();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
+                const graph = currentPaperType === 'graph';
+                const step = graph ? 10 : getSettings().lineSpacing;
+                for (let y = r.d1.y + step; y < r.d4.y - 0.01; y += step) {
+                    const a = S({ x: r.d1.x, y }), b = S({ x: r.d4.x, y });
+                    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+                }
+                if (graph) {
+                    for (let x = r.d1.x + 10; x < r.d4.x - 0.01; x += 10) {
+                        const a = S({ x, y: r.d1.y }), b = S({ x, y: r.d4.y });
+                        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+                    }
+                }
+                const c = [S(r.d1), S(r.d2), S(r.d4), S(r.d3)];
+                ctx.beginPath();
+                ctx.moveTo(c[0].x, c[0].y);
+                c.slice(1).forEach(q => ctx.lineTo(q.x, q.y));
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.10)';
+                ctx.fill();
+                ctx.strokeStyle = '#10b981';
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([6, 6]);
+                ctx.stroke();
+                ctx.restore();
+            } else {
             // Connecting quad with transparent green tint
             ctx.save();
             ctx.beginPath();
@@ -7184,6 +7314,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             ctx.setLineDash([6, 6]);
             ctx.stroke();
             ctx.restore();
+            }
             
             // Draw pins
             const pins = [
@@ -7191,7 +7322,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 { id: 'p2', pt: p2, label: '2', name: 'TR' },
                 { id: 'p3', pt: p3, label: '3', name: 'BL' },
                 { id: 'p4', pt: p4, label: '4', name: 'BR' }
-            ];
+            ].filter(pin => photoPinIds().includes(pin.id));
             
             for (let pin of pins) {
                 const isAct = (pin.id === activePhotoPin);
@@ -7312,10 +7443,11 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             ];
             for (let p of pins) {
                 if (!p.btn) continue;
+                const hide = photoPinIds().includes(p.id) ? '' : ' hidden';
                 if (p.id === activePhotoPin) {
-                    p.btn.className = `p-2.5 rounded-lg border text-left transition flex flex-col cursor-pointer ${p.activeCls}`;
+                    p.btn.className = `p-2.5 rounded-lg border text-left transition flex flex-col cursor-pointer ${p.activeCls}${hide}`;
                 } else {
-                    p.btn.className = `p-2.5 rounded-lg border border-slate-800 bg-slate-950/40 hover:bg-slate-800/60 text-left transition flex flex-col cursor-pointer`;
+                    p.btn.className = `p-2.5 rounded-lg border border-slate-800 bg-slate-950/40 hover:bg-slate-800/60 text-left transition flex flex-col cursor-pointer${hide}`;
                 }
             }
         }
@@ -7352,7 +7484,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 const ih = graphOverlayImg ? graphOverlayImg.height : 1;
                 
                 // Check if clicking near any pin in screen coordinates
-                const pins = ['p1', 'p2', 'p3', 'p4'];
+                const pins = photoPinIds();
                 let clickedPin = null;
                 let minDist = 24;
                 for (let pid of pins) {
@@ -7430,6 +7562,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             if (ix >= 0 && ix <= iw && iy >= 0 && iy <= ih) {
                                 tempPhotoPoints[activePhotoPin].x = Math.max(0, Math.min(1, ix / iw));
                                 tempPhotoPoints[activePhotoPin].y = Math.max(0, Math.min(1, iy / ih));
+                                if (tempPhotoMode !== 'four' && activePhotoPin === 'p1') {
+                                    activePhotoPin = 'p4';
+                                    updatePinSelectionUI();
+                                }
                                 renderPhotoCalibCanvas();
                                 updateLoupe(mx, my);
                             }
@@ -7491,6 +7627,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         if (btnApplyPhotoCalib) {
             btnApplyPhotoCalib.addEventListener('click', () => {
                 photoCalibration.photoPoints = JSON.parse(JSON.stringify(tempPhotoPoints));
+                photoCalibration.mode = tempPhotoMode;
+                applyPhotoStudioModeUI(photoCalibration.mode);
                 
                 const selectedRad = document.querySelector('input[name="radPhotoTargetMode"]:checked');
                 if (selectedRad) photoCalibration.targetMode = selectedRad.value;
@@ -7500,7 +7638,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 
                 if (photoCalibModal) photoCalibModal.classList.add('hidden');
                 triggerPreviewUpdate();
-                showToast("✨ Photo calibrated & perspective warped to graph!", "success");
+                showToast(photoCalibration.mode === 'four' ? "✨ Photo aligned with perspective correction" : "✨ Photo aligned to Point 1 and Point 4", "success");
             });
         }
 
@@ -7601,83 +7739,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 pCtx.drawImage(previewBaseCache, 0, 0);
                 pCtx.restore();
             } else {
-            // Draw paper sheet and grid
-            if (showBedGrid) {
-                if (currentPaperType === 'graph') {
-                    // --- 1CM ENGINEERING GRAPH PAPER MODE ---
-                    // Draw 1cm major grid lines and 2mm minor grid lines
-                    // 20cm height = 200mm = 20 major lines
-                    pCtx.save();
-                    
-                    // Minor grid (2mm)
-                    pCtx.strokeStyle = 'rgba(16, 185, 129, 0.16)';
-                    pCtx.lineWidth = 0.8;
-                    for (let x = 0; x <= 200; x += 2) {
-                        if (x % 10 === 0) continue;
-                        pCtx.beginPath();
-                        if (calibMatrix) {
-                            const pA = mapDesignToBed(x, 0, calibMatrix);
-                            const pB = mapDesignToBed(x, 200, calibMatrix);
-                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
-                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
-                        } else {
-                            pCtx.moveTo(paperX + x * mmToPx, paperY);
-                            pCtx.lineTo(paperX + x * mmToPx, paperY + 200 * mmToPx);
-                        }
-                        pCtx.stroke();
-                    }
-                    for (let y = 0; y <= 200; y += 2) {
-                        if (y % 10 === 0) continue;
-                        pCtx.beginPath();
-                        if (calibMatrix) {
-                            const pA = mapDesignToBed(0, y, calibMatrix);
-                            const pB = mapDesignToBed(200, y, calibMatrix);
-                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
-                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
-                        } else {
-                            pCtx.moveTo(paperX, paperY + y * mmToPx);
-                            pCtx.lineTo(paperX + 200 * mmToPx, paperY + y * mmToPx);
-                        }
-                        pCtx.stroke();
-                    }
-
-                    // Major grid (10mm = 1cm)
-                    pCtx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
-                    pCtx.lineWidth = 1.8;
-                    for (let x = 0; x <= 200; x += 10) {
-                        pCtx.beginPath();
-                        if (calibMatrix) {
-                            const pA = mapDesignToBed(x, 0, calibMatrix);
-                            const pB = mapDesignToBed(x, 200, calibMatrix);
-                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
-                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
-                        } else {
-                            pCtx.moveTo(paperX + x * mmToPx, paperY);
-                            pCtx.lineTo(paperX + x * mmToPx, paperY + 200 * mmToPx);
-                        }
-                        pCtx.stroke();
-                    }
-                    for (let y = 0; y <= 200; y += 10) {
-                        pCtx.beginPath();
-                        if (calibMatrix) {
-                            const pA = mapDesignToBed(0, y, calibMatrix);
-                            const pB = mapDesignToBed(200, y, calibMatrix);
-                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
-                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
-                        } else {
-                            pCtx.moveTo(paperX, paperY + y * mmToPx);
-                            pCtx.lineTo(paperX + 200 * mmToPx, paperY + y * mmToPx);
-                        }
-                        pCtx.stroke();
-                    }
-                    pCtx.restore();
-
-                    const indicatorEl = document.getElementById('printableLinesIndicator');
-                    if (indicatorEl) {
-                        indicatorEl.textContent = `1cm Graph Paper: 20cm Travel Active (20 Major Lines)`;
-                    }
-
-                    // Render Friend's Photo Overlay if present
+            // Page photo overlay (ruled and graph paper), drawn under the handwriting
+            function drawPhotoOverlay() {
                     if (graphOverlayImg && graphOverlayOpacity > 0) {
                         pCtx.save();
                         pCtx.globalAlpha = graphOverlayOpacity;
@@ -7720,13 +7783,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         }
                         
                         if (!dstPts) {
-                            // Default 'graph200': 1cm grid 200x200mm
-                            dstPts = {
-                                p1: toPx({ x: 0.0, y: 0.0 }),
-                                p2: toPx({ x: 200.0, y: 0.0 }),
-                                p3: toPx({ x: 0.0, y: 200.0 }),
-                                p4: toPx({ x: 200.0, y: 200.0 })
-                            };
+                            // default: the page's own reference points (graph grid box / ruled margin corners)
+                            const r = calibDesignPoints(settings);
+                            dstPts = { p1: toPx(r.d1), p2: toPx(r.d2), p3: toPx(r.d3), p4: toPx(r.d4) };
                         }
 
                         const sW = graphOverlayImg.width;
@@ -7738,11 +7797,32 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             p4: { x: photoCalibration.photoPoints.p4.x * sW, y: photoCalibration.photoPoints.p4.y * sH }
                         };
                         
-                        drawWarpedQuad(pCtx, graphOverlayImg, srcPts, dstPts);
+                        if (photoCalibration.mode === 'four') {
+                            drawWarpedQuad(pCtx, graphOverlayImg, srcPts, dstPts);
+                        } else {
+                            // 2 points: photo Point 1 / Point 4 onto the page's Point 1 / Point 4 by one rotation + scale + shift.
+                            // A third pair (a right angle off the diagonal) fixes the affine transform exactly.
+                            const r = calibDesignPoints(settings);
+                            const A = srcPts.p1, B = srcPts.p4, C = { x: A.x - (B.y - A.y), y: A.y + (B.x - A.x) };
+                            const Ad = toPx(r.d1), Bd = toPx(r.d4);
+                            const Cd = toPx({ x: r.d1.x - (r.d4.y - r.d1.y), y: r.d1.y + (r.d4.x - r.d1.x) });
+                            const ux = B.x - A.x, uy = B.y - A.y, vx = C.x - A.x, vy = C.y - A.y;
+                            const det = ux * vy - uy * vx;
+                            if (Math.abs(det) > 1e-9) {
+                                const px1 = Bd.x - Ad.x, py1 = Bd.y - Ad.y, px2 = Cd.x - Ad.x, py2 = Cd.y - Ad.y;
+                                const a = (px1 * vy - px2 * uy) / det, c = (px2 * ux - px1 * vx) / det;
+                                const b = (py1 * vy - py2 * uy) / det, d = (py2 * ux - py1 * vx) / det;
+                                const e = Ad.x - a * A.x - c * A.y, f = Ad.y - b * A.x - d * A.y;
+                                pCtx.save();
+                                pCtx.transform(a, b, c, d, e, f);
+                                pCtx.drawImage(graphOverlayImg, 0, 0);
+                                pCtx.restore();
+                            }
+                        }
                         pCtx.restore();
 
                         // If in Graph Alignment Pins mode, draw the 4 interactive pins
-                        if (canvasClickMode === 'graphPins') {
+                        if (canvasClickMode === 'graphPins' && photoCalibration.mode === 'four') {
                             const targetPins = [
                                 { id: 'p1', label: '1 (TL)', pt: dstPts.p1, col: '#10b981' },
                                 { id: 'p2', label: '2 (TR)', pt: dstPts.p2, col: '#0ea5e9' },
@@ -7772,6 +7852,85 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                 pCtx.restore();
                             }
                         }
+                    }
+
+            }
+
+            // Draw paper sheet and grid
+            if (showBedGrid) {
+                if (currentPaperType === 'graph') {
+                    // --- 1CM ENGINEERING GRAPH PAPER MODE ---
+                    // Draw 1cm major grid lines and 2mm minor grid lines
+                    // Drawn over the grid box (default 20 × 20 cm)
+                    pCtx.save();
+                    const gBox = graphBoxMM();
+                    
+                    // Minor grid (2mm)
+                    pCtx.strokeStyle = 'rgba(16, 185, 129, 0.16)';
+                    pCtx.lineWidth = 0.8;
+                    for (let x = 0; x <= gBox.w; x += 2) {
+                        if (x % 10 === 0) continue;
+                        pCtx.beginPath();
+                        if (calibMatrix) {
+                            const pA = mapDesignToBed(x, 0, calibMatrix);
+                            const pB = mapDesignToBed(x, gBox.h, calibMatrix);
+                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
+                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
+                        } else {
+                            pCtx.moveTo(paperX + x * mmToPx, paperY);
+                            pCtx.lineTo(paperX + x * mmToPx, paperY + gBox.h * mmToPx);
+                        }
+                        pCtx.stroke();
+                    }
+                    for (let y = 0; y <= gBox.h; y += 2) {
+                        if (y % 10 === 0) continue;
+                        pCtx.beginPath();
+                        if (calibMatrix) {
+                            const pA = mapDesignToBed(0, y, calibMatrix);
+                            const pB = mapDesignToBed(gBox.w, y, calibMatrix);
+                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
+                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
+                        } else {
+                            pCtx.moveTo(paperX, paperY + y * mmToPx);
+                            pCtx.lineTo(paperX + gBox.w * mmToPx, paperY + y * mmToPx);
+                        }
+                        pCtx.stroke();
+                    }
+
+                    // Major grid (10mm = 1cm)
+                    pCtx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
+                    pCtx.lineWidth = 1.8;
+                    for (let x = 0; x <= gBox.w; x += 10) {
+                        pCtx.beginPath();
+                        if (calibMatrix) {
+                            const pA = mapDesignToBed(x, 0, calibMatrix);
+                            const pB = mapDesignToBed(x, gBox.h, calibMatrix);
+                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
+                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
+                        } else {
+                            pCtx.moveTo(paperX + x * mmToPx, paperY);
+                            pCtx.lineTo(paperX + x * mmToPx, paperY + gBox.h * mmToPx);
+                        }
+                        pCtx.stroke();
+                    }
+                    for (let y = 0; y <= gBox.h; y += 10) {
+                        pCtx.beginPath();
+                        if (calibMatrix) {
+                            const pA = mapDesignToBed(0, y, calibMatrix);
+                            const pB = mapDesignToBed(gBox.w, y, calibMatrix);
+                            pCtx.moveTo(pA.x * mmToPx, (220 - pA.y) * mmToPx);
+                            pCtx.lineTo(pB.x * mmToPx, (220 - pB.y) * mmToPx);
+                        } else {
+                            pCtx.moveTo(paperX, paperY + y * mmToPx);
+                            pCtx.lineTo(paperX + gBox.w * mmToPx, paperY + y * mmToPx);
+                        }
+                        pCtx.stroke();
+                    }
+                    pCtx.restore();
+
+                    const indicatorEl = document.getElementById('printableLinesIndicator');
+                    if (indicatorEl) {
+                        indicatorEl.textContent = `1cm Graph Paper: grid box ${gBox.w / 10} × ${gBox.h / 10} cm`;
                     }
 
                 } else {
@@ -7869,6 +8028,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 }
             }
             
+            drawPhotoOverlay();
+
             // Compile text handwriting paths
             try {
                 if (window.handwritingLayoutDirty || !window.cachedHandwritingPaths) {
@@ -8300,8 +8461,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             // aiming for Point 4 it follows the pen in FPS mode (the mouse otherwise), so you can see the right margin
             // meet the 20th line; after Point 4 is captured it shows the final map with the computed P2 and P3.
             if (isCalibTwoPoint() && p1) {
-                const xL = settings.leftMargin, xR = 210 - settings.rightMargin;
-                const yTop = settings.topLineOffset, y20 = settings.topLineOffset + 20 * settings.lineSpacing;
+                const refs = calibDesignPoints(settings);
+                const isGraphPaper = currentPaperType === 'graph';
+                const xL = refs.d1.x, xR = refs.d4.x, yTop = refs.d1.y, y20 = refs.d4.y;
                 let m = null;
                 const live = !p4;
                 if (p4) {
@@ -8328,17 +8490,29 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     pCtx.fillStyle = 'rgba(236, 72, 153, 0.9)';
                     pCtx.font = 'bold 9px sans-serif';
                     pCtx.textAlign = 'left';
-                    pCtx.fillText('P4 target: right margin × 20th line', pr.x * mmToPx + 13, (220 - pr.y) * mmToPx + 3);
+                    pCtx.fillText(isGraphPaper ? 'P4 target: grid box bottom-right corner' : 'P4 target: right margin × 20th line', pr.x * mmToPx + 13, (220 - pr.y) * mmToPx + 3);
                 }
                 if (m) {
                     const P = (x, y) => { const q = mapDesignToBed(x, y, m); return [q.x * mmToPx, (220 - q.y) * mmToPx]; };
                     pCtx.save();
                     if (live) pCtx.setLineDash([5, 4]);
-                    // the 20 ruled lines (the 20th, which Point 4 sits on, drawn stronger)
-                    for (let k = 0; k <= 20; k++) {
-                        const y = yTop + k * settings.lineSpacing;
-                        pCtx.strokeStyle = k === 0 || k === 20 ? 'rgba(59, 130, 246, 0.85)' : 'rgba(59, 130, 246, 0.35)';
-                        pCtx.lineWidth = k === 0 || k === 20 ? 1.8 : 1.0;
+                    // the ruled lines (the 20th, which Point 4 sits on, drawn stronger) or the grid box's 1 cm lines
+                    const rows = isGraphPaper ? Math.round((y20 - yTop) / 10) : 20;
+                    const rowStep = isGraphPaper ? 10 : settings.lineSpacing;
+                    if (isGraphPaper) {
+                        pCtx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
+                        pCtx.lineWidth = 1.0;
+                        for (let x = xL + 10; x < xR - 0.01; x += 10) {
+                            pCtx.beginPath();
+                            pCtx.moveTo(...P(x, yTop));
+                            pCtx.lineTo(...P(x, y20));
+                            pCtx.stroke();
+                        }
+                    }
+                    for (let k = 0; k <= rows; k++) {
+                        const y = yTop + k * rowStep;
+                        pCtx.strokeStyle = k === 0 || k === rows ? 'rgba(59, 130, 246, 0.85)' : 'rgba(59, 130, 246, 0.35)';
+                        pCtx.lineWidth = k === 0 || k === rows ? 1.8 : 1.0;
                         pCtx.beginPath();
                         pCtx.moveTo(...P(xL, y));
                         pCtx.lineTo(...P(xR, y));
@@ -9891,11 +10065,8 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         function getCalibMapping() {
             const settings = getSettings();
             
-            // Design reference points on paper (Y goes from 0 at top to 297 at bottom)
-            const d1 = { x: settings.leftMargin, y: settings.topLineOffset }; // Top-Left
-            const d2 = { x: 210 - settings.rightMargin, y: settings.topLineOffset }; // Top-Right
-            const d3 = { x: settings.leftMargin, y: settings.topLineOffset + 20.0 * settings.lineSpacing }; // Bottom-Left
-            const d4 = { x: 210 - settings.rightMargin, y: settings.topLineOffset + 20.0 * settings.lineSpacing }; // Bottom-Right
+            // Design reference points on paper (Y goes from 0 at top to 297 at bottom): ruled margins or graph grid box
+            const { d1, d2, d3, d4 } = calibDesignPoints(settings);
             
             // Physical inputs
             const p1 = {
@@ -10398,10 +10569,10 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         }
         // Point 4 predicted from Point 1 and the page geometry (paper assumed square to the bed)
         function predictCalibP4(p1) {
-            const s = getSettings();
+            const { d1, d4 } = calibDesignPoints();
             return {
-                x: Math.max(-16.6, Math.min(220.0, p1.x + (210 - s.rightMargin - s.leftMargin))),
-                y: Math.max(0.0, Math.min(220.0, p1.y - 20.0 * s.lineSpacing))
+                x: Math.max(-16.6, Math.min(220.0, p1.x + (d4.x - d1.x))),
+                y: Math.max(0.0, Math.min(220.0, p1.y - (d4.y - d1.y)))
             };
         }
 
