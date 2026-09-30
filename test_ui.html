@@ -7749,6 +7749,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 if (graphOverlayControls) graphOverlayControls.classList.add('hidden');
                 if (topOpacityContainer) topOpacityContainer.classList.add('hidden');
                 if (graphPhotoInput) graphPhotoInput.value = "";
+                try { localStorage.removeItem('plotter_page_photo'); } catch (e) {}
                 triggerPreviewUpdate();
                 showToast("Removed reference photo", "info");
             });
@@ -8289,6 +8290,31 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             }
         });
 
+        // The page photo is kept as a compact JPEG (longest side 1600 px) so it survives reloads and syncs to the
+        // other device; its alignment points are kept in 'plotter_photo_calib'.
+        function savePagePhoto(img) {
+            const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+            const c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(img.width * k));
+            c.height = Math.max(1, Math.round(img.height * k));
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            safeSetItem('plotter_page_photo', c.toDataURL('image/jpeg', 0.85));
+        }
+        function restorePagePhoto() {
+            const src = safeGetItem('plotter_page_photo');
+            if (!src) return;
+            const img = new Image();
+            img.onload = () => {
+                graphOverlayImg = img;
+                if (graphOverlayControls) graphOverlayControls.classList.remove('hidden');
+                if (topOpacityContainer) topOpacityContainer.classList.remove('hidden');
+                updateGraphOpacityUI();
+                triggerPreviewUpdate();
+            };
+            img.src = src;
+        }
+        setTimeout(restorePagePhoto, 0);
+
         if (graphPhotoInput) {
             graphPhotoInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
@@ -8298,6 +8324,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     const img = new Image();
                     img.onload = () => {
                         graphOverlayImg = img;
+                        savePagePhoto(img);
                         if (graphOverlayControls) graphOverlayControls.classList.remove('hidden');
                         if (topOpacityContainer) topOpacityContainer.classList.remove('hidden');
                         updateGraphOpacityUI();
