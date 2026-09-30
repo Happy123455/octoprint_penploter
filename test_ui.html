@@ -13355,6 +13355,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         // shows the current page's slice, and printing still prints only that page.
         // g.flowFrom: offset from which the layout is stale (null when up to date).
         let flowTimer = null, flowRunning = false, flowQueued = false, flowSettingsSig = null;
+        const FLOW_ALGO = 2;
 
         function flowGroupOfPage(i) {
             const g = pageGroupById(pageGroupOf[i]);
@@ -13395,6 +13396,11 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             let dirty = false;
             pageGroups.forEach(g => {
                 if (!g.flow) return;
+                if (g.flowAlgo !== FLOW_ALGO && typeof g.flowText === 'string' && g.flowRanges) {
+                    // laid out by an older pager (possibly one word per page): lay the whole group out again
+                    g.flowAlgo = FLOW_ALGO;
+                    g.flowRanges = null;   // no reuse of the old page starts
+                }
                 if (typeof g.flowText !== 'string') g.flowText = pagesText.filter((_, i) => pageGroupOf[i] === g.id).join('\n');
                 if (g.flowRanges) {
                     const pages = pagesText.filter((_, i) => pageGroupOf[i] === g.id);
@@ -13519,8 +13525,10 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         // layout is still valid, so layout stops there and reports it as reusedFrom.
         async function paginateRanges(src, from, reuse, onProgress) {
             const settings = getSettings();
-            const calib = settings.use3PointCalib ? getCalibMapping() : null;
-            const fits = (s, e) => pageTextFits(src.slice(s, e), settings, calib);
+            // How much text fits on a sheet depends on the paper, not on where the calibration put it on the bed:
+            // a calibrated top line close to the pen's reach made every line "not fit" and split the text one
+            // word per page, so the fit is always judged on the plain page layout.
+            const fits = (s, e) => pageTextFits(src.slice(s, e), settings, null);
             const cap = (getBedLayoutStats().ruledLines || 24) + 4;
             const ranges = [];
             let pos = from;
