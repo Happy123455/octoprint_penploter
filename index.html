@@ -755,9 +755,56 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                 <div class="flex flex-wrap items-center gap-1">
                                     <div id="imageBlockList" class="flex flex-wrap items-center gap-1"></div>
                                     <button id="btnAddTextBlock" type="button" class="btn btn-sm btn-secondary"><svg class="i-sm"><use href="#i-type"/></svg>Add text block</button>
+                                    <button id="btnAddGraphBlock" type="button" class="btn btn-sm btn-secondary" title="Draw a line or column graph from data, snapped to the paper grid"><svg class="i-sm"><use href="#i-graph"/></svg>Add graph</button>
                                 </div>
 
                                 <div id="imageBlockControls" class="space-y-3 hidden">
+                                    <div data-block-graph-only class="hidden space-y-3">
+                                        <div class="seg">
+                                            <button type="button" class="seg-btn seg-on" data-graph-type="line">Line graph</button>
+                                            <button type="button" class="seg-btn" data-graph-type="column">Column graph</button>
+                                        </div>
+                                        <div class="grid grid-cols-3 gap-2">
+                                            <div class="col-span-3"><label class="lbl" for="graphTitle">Title</label><input id="graphTitle" class="field field-sm" placeholder="e.g. Load vs Deflection" /></div>
+                                            <div class="col-span-3 sm:col-span-1"><label class="lbl" for="graphXLabel">X axis</label><input id="graphXLabel" class="field field-sm" placeholder="Load (kN)" /></div>
+                                            <div class="col-span-3 sm:col-span-2"><label class="lbl" for="graphYLabel">Y axis</label><input id="graphYLabel" class="field field-sm" placeholder="Deflection (mm)" /></div>
+                                        </div>
+                                        <div class="space-y-1">
+                                            <div class="row">
+                                                <label class="lbl" for="graphData">Data</label>
+                                                <label class="link cursor-pointer text-[11px]">Import Excel / CSV…<input type="file" id="graphImportFile" accept=".xlsx,.xls,.csv,.tsv,.txt" class="hidden" /></label>
+                                            </div>
+                                            <textarea id="graphData" rows="6" class="field field-mono text-[12px] select-text" placeholder="Paste from Excel: first column X, then one column per series"></textarea>
+                                            <p class="hint">Paste straight from Excel or type rows: first column X (numbers, or names for columns), then one column per series; the first row is the header.</p>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div><label class="lbl" for="graphXScale">X: 1 cm =</label><input type="number" id="graphXScale" class="field field-sm field-mono" placeholder="auto" /></div>
+                                            <div><label class="lbl" for="graphYScale">Y: 1 cm =</label><input type="number" id="graphYScale" class="field field-sm field-mono" placeholder="auto" /></div>
+                                            <div><label class="lbl" for="graphXStart">X axis starts at</label><input type="number" id="graphXStart" class="field field-sm field-mono" placeholder="auto" /></div>
+                                            <div><label class="lbl" for="graphYStart">Y axis starts at</label><input type="number" id="graphYStart" class="field field-sm field-mono" placeholder="auto" /></div>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div data-graph-line><label class="lbl" for="graphCurve">Line</label>
+                                                <select id="graphCurve" class="field field-sm"><option value="straight">Straight segments</option><option value="smooth">Smooth curve</option><option value="none">Points only</option></select></div>
+                                            <div data-graph-line><label class="lbl" for="graphMarker">Points</label>
+                                                <select id="graphMarker" class="field field-sm"><option value="dot">Dot ·</option><option value="cross">Cross ×</option><option value="circle">Circle ○</option><option value="none">None</option></select></div>
+                                            <div data-graph-column class="hidden"><label class="lbl" for="graphHatch">Bar fill</label>
+                                                <select id="graphHatch" class="field field-sm"><option value="none">Outline</option><option value="diagonal">Diagonal hatch</option><option value="cross">Cross hatch</option></select></div>
+                                            <div data-graph-column class="hidden"><label class="lbl" for="graphBarWidth">Bar width</label>
+                                                <input type="range" id="graphBarWidth" min="0.3" max="0.9" step="0.05" value="0.6" class="slider" /></div>
+                                            <div><label class="lbl" for="graphLabelSize">Label size</label>
+                                                <div class="relative"><input type="number" id="graphLabelSize" value="3.2" min="2" max="6" step="0.2" class="field field-sm field-mono pr-8" /><span class="unit">mm</span></div></div>
+                                            <div class="flex flex-col justify-end gap-1">
+                                                <label class="check-row text-[11px]"><input type="checkbox" id="graphLegend" checked class="check" />Legend</label>
+                                                <label class="check-row text-[11px]"><input type="checkbox" id="graphShowScale" checked class="check" />Scale note</label>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <label class="check-row text-[11px]" title="In Move / resize mode, drag any single part of the graph (a label, point, bar, the legend) to adjust it by hand. The adjustment is kept when the graph is regenerated."><input type="checkbox" id="graphTouchUp" class="check" />Touch up (drag single parts)</label>
+                                            <button type="button" id="btnGraphResetTouchUps" class="btn btn-sm btn-ghost">Reset touch-ups</button>
+                                        </div>
+                                        <p id="graphStatus" class="text-[10px] font-mono text-slate-400"></p>
+                                    </div>
                                     <div data-block-text-only class="hidden space-y-1">
                                         <label class="lbl" for="textBlockInput">Text in this block</label>
                                         <textarea id="textBlockInput" rows="3" class="field text-[13px] select-text" placeholder="Type the text for this block…"></textarea>
@@ -787,7 +834,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                         </div>
                                     </div>
 
-                                    <div class="grid grid-cols-4 gap-2">
+                                    <div class="grid grid-cols-4 gap-2" data-block-free>
                                         <div>
                                             <label class="lbl" for="imgPosX">Pos X</label>
                                             <div class="relative"><input type="number" id="imgPosX" value="35.0" step="1" class="field field-mono pr-8" /><span class="unit">mm</span></div>
@@ -806,7 +853,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                         </div>
                                     </div>
 
-                                    <div class="sub">
+                                    <div class="sub" data-block-free>
                                         <div class="row">
                                             <span class="text-[11px] text-slate-400">Rotation <span id="lblImgRotation" class="val ml-1">0°</span></span>
                                             <div class="flex items-center gap-1">
@@ -820,7 +867,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
                                     <div class="flex flex-wrap items-center justify-between gap-2">
                                         <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-                                            <label class="check-row text-[11px]" title="When on, typing a width or height scales the other one too">
+                                            <label class="check-row text-[11px]" data-block-free title="When on, typing a width or height scales the other one too">
                                                 <input type="checkbox" id="imgKeepAspect" class="check" />
                                                 Keep proportions
                                             </label>
@@ -5932,13 +5979,23 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 updateCalibPointNames();
                 const jy = document.getElementById('jumpYDistanceInput');
                 if (jy && currentPaperType === 'graph') jy.value = graphBoxMM().h.toFixed(2);
+                rebuildGraphBlocks();
                 triggerPreviewUpdate();
             });
         });
 
-        function setPaperType(type) {
+        // graphs are sized to the paper (grid box or ruled area), so they follow paper changes
+        function rebuildGraphBlocks() {
+            try {
+                imageBlocks.forEach(b => { if (b.kind === 'graph') buildGraphBlock(b); });
+                if (imageBlock && imageBlock.kind === 'graph') updateGraphStatus(imageBlock);
+            } catch (e) { /* blocks not set up yet during start-up */ }
+        }
+
+        function setPaperType(type, silent = false) {
             currentPaperType = type;
             updateCalibPointNames();
+            rebuildGraphBlocks();
             const jumpYInput = document.getElementById('jumpYDistanceInput');
             
             if (type === 'graph') {
@@ -5954,7 +6011,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 
                 // Jump Y Down matches the grid box height
                 if (jumpYInput) jumpYInput.value = graphBoxMM().h.toFixed(2);
-                showToast(`📈 1cm Graph Mode: grid box ${graphBoxMM().w / 10} × ${graphBoxMM().h / 10} cm (Jump Y set to ${graphBoxMM().h} mm)`, "info");
+                if (!silent) showToast(`📈 1cm Graph Mode: grid box ${graphBoxMM().w / 10} × ${graphBoxMM().h / 10} cm (Jump Y set to ${graphBoxMM().h} mm)`, "info");
             } else {
                 if (btnPaperModeRuled) btnPaperModeRuled.className = "seg-btn seg-on-accent";
                 if (btnPaperModeGraph) btnPaperModeGraph.className = "seg-btn";
@@ -5968,7 +6025,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 
                 // Restore Jump Y Down to standard notebook spacing (146mm)
                 if (jumpYInput) jumpYInput.value = "146.00";
-                showToast("📄 Ruled Notebook Mode active (Jump Y set to 146mm)", "info");
+                if (!silent) showToast("📄 Ruled Notebook Mode active (Jump Y set to 146mm)", "info");
             }
             safeSetItem('plotter_paper_type', currentPaperType);
             triggerPreviewUpdate();
@@ -6027,13 +6084,13 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         function newImageBlock(kind = 'image') {
             return {
                 kind, img: null, text: '', x: 35.0, y: 50.0, width: 65.0, height: 65.0, rotation: 0,
-                threshold: 128, style: 'contours', invert: false, showUnderlay: kind !== 'text', keepAspect: kind !== 'text',
+                threshold: 128, style: 'contours', invert: false, showUnderlay: kind === 'image', keepAspect: kind !== 'text',
                 strokes: [], _rawStrokes: [], _rasterW: 1600, _rasterH: 1600
             };
         }
 
         function blockIsLive(b) {
-            return !!b && (!!b.img || (b.kind === 'text' && b._rawStrokes && b._rawStrokes.length > 0));
+            return !!b && (!!b.img || ((b.kind === 'text' || b.kind === 'graph') && b._rawStrokes && b._rawStrokes.length > 0));
         }
 
         function selectedImageBlock() {
@@ -6060,6 +6117,466 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             b.width = parseFloat((w * sx).toFixed(1));
             b.height = parseFloat((h * sy).toFixed(1));
             rescaleImageStrokes(b);
+        }
+
+        // ================= GRAPH BLOCKS =================
+        // A graph block draws a line or column graph as pen strokes: axes with arrowheads and ticks, handwriting tick
+        // labels, axis names, a title, a "Scale: 1 cm = ..." note, a legend and the data. It sits on the paper grid at a
+        // chosen scale (1 cm = N units); on graph paper its origin snaps to the 1 cm lines. Strokes are kept in named
+        // groups, so a single part can be touched up (moved) and keeps that offset when the graph is regenerated.
+        function defaultGraphSpec() {
+            return {
+                type: 'line', title: '', xLabel: '', yLabel: '',
+                data: 'X\tY\n0\t0\n1\t1.8\n2\t4.1\n3\t5.9\n4\t8.2\n5\t9.8',
+                xScale: '', yScale: '', xStart: '', yStart: '',
+                curve: 'straight', marker: 'dot', hatch: 'diagonal', barWidth: 0.6,
+                labelSize: 3.2, legend: true, showScale: true, offsets: {}, originX: null, originY: null
+            };
+        }
+
+        // Pasted / imported table: tab, comma or semicolon separated; the first row is the header
+        function parseGraphTable(text) {
+            const lines = String(text || '').replace(/\r/g, '').split('\n').filter(l => l.trim());
+            if (!lines.length) return { headers: [], rows: [] };
+            const first = lines[0];
+            const sep = first.includes('\t') ? '\t' : (first.includes(';') ? ';' : ',');
+            const split = (l) => l.split(sep).map(c => c.trim().replace(/^"(.*)"$/, '$1'));
+            let headers = split(first), rows = lines.slice(1).map(split);
+            if (headers.length && headers.every(h => /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(h))) {
+                rows = lines.map(split);   // no header row
+                headers = ['X'].concat(headers.slice(1).map((_, i) => `Series ${i + 1}`));
+            }
+            return { headers, rows };
+        }
+
+        // smallest "nice" step (1, 2, 2.5, 5 x 10^n) not below raw
+        function niceStep(raw) {
+            if (!(raw > 0) || !isFinite(raw)) return 1;
+            const e = Math.pow(10, Math.floor(Math.log10(raw)));
+            for (const m of [1, 2, 2.5, 5, 10]) if (m * e >= raw * (1 - 1e-9)) return m * e;
+            return 10 * e;
+        }
+        function fmtGraphNum(v) {
+            const r = Math.round(v * 1e6) / 1e6;
+            return Math.abs(r) < 1e-9 ? '0' : String(r);
+        }
+        function graphUnitOf(label) {
+            const m = String(label || '').match(/\(([^)]+)\)\s*$/);
+            return m ? m[1] : 'units';
+        }
+
+        // deterministic randomness: a graph looks the same every time it is regenerated
+        function graphRng(seed) {
+            let h = 2166136261;
+            for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+            return () => {
+                h = Math.imul(h ^ (h >>> 15), 2246822507);
+                h = Math.imul(h ^ (h >>> 13), 3266489909);
+                h ^= h >>> 16;
+                return (h >>> 0) / 4294967296;
+            };
+        }
+
+        // a hand-drawn line through key points: slow wobble along its length, corners rounded over a small distance
+        function graphHandLine(pts, amp, seed, round = true) {
+            const rnd = graphRng(seed);
+            let p = pts;
+            if (round && p.length > 2) {
+                const r = [p[0]];
+                for (let i = 0; i < p.length - 1; i++) {
+                    const a = p[i], b = p[i + 1];
+                    const c = Math.min(0.2, 0.25 / (Math.hypot(b.x - a.x, b.y - a.y) || 1));
+                    if (i > 0) r.push({ x: a.x * (1 - c) + b.x * c, y: a.y * (1 - c) + b.y * c });
+                    if (i < p.length - 2) r.push({ x: a.x * c + b.x * (1 - c), y: a.y * c + b.y * (1 - c) });
+                }
+                r.push(p[p.length - 1]);
+                p = r;
+            }
+            const ph1 = rnd() * Math.PI * 2, ph2 = rnd() * Math.PI * 2;
+            const out = [];
+            let dist = 0;
+            for (let i = 0; i < p.length - 1; i++) {
+                const a = p[i], b = p[i + 1];
+                const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1e-6;
+                const nx = -dy / len, ny = dx / len;
+                const n = Math.max(1, Math.ceil(len / 0.4));
+                for (let k = i === 0 ? 0 : 1; k <= n; k++) {
+                    const t = k / n, d = dist + t * len;
+                    const w = amp * (0.65 * Math.sin(d * 0.45 + ph1) + 0.35 * Math.sin(d * 1.3 + ph2));
+                    out.push({ x: a.x + dx * t + nx * w, y: a.y + dy * t + ny * w });
+                }
+                dist += len;
+            }
+            return out;
+        }
+
+        // a polyline cut into pen dashes
+        function graphDashes(path, dash, gap) {
+            const out = [];
+            let cur = [], left = dash, drawing = true;
+            for (let i = 0; i < path.length - 1; i++) {
+                let a = path[i];
+                const b = path[i + 1];
+                let seg = Math.hypot(b.x - a.x, b.y - a.y);
+                while (seg > 1e-9) {
+                    const step = Math.min(seg, left);
+                    const t = step / seg;
+                    const q = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+                    if (drawing) { if (!cur.length) cur.push(a); cur.push(q); }
+                    a = q; seg -= step; left -= step;
+                    if (left <= 1e-9) {
+                        if (drawing && cur.length > 1) out.push(cur);
+                        cur = []; drawing = !drawing; left = drawing ? dash : gap;
+                    }
+                }
+            }
+            if (drawing && cur.length > 1) out.push(cur);
+            return out;
+        }
+
+        // Catmull-Rom curve through the data points
+        function graphSmooth(pts) {
+            if (pts.length < 3) return pts;
+            const out = [];
+            for (let i = 0; i < pts.length - 1; i++) {
+                const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+                for (let k = i === 0 ? 0 : 1; k <= 12; k++) {
+                    const t = k / 12, t2 = t * t, t3 = t2 * t;
+                    out.push({
+                        x: 0.5 * (2 * p1.x + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+                        y: 0.5 * (2 * p1.y + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
+                    });
+                }
+            }
+            return out;
+        }
+
+        // handwriting strokes for a label, top-left at (0, 0); cached per text and size
+        const graphLabelCache = new Map();
+        function graphLabelStrokes(text, size, settings) {
+            const key = `${activeFontMode}|${size}|${text}`;
+            if (graphLabelCache.has(key)) return graphLabelCache.get(key);
+            const k = size / (settings.charHeight || 4.5);
+            const s = Object.assign({}, settings, {
+                text: String(text), charHeight: size, charSpacing: settings.charSpacing * k, wordSpacing: settings.wordSpacing * k,
+                leftMargin: 0, rightMargin: 0
+            });
+            const paths = (computeHandwritingLayout(s) || []).filter(q => q && q.length > 1);
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+            paths.forEach(q => q.forEach(pt => { x0 = Math.min(x0, pt.x); y0 = Math.min(y0, pt.y); x1 = Math.max(x1, pt.x); y1 = Math.max(y1, pt.y); }));
+            const out = paths.length
+                ? { strokes: paths.map(q => q.map(pt => ({ x: pt.x - x0, y: pt.y - y0 }))), w: x1 - x0, h: y1 - y0 }
+                : { strokes: [], w: 0, h: size };
+            if (graphLabelCache.size > 500) graphLabelCache.clear();
+            graphLabelCache.set(key, out);
+            return out;
+        }
+        // place a label: (ax, ay) = anchor within the label (0 left/top, 0.5 centre, 1 right/bottom); rotate: -90 reads upward
+        function graphPlaceLabel(lbl, x, y, ax, ay, rotate) {
+            const w = rotate ? lbl.h : lbl.w, h = rotate ? lbl.w : lbl.h;
+            const ox = x - ax * w, oy = y - ay * h;
+            return lbl.strokes.map(st => st.map(p => rotate ? { x: ox + p.y, y: oy + (lbl.w - p.x) } : { x: ox + p.x, y: oy + p.y }));
+        }
+
+        function graphMarker(type, c, seed, amp) {
+            const r = 1.1, L = (pts) => graphHandLine(pts, amp * 0.4, seed);
+            const circle = (rad, turns) => {
+                const pts = [];
+                for (let i = 0; i <= 14 * turns; i++) {
+                    const a = i / 14 * Math.PI * 2, rr = rad * (1 - 0.35 * i / (14 * turns));
+                    pts.push({ x: c.x + rr * Math.cos(a), y: c.y + rr * Math.sin(a) });
+                }
+                return pts;
+            };
+            if (type === 'cross') return [L([{ x: c.x - r, y: c.y - r }, { x: c.x + r, y: c.y + r }]), L([{ x: c.x + r, y: c.y - r }, { x: c.x - r, y: c.y + r }])];
+            if (type === 'circle') {
+                const pts = [];
+                for (let i = 0; i <= 16; i++) pts.push({ x: c.x + r * Math.cos(i / 16 * Math.PI * 2), y: c.y + r * Math.sin(i / 16 * Math.PI * 2) });
+                return [pts];
+            }
+            if (type === 'triangle') return [L([{ x: c.x, y: c.y - r * 1.2 }, { x: c.x + r * 1.1, y: c.y + r * 0.8 }, { x: c.x - r * 1.1, y: c.y + r * 0.8 }, { x: c.x, y: c.y - r * 1.2 }])];
+            if (type === 'dot') return [circle(0.55, 2)];
+            return [];
+        }
+
+        // hatch lines inside a rectangle: 'diagonal' (/), 'back' (\), 'cross' (both)
+        function graphHatch(x0, y0, x1, y1, kind, seed, amp) {
+            const out = [], sp = 1.8 * Math.SQRT2;
+            const ya = Math.min(y0, y1), yb = Math.max(y0, y1), xa = Math.min(x0, x1), xb = Math.max(x0, x1);
+            const dirs = kind === 'cross' ? ['/', '\\'] : kind === 'back' ? ['\\'] : kind === 'diagonal' ? ['/'] : [];
+            dirs.forEach(d => {
+                // '/': x + y = c ; '\': x - y = c
+                const cMin = d === '/' ? xa + ya : xa - yb, cMax = d === '/' ? xb + yb : xb - ya;
+                for (let c = cMin + sp / 2; c < cMax; c += sp) {
+                    let p, q;
+                    if (d === '/') {
+                        const u0 = Math.max(xa, c - yb), u1 = Math.min(xb, c - ya);
+                        if (u1 - u0 < 0.3) continue;
+                        p = { x: u0, y: c - u0 }; q = { x: u1, y: c - u1 };
+                    } else {
+                        const u0 = Math.max(xa, c + ya), u1 = Math.min(xb, c + yb);
+                        if (u1 - u0 < 0.3) continue;
+                        p = { x: u0, y: u0 - c }; q = { x: u1, y: u1 - c };
+                    }
+                    out.push(graphHandLine([p, q], amp * 0.5, seed + d + c.toFixed(2)));
+                }
+            });
+            return out;
+        }
+
+        // The whole graph as stroke groups, in mm with the plot's bottom-left corner at (0, 0), y downward
+        function buildGraphGroups(spec, settings) {
+            const groups = [];
+            const add = (id, strokes) => { const st = strokes.filter(x => x && x.length > 1); if (st.length) groups.push({ id, strokes: st }); };
+            const amp = Math.min(0.3, Math.max(0.04, (settings.mathLineWobble || 0.15) * 0.5));
+            const Ln = (seed, pts, round) => graphHandLine(pts, amp, seed, round);
+            const lab = +spec.labelSize > 0 ? +spec.labelSize : 3.2;
+            const t = parseGraphTable(spec.data);
+            const cats = t.rows.map(r => (r[0] === undefined ? '' : r[0]));
+            const series = t.headers.slice(1).map((name, k) => ({ name, vals: t.rows.map(r => parseFloat(r[k + 1])) }));
+            const isColumn = spec.type === 'column';
+            const xsNum = cats.map(c => parseFloat(c));
+            const numericX = !isColumn && xsNum.length > 0 && cats.every(c => /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(String(c).trim()));
+            const box = currentPaperType === 'graph' ? graphBoxMM() : { w: 210 - settings.leftMargin - settings.rightMargin, h: 20 * settings.lineSpacing };
+            const maxW = Math.max(4, Math.floor(box.w / 10) - 3), maxH = Math.max(4, Math.floor(box.h / 10) - 5);
+            const num = (v) => (v !== '' && v !== null && v !== undefined && isFinite(+v)) ? +v : null;
+
+            // an axis: start value, units per cm and length in cm (fitted to maxLen unless the user fixed the scale)
+            function fitAxis(lo, hi, maxLen, userScale, userStart) {
+                if (!isFinite(lo) || !isFinite(hi)) { lo = 0; hi = 1; }
+                if (hi <= lo) hi = lo + 1;
+                let start = num(userStart);
+                const autoStart = start === null;
+                if (autoStart) start = (lo >= 0 && lo <= 0.5 * hi) ? 0 : lo;
+                let scale = num(userScale);
+                if (!(scale > 0)) {
+                    scale = niceStep((hi - start) / maxLen);
+                    for (let i = 0; i < 8; i++) {
+                        const s0 = autoStart ? Math.floor(start / scale + 1e-9) * scale : start;
+                        if (Math.ceil((hi - s0) / scale - 1e-9) <= maxLen) break;
+                        scale = niceStep(scale * 1.0001);
+                    }
+                }
+                if (autoStart) start = Math.floor(start / scale + 1e-9) * scale;
+                return { start, scale, len: Math.max(1, Math.ceil((hi - start) / scale - 1e-9)) };
+            }
+
+            const allY = series.flatMap(s => s.vals).filter(v => isFinite(v));
+            const yLo = allY.length ? Math.min(...allY) : 0, yHi = allY.length ? Math.max(...allY) : 1;
+            const Y = fitAxis(isColumn ? Math.min(0, yLo) : yLo, yHi, maxH, spec.yScale, spec.yStart);
+            let X, xPos, slot = 1;
+            if (numericX) {
+                X = fitAxis(Math.min(...xsNum), Math.max(...xsNum), maxW, spec.xScale, spec.xStart);
+                xPos = (i) => (xsNum[i] - X.start) / X.scale;
+            } else {
+                const n = Math.max(1, cats.length);
+                slot = n * 2 + 1 <= maxW ? 2 : n + 0.5 <= maxW ? 1 : 0.5;
+                X = { start: 0, scale: null, len: Math.ceil(n * slot + slot * 0.5) };
+                xPos = (i) => (i + 0.75) * slot;
+            }
+            const W = X.len * 10, H = Y.len * 10;
+            const yCm = (v) => (v - Y.start) / Y.scale;
+            // axes cross at 0 when 0 lies inside the range, otherwise at the start
+            const ay = -(Y.start < 0 && Y.start + Y.len * Y.scale > 0 ? yCm(0) : 0) * 10;
+            const ax = numericX && X.start < 0 && X.start + X.len * X.scale > 0 ? (0 - X.start) / X.scale * 10 : 0;
+
+            // axes with arrowheads
+            add('axis-x', [Ln('axis-x', [{ x: 0, y: ay }, { x: W + 6, y: ay }]),
+                           Ln('axis-x-arrow', [{ x: W + 3.6, y: ay - 1.3 }, { x: W + 6, y: ay }, { x: W + 3.6, y: ay + 1.3 }])]);
+            add('axis-y', [Ln('axis-y', [{ x: ax, y: 0 }, { x: ax, y: -(H + 6) }]),
+                           Ln('axis-y-arrow', [{ x: ax - 1.3, y: -(H + 3.6) }, { x: ax, y: -(H + 6) }, { x: ax + 1.3, y: -(H + 3.6) }])]);
+
+            // ticks and tick labels
+            const yLabels = [];
+            for (let i = 0; i <= Y.len; i++) {
+                const y = -i * 10;
+                const tick = Math.abs(y - ay) > 0.01 ? [Ln('yt' + i, [{ x: ax, y }, { x: ax - 1.5, y }])] : [];
+                const l = graphLabelStrokes(fmtGraphNum(Y.start + i * Y.scale), lab, settings);
+                yLabels.push(l.w);
+                add('yt-' + i, tick.concat(graphPlaceLabel(l, ax - 2.4, y, 1, 0.5)));
+            }
+            const yTickW = Math.max(0, ...yLabels);
+            let xLabelBottom = ay + 2 + lab;
+            if (numericX) {
+                const labels = [];
+                for (let i = 0; i <= X.len; i++) labels.push(graphLabelStrokes(fmtGraphNum(X.start + i * X.scale), lab, settings));
+                const every = Math.max(...labels.map(l => l.w)) > 8.5 ? 2 : 1;
+                for (let i = 0; i <= X.len; i++) {
+                    const x = i * 10;
+                    const tick = Math.abs(x - ax) > 0.01 ? [Ln('xt' + i, [{ x, y: ay }, { x, y: ay + 1.5 }])] : [];
+                    add('xt-' + i, tick.concat(i % every === 0 ? graphPlaceLabel(labels[i], x, ay + 2.4, 0.5, 0) : []));
+                }
+            } else {
+                cats.forEach((c, i) => {
+                    let l = graphLabelStrokes(String(c), lab, settings);
+                    const room = slot * 10 - 1;
+                    if (l.w > room) l = graphLabelStrokes(String(c), Math.max(2.2, lab * room / l.w), settings);
+                    const x = xPos(i) * 10;
+                    add('xt-' + i, [Ln('xt' + i, [{ x, y: ay }, { x, y: ay + 1.5 }])].concat(graphPlaceLabel(l, x, ay + 2.4, 0.5, 0)));
+                    xLabelBottom = Math.max(xLabelBottom, ay + 2.4 + l.h);
+                });
+            }
+
+            // axis names: x centred under the tick labels, y written upward beside the tick labels
+            if (String(spec.xLabel || '').trim()) {
+                add('xlabel', graphPlaceLabel(graphLabelStrokes(spec.xLabel.trim(), lab * 1.1, settings), W / 2, xLabelBottom + 3, 0.5, 0));
+            }
+            if (String(spec.yLabel || '').trim()) {
+                add('ylabel', graphPlaceLabel(graphLabelStrokes(spec.yLabel.trim(), lab * 1.1, settings), ax - 2.4 - yTickW - 3, -H / 2, 1, 0.5, true));
+            }
+
+            // scale note (right, above the plot) and title (above that)
+            let top = -(H + 6) - 2;
+            if (spec.showScale) {
+                const lines = ['Scale:'];
+                if (numericX) lines.push(`X-axis: 1 cm = ${fmtGraphNum(X.scale)} ${graphUnitOf(spec.xLabel)}`);
+                lines.push(`Y-axis: 1 cm = ${fmtGraphNum(Y.scale)} ${graphUnitOf(spec.yLabel)}`);
+                const ls = lines.map(s => graphLabelStrokes(s, lab * 0.95, settings));
+                const lh = lab * 1.55;
+                const blockW = Math.max(...ls.map(l => l.w));
+                const strokes = [];
+                ls.forEach((l, i) => strokes.push(...graphPlaceLabel(l, W + 6 - blockW, top - (ls.length - 1 - i) * lh, 0, 1)));
+                add('scale', strokes);
+                top -= ls.length * lh + 2;
+            }
+            if (String(spec.title || '').trim()) {
+                add('title', graphPlaceLabel(graphLabelStrokes(spec.title.trim(), lab * 1.3, settings), W / 2, top - 1, 0.5, 1));
+            }
+
+            // data
+            const baseMarker = spec.marker || 'dot';
+            const markers = baseMarker === 'none' ? ['none'] : [baseMarker].concat(['cross', 'circle', 'triangle', 'dot'].filter(m => m !== baseMarker));
+            const baseHatch = spec.hatch || 'diagonal';
+            const hatches = [baseHatch].concat(['diagonal', 'back', 'cross', 'none'].filter(h => h !== baseHatch));
+            const nS = Math.max(1, series.length);
+            series.forEach((s, k) => {
+                if (isColumn) {
+                    const groupW = (+spec.barWidth || 0.6) * slot * 10, barW = groupW / nS;
+                    s.vals.forEach((v, i) => {
+                        if (!isFinite(v)) return;
+                        const x0 = xPos(i) * 10 - groupW / 2 + k * barW, x1 = x0 + barW, yv = -yCm(v) * 10;
+                        add(`bar-${k}-${i}`, [Ln(`bar-${k}-${i}`, [{ x: x0, y: ay }, { x: x0, y: yv }, { x: x1, y: yv }, { x: x1, y: ay }])]
+                            .concat(graphHatch(x0, ay, x1, yv, hatches[k % hatches.length], `h-${k}-${i}`, amp)));
+                    });
+                } else {
+                    const pts = [];
+                    s.vals.forEach((v, i) => { if (isFinite(v)) pts.push({ x: xPos(i) * 10, y: -yCm(v) * 10, i }); });
+                    if (numericX) pts.sort((a, b) => a.x - b.x);
+                    if (spec.curve !== 'none' && pts.length > 1) {
+                        const smooth = spec.curve === 'smooth';
+                        const path = Ln(`s${k}-line`, smooth ? graphSmooth(pts) : pts, !smooth);
+                        add(`s${k}-line`, k % 2 === 1 ? graphDashes(path, 2.4, 1.4) : [path]);
+                    }
+                    const m = markers[k % markers.length];
+                    pts.forEach(pt => add(`s${k}-p${pt.i}`, graphMarker(m, pt, `m${k}-${pt.i}`, amp)));
+                }
+            });
+
+            // legend, top-left inside the plot
+            const named = series.length > 1 || (series.length === 1 && !/^(y|series 1)$/i.test(series[0].name.trim()));
+            if (spec.legend && named) {
+                const strokes = [], lh = lab * 1.7;
+                series.forEach((s, k) => {
+                    const y = -(H - 2) + k * lh + lab / 2, x = ax + 4;
+                    if (isColumn) {
+                        strokes.push(Ln(`lg${k}`, [{ x, y: y + 1.5 }, { x, y: y - 1.5 }, { x: x + 5, y: y - 1.5 }, { x: x + 5, y: y + 1.5 }, { x, y: y + 1.5 }]));
+                        strokes.push(...graphHatch(x, y - 1.5, x + 5, y + 1.5, hatches[k % hatches.length], `lgh${k}`, amp));
+                    } else {
+                        const line = Ln(`lg${k}`, [{ x, y }, { x: x + 7, y }]);
+                        if (spec.curve !== 'none') strokes.push(...(k % 2 === 1 ? graphDashes(line, 2.4, 1.4) : [line]));
+                        strokes.push(...graphMarker(markers[k % markers.length], { x: x + 3.5, y }, `lgm${k}`, amp));
+                    }
+                    strokes.push(...graphPlaceLabel(graphLabelStrokes(s.name.trim() || `Series ${k + 1}`, lab, settings), x + 9, y, 0, 0.5));
+                });
+                add('legend', strokes);
+            }
+
+            const info = numericX
+                ? `X: 1 cm = ${fmtGraphNum(X.scale)} ${graphUnitOf(spec.xLabel)} (from ${fmtGraphNum(X.start)}, ${X.len} cm) · Y: 1 cm = ${fmtGraphNum(Y.scale)} ${graphUnitOf(spec.yLabel)} (from ${fmtGraphNum(Y.start)}, ${Y.len} cm)`
+                : `${cats.length} categories × ${slot} cm · Y: 1 cm = ${fmtGraphNum(Y.scale)} ${graphUnitOf(spec.yLabel)} (from ${fmtGraphNum(Y.start)}, ${Y.len} cm)`;
+            return { groups, info, series: series.length, rows: t.rows.length };
+        }
+
+        function defaultGraphOrigin(settings) {
+            if (currentPaperType === 'graph') return { x: 30, y: graphBoxMM().h - 30 };
+            return { x: Math.round(settings.leftMargin + 20), y: Math.round(settings.topLineOffset + 20 * settings.lineSpacing - 12) };
+        }
+        // origin lands on a 1 cm grid line on graph paper (on ruled paper, on a whole millimetre)
+        function snapGraphOrigin(b) {
+            const step = currentPaperType === 'graph' ? 10 : 1;
+            b.graph.originX = Math.round(b.graph.originX / step) * step;
+            b.graph.originY = Math.round(b.graph.originY / step) * step;
+        }
+
+        // lay the groups out with their touch-up offsets; the block box follows, the plot origin stays put
+        function applyGraphOffsets(b) {
+            const off = (b.graph && b.graph.offsets) || {};
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+            (b._graphGroups || []).forEach(g => {
+                const o = off[g.id] || { dx: 0, dy: 0 };
+                g.placed = g.strokes.map(st => st.map(p => ({ x: p.x + o.dx, y: p.y + o.dy })));
+                g.placed.forEach(st => st.forEach(p => { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }));
+            });
+            if (!isFinite(x0)) { x0 = 0; y0 = 0; x1 = 1; y1 = 1; }
+            b._ox = -x0;
+            b._oy = -y0;
+            b._rawStrokes = [];
+            (b._graphGroups || []).forEach(g => g.placed.forEach(st => b._rawStrokes.push(st.map(p => ({ x: p.x - x0, y: p.y - y0 })))));
+            b._rasterW = b.width = Math.max(1, x1 - x0);
+            b._rasterH = b.height = Math.max(1, y1 - y0);
+            b.rotation = 0;
+            b.x = b.graph.originX - b._ox;
+            b.y = b.graph.originY - b._oy;
+            rescaleImageStrokes(b);
+        }
+
+        function buildGraphBlock(b) {
+            const settings = getSettings();
+            if (!b.graph) b.graph = defaultGraphSpec();
+            if (b.graph.originX == null || b.graph.originY == null) {
+                const o = defaultGraphOrigin(settings);
+                b.graph.originX = o.x;
+                b.graph.originY = o.y;
+            }
+            const res = buildGraphGroups(b.graph, settings);
+            b._graphGroups = res.groups;
+            b._graphInfo = res.info;
+            window.handwritingLayoutDirty = true;   // label layout reused the handwriting engine
+            applyGraphOffsets(b);
+        }
+
+        // the stroke group of a graph block nearest a design point (for touch-up), within `reach` mm
+        function graphGroupAt(b, dPt, reach) {
+            let best = null, bestD = reach;
+            const lx = dPt.x - b.graph.originX, ly = dPt.y - b.graph.originY;
+            (b._graphGroups || []).forEach(g => g.placed.forEach(st => {
+                for (let i = 0; i < st.length; i++) {
+                    const d = Math.hypot(st[i].x - lx, st[i].y - ly);
+                    if (d < bestD) { bestD = d; best = g.id; }
+                }
+            }));
+            return best;
+        }
+
+        // Excel (.xlsx / .xls) needs SheetJS, loaded only when a spreadsheet is imported
+        function loadSheetJS() {
+            if (window.XLSX) return Promise.resolve(window.XLSX);
+            return new Promise((resolve, reject) => {
+                const sc = document.createElement('script');
+                sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                sc.onload = () => resolve(window.XLSX);
+                sc.onerror = () => reject(new Error('Could not load the Excel reader (are you offline?). Save the sheet as CSV instead.'));
+                document.head.appendChild(sc);
+            });
+        }
+        async function readGraphFile(file) {
+            if (/\.(csv|tsv|txt)$/i.test(file.name)) return { text: await file.text(), sheet: file.name.replace(/\.[^.]+$/, '') };
+            const XLSX = await loadSheetJS();
+            const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+            const name = wb.SheetNames[0];
+            const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, blankrows: false })
+                .filter(r => r.some(c => c !== null && c !== undefined && String(c).trim() !== ''));
+            return { text: rows.map(r => r.map(c => (c === null || c === undefined) ? '' : String(c)).join('\t')).join('\n'), sheet: name };
         }
 
         let isDraggingImage = false;
@@ -6094,6 +6611,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         // Check if a point in design space (dPt) is over an image resize/rotate handle or inside the image
         function getImageHandleAtPoint(dPt, zoomScale = 1.0, imageBlock = selectedImageBlock()) {
             if (!blockIsLive(imageBlock)) return null;
+            if (imageBlock.kind === 'graph') {
+                return dPt.x >= imageBlock.x && dPt.x <= imageBlock.x + imageBlock.width && dPt.y >= imageBlock.y && dPt.y <= imageBlock.y + imageBlock.height ? 'move' : null;
+            }
             const x0 = imageBlock.x;
             const y0 = imageBlock.y;
             const x1 = imageBlock.x + imageBlock.width;
@@ -6584,7 +7104,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
 
         function vectorizeImageBlock() {
-            if (imageBlock.kind === 'text') {
+            if (imageBlock.kind === 'text' || imageBlock.kind === 'graph') {
                 rescaleImageStrokes();
                 triggerPreviewUpdate();
                 return;
@@ -6699,6 +7219,10 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 const t = (b.text || '').trim().split('\n')[0];
                 return t ? (t.length > 14 ? t.slice(0, 14) + '…' : t) : `Text ${n}`;
             }
+            if (b.kind === 'graph') {
+                const t = ((b.graph && b.graph.title) || '').trim();
+                return t ? (t.length > 14 ? t.slice(0, 14) + '…' : t) : `Graph ${n}`;
+            }
             return `Image ${n}`;
         }
 
@@ -6713,7 +7237,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 btn.className = `h-7 px-2.5 rounded-md text-[11px] font-medium flex items-center gap-1.5 transition-all ${on
                     ? 'bg-indigo-600 border border-indigo-500/80 text-white'
                     : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'}`;
-                btn.innerHTML = `<svg class="i-sm"><use href="#${b.kind === 'text' ? 'i-type' : 'i-image'}"/></svg>`;
+                btn.innerHTML = `<svg class="i-sm"><use href="#${b.kind === 'text' ? 'i-type' : b.kind === 'graph' ? 'i-graph' : 'i-image'}"/></svg>`;
                 btn.appendChild(document.createTextNode(blockLabel(b)));
                 btn.title = 'Select this block';
                 btn.addEventListener('click', () => selectImageBlock(b));
@@ -6726,9 +7250,12 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             imageBlock = b || newImageBlock('image');
             const live = blockIsLive(imageBlock) || imageBlock.kind === 'text';
             if (imageBlockControls) imageBlockControls.classList.toggle('hidden', !live);
-            const isText = imageBlock.kind === 'text';
-            document.querySelectorAll('[data-block-image-only]').forEach(el => el.classList.toggle('hidden', isText));
+            const isText = imageBlock.kind === 'text', isGraph = imageBlock.kind === 'graph';
+            document.querySelectorAll('[data-block-image-only]').forEach(el => el.classList.toggle('hidden', imageBlock.kind !== 'image'));
             document.querySelectorAll('[data-block-text-only]').forEach(el => el.classList.toggle('hidden', !isText));
+            document.querySelectorAll('[data-block-graph-only]').forEach(el => el.classList.toggle('hidden', !isGraph));
+            document.querySelectorAll('[data-block-free]').forEach(el => el.classList.toggle('hidden', isGraph));
+            if (isGraph) fillGraphEditor(imageBlock);
             if (textBlockInput) textBlockInput.value = imageBlock.text || '';
             if (imgPosX) imgPosX.value = imageBlock.x;
             if (imgPosY) imgPosY.value = imageBlock.y;
@@ -6757,6 +7284,99 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             b.y = 45 + (k % 5) * 12;
             imageBlocks.push(b);
         }
+
+        // --- graph editor ---
+        const GRAPH_FIELDS = { graphTitle: 'title', graphXLabel: 'xLabel', graphYLabel: 'yLabel', graphData: 'data', graphXScale: 'xScale',
+                               graphYScale: 'yScale', graphXStart: 'xStart', graphYStart: 'yStart', graphCurve: 'curve', graphMarker: 'marker',
+                               graphHatch: 'hatch', graphBarWidth: 'barWidth', graphLabelSize: 'labelSize', graphLegend: 'legend', graphShowScale: 'showScale' };
+        function showGraphType(type) {
+            document.querySelectorAll('[data-graph-type]').forEach(b => b.className = `seg-btn ${b.dataset.graphType === type ? 'seg-on' : ''}`);
+            document.querySelectorAll('[data-graph-line]').forEach(el => el.classList.toggle('hidden', type !== 'line'));
+            document.querySelectorAll('[data-graph-column]').forEach(el => el.classList.toggle('hidden', type !== 'column'));
+        }
+        function fillGraphEditor(b) {
+            const g = b.graph;
+            Object.entries(GRAPH_FIELDS).forEach(([id, key]) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (el.type === 'checkbox') el.checked = !!g[key]; else el.value = g[key] === null || g[key] === undefined ? '' : g[key];
+            });
+            showGraphType(g.type);
+            updateGraphStatus(b);
+        }
+        function updateGraphStatus(b) {
+            const out = document.getElementById('graphStatus');
+            if (!out || !b || b.kind !== 'graph') return;
+            const unit = currentPaperType === 'graph' ? 'cm from the grid box corner' : 'mm on the page';
+            const ox = currentPaperType === 'graph' ? b.graph.originX / 10 : b.graph.originX, oy = currentPaperType === 'graph' ? b.graph.originY / 10 : b.graph.originY;
+            out.textContent = `${b._graphInfo || ''} · origin at (${fmtGraphNum(ox)}, ${fmtGraphNum(oy)}) ${unit}`;
+        }
+        function regenerateGraph(b) {
+            buildGraphBlock(b);
+            updateGraphStatus(b);
+            renderImageBlockList();
+            triggerPreviewUpdate();
+        }
+        Object.entries(GRAPH_FIELDS).forEach(([id, key]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener(el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input', () => {
+                if (imageBlock.kind !== 'graph') return;
+                imageBlock.graph[key] = el.type === 'checkbox' ? el.checked : el.value;
+                regenerateGraph(imageBlock);
+            });
+        });
+        document.querySelectorAll('[data-graph-type]').forEach(btn => btn.addEventListener('click', () => {
+            if (imageBlock.kind !== 'graph') return;
+            imageBlock.graph.type = btn.dataset.graphType;
+            showGraphType(imageBlock.graph.type);
+            regenerateGraph(imageBlock);
+        }));
+        const graphImportFile = document.getElementById('graphImportFile');
+        if (graphImportFile) {
+            graphImportFile.addEventListener('change', async (e) => {
+                const f = e.target.files && e.target.files[0];
+                e.target.value = '';
+                if (!f || imageBlock.kind !== 'graph') return;
+                try {
+                    const { text, sheet } = await readGraphFile(f);
+                    const g = imageBlock.graph;
+                    g.data = text;
+                    const t = parseGraphTable(text);
+                    if (!String(g.xLabel || '').trim() && t.headers[0] && !/^x$/i.test(t.headers[0])) g.xLabel = t.headers[0];
+                    if (!String(g.yLabel || '').trim() && t.headers.length === 2) g.yLabel = t.headers[1];
+                    if (!String(g.title || '').trim() && sheet && !/^sheet\s*\d*$/i.test(sheet)) g.title = sheet;
+                    fillGraphEditor(imageBlock);
+                    regenerateGraph(imageBlock);
+                    showToast(`Imported ${t.rows.length} rows × ${Math.max(0, t.headers.length - 1)} series from ${f.name}`, "success");
+                } catch (err) {
+                    showToast("Import failed: " + err.message, "error");
+                }
+            });
+        }
+        const btnAddGraphBlock = document.getElementById('btnAddGraphBlock');
+        if (btnAddGraphBlock) {
+            btnAddGraphBlock.addEventListener('click', () => {
+                const b = newImageBlock('graph');
+                b.graph = defaultGraphSpec();
+                imageBlocks.push(b);
+                buildGraphBlock(b);
+                selectImageBlock(b);
+                if (typeof setCanvasClickMode === 'function') setCanvasClickMode('image', true);
+                showToast("Graph added: paste your data, then drag the graph into place", "success");
+            });
+        }
+        const btnGraphResetTouchUps = document.getElementById('btnGraphResetTouchUps');
+        if (btnGraphResetTouchUps) {
+            btnGraphResetTouchUps.addEventListener('click', () => {
+                if (imageBlock.kind !== 'graph') return;
+                imageBlock.graph.offsets = {};
+                applyGraphOffsets(imageBlock);
+                triggerPreviewUpdate();
+                showToast("Touch-ups reset", "info");
+            });
+        }
+        let graphTouchDrag = null;
 
         const btnAddTextBlock = document.getElementById('btnAddTextBlock');
         if (btnAddTextBlock) {
@@ -8126,8 +8746,9 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
                 if (imageBlock.strokes && imageBlock.strokes.length > 0) {
                     // text blocks use the handwriting pen; stretching only moves points, never the line width
-                    pCtx.strokeStyle = imageBlock.kind === 'text' ? '#1d4ed8' : '#0f172a'; // blue gel pen / charcoal diagram ink
-                    pCtx.lineWidth = imageBlock.kind === 'text' ? 3.5 : 1.4;
+                    const penDrawn = imageBlock.kind === 'text' || imageBlock.kind === 'graph';
+                    pCtx.strokeStyle = penDrawn ? '#1d4ed8' : '#0f172a'; // blue gel pen / charcoal diagram ink
+                    pCtx.lineWidth = penDrawn ? 3.5 : 1.4;
                     pCtx.lineCap = 'round';
                     pCtx.lineJoin = 'round';
                     for (let stroke of imageBlock.strokes) {
@@ -8180,6 +8801,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     pCtx.closePath();
                     pCtx.stroke();
 
+                    if (imageBlock.kind !== 'graph') {
                     // Stem line to rotation handle
                     pCtx.setLineDash([3, 3]);
                     pCtx.strokeStyle = '#ec4899';
@@ -8236,6 +8858,8 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     pCtx.arc(cRot.x, cRot.y, 2.5, 0, Math.PI * 2);
                     pCtx.fill();
 
+                    }
+
                     // Label badge with dimensions & rotation
                     const rotText = imageBlock.rotation ? ` (${imageBlock.rotation}°)` : '';
                     const badgeW = 295;
@@ -8245,7 +8869,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     pCtx.font = 'bold 10.5px sans-serif';
                     pCtx.textAlign = 'left';
                     pCtx.textBaseline = 'middle';
-                    pCtx.fillText(`${imageBlock.kind === 'text' ? '✍️ Text' : '🖼️ Image'}: ${imageBlock.width.toFixed(1)}×${imageBlock.height.toFixed(1)}mm${rotText} [Drag / Resize / Rotate]`, cTL.x + 6, cTL.y - 13);
+                    pCtx.fillText(`${imageBlock.kind === 'text' ? '✍️ Text' : imageBlock.kind === 'graph' ? '📈 Graph' : '🖼️ Image'}: ${imageBlock.width.toFixed(1)}×${imageBlock.height.toFixed(1)}mm${rotText} [Drag / Resize / Rotate]`, cTL.x + 6, cTL.y - 13);
                 }
                 pCtx.restore();
             }
@@ -11896,6 +12520,17 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 const settings = getSettings();
                 const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
                 const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
+                // Touch up: drag a single part of the selected graph
+                const touchUp = document.getElementById('graphTouchUp');
+                if (touchUp && touchUp.checked && imageBlock.kind === 'graph' && blockIsLive(imageBlock)) {
+                    const gid = graphGroupAt(imageBlock, dPt, Math.max(1.2, 3.0 / zoomScale));
+                    if (gid) {
+                        const o = (imageBlock.graph.offsets[gid] || { dx: 0, dy: 0 });
+                        graphTouchDrag = { id: gid, start: dPt, base: { dx: o.dx, dy: o.dy } };
+                        e.preventDefault();
+                        return;
+                    }
+                }
                 let handle = getImageHandleAtPoint(dPt, zoomScale);
                 if (!handle) {
                     // clicked another block: select the topmost one under the pointer
@@ -12092,6 +12727,19 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 return;
             }
 
+            if (graphTouchDrag && imageBlock.kind === 'graph') {
+                const settings = getSettings();
+                const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
+                const dPt = mapBedToDesign(targetBedX, targetBedY, calibMatrix);
+                imageBlock.graph.offsets[graphTouchDrag.id] = {
+                    dx: +(graphTouchDrag.base.dx + dPt.x - graphTouchDrag.start.x).toFixed(2),
+                    dy: +(graphTouchDrag.base.dy + dPt.y - graphTouchDrag.start.y).toFixed(2)
+                };
+                applyGraphOffsets(imageBlock);
+                renderPreview();
+                return;
+            }
+
             if (isDraggingImage && blockIsLive(imageBlock)) {
                 const settings = getSettings();
                 const calibMatrix = settings.use3PointCalib ? getCalibMapping() : null;
@@ -12164,6 +12812,25 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 isRotatingImage = false;
                 imageRotateState = null;
                 showToast(`Image rotated to ${imageBlock.rotation}°`, "info");
+                e.preventDefault();
+                return;
+            }
+
+            if (graphTouchDrag) {
+                graphTouchDrag = null;
+                triggerPreviewUpdate();
+                e.preventDefault();
+                return;
+            }
+
+            if (isDraggingImage && imageBlock.kind === 'graph') {
+                isDraggingImage = false;
+                imageBlock.graph.originX = imageBlock.x + imageBlock._ox;
+                imageBlock.graph.originY = imageBlock.y + imageBlock._oy;
+                snapGraphOrigin(imageBlock);
+                applyGraphOffsets(imageBlock);
+                updateGraphStatus(imageBlock);
+                renderPreview();
                 e.preventDefault();
                 return;
             }
@@ -14082,7 +14749,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         // Most settings live only in their controls, and blocks weren't saved at all, so neither survived a reload
         // or reached another device. All controls with an id (minus one-off fields like the import box) are saved
         // as 'plotter_form_state', blocks as 'plotter_blocks'; both are restored on load and synced live.
-        const FORM_SKIP = /^(textInput|octoprintUrl|octoprintApiKey|geminiApiKey|profileSelect|newProfileName|inputNewChar|txtCustomPrompt|activeTableSelect|textBlockInput|img[A-Z]\w*|jogVirtual\w*|fpsSensitivityRange|keepPrinterConnected|pages(Import|Export)\w*|mathCompact)$/;
+        const FORM_SKIP = /^(graph(Title|XLabel|YLabel|Data|XScale|YScale|XStart|YStart|Curve|Marker|Hatch|BarWidth|LabelSize|Legend|ShowScale|TouchUp|ImportFile)|textInput|octoprintUrl|octoprintApiKey|geminiApiKey|profileSelect|newProfileName|inputNewChar|txtCustomPrompt|activeTableSelect|textBlockInput|img[A-Z]\w*|jogVirtual\w*|fpsSensitivityRange|keepPrinterConnected|pages(Import|Export)\w*|mathCompact)$/;
         function syncableControls() {
             return [...document.querySelectorAll('input[id], select[id], textarea[id]')]
                 .filter(el => el.type !== 'file' && el.type !== 'button' && !FORM_SKIP.test(el.id));
@@ -14133,7 +14800,8 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         function readBlocks() {
             return JSON.stringify({
                 selected: imageBlocks.indexOf(imageBlock),
-                blocks: imageBlocks.map(b => Object.assign(Object.fromEntries(BLOCK_FIELDS.map(f => [f, b[f]])), b.kind === 'image' ? { src: b._src || null } : {}))
+                blocks: imageBlocks.map(b => Object.assign(Object.fromEntries(BLOCK_FIELDS.map(f => [f, b[f]])),
+                    b.kind === 'image' ? { src: b._src || null } : b.kind === 'graph' ? { graph: b.graph } : {}))
             });
         }
         let lastBlocks = null;
@@ -14149,9 +14817,12 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             if (!o || !Array.isArray(o.blocks) || json === lastBlocks) return;
             lastBlocks = json;
             const built = o.blocks.map(d => {
-                const b = Object.assign(newImageBlock(d.kind === 'text' ? 'text' : 'image'), d);
+                const b = Object.assign(newImageBlock(d.kind === 'text' || d.kind === 'graph' ? d.kind : 'image'), d);
                 delete b.src;
-                if (b.kind === 'text') {
+                if (b.kind === 'graph') {
+                    b.graph = Object.assign(defaultGraphSpec(), d.graph || {});
+                    buildGraphBlock(b);
+                } else if (b.kind === 'text') {
                     const w = b.width, h = b.height;
                     buildTextBlockStrokes(b);
                     b.width = w; b.height = h;
@@ -14178,6 +14849,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         // restore on load, then save whenever something changes (events cover edits; the slow poll catches
         // values the app sets in code, e.g. applying a profile or dragging a block)
         applyFormState(safeGetItem('plotter_form_state'));
+        if (safeGetItem('plotter_paper_type') === 'graph') setPaperType('graph', true);
         applyBlocks(safeGetItem('plotter_blocks'));
         lastFormState = readFormState();
         lastBlocks = readBlocks();
