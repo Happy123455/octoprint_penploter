@@ -167,10 +167,29 @@ class Handler(SimpleHTTPRequestHandler):
     def send_json(self, obj, code=200):
         body = json.dumps(obj).encode()
         self.send_response(code)
+        if self.path.startswith('/octoprint/'):
+            self.cors()
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def cors(self):
+        # lets the https copy of the app (GitHub Pages) use this computer as its OctoPrint relay
+        origin = self.headers.get('Origin')
+        if origin:
+            self.send_header('Access-Control-Allow-Origin', origin)
+            self.send_header('Vary', 'Origin')
+            self.send_header('Access-Control-Allow-Private-Network', 'true')
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.cors()
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', self.headers.get('Access-Control-Request-Headers') or '*')
+        self.send_header('Access-Control-Max-Age', '600')
+        self.send_header('Content-Length', '0')
+        self.end_headers()
 
     def proxy(self):
         path = self.path[len('/octoprint'):] or '/'
@@ -186,6 +205,7 @@ class Handler(SimpleHTTPRequestHandler):
         for k, v in rheaders:
             if k.lower() not in HOP_HEADERS and not k.lower().startswith('access-control-'):
                 self.send_header(k, v)
+        self.cors()
         self.send_header('Content-Length', str(len(data)))
         self.end_headers()
         self.wfile.write(data)

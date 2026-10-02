@@ -2043,6 +2043,19 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         // from the same pages, settings, calibration and font. Afterwards local changes are pushed, and changes
         // made on another device are written to this browser's storage and announced with a 'plotter-sync' event.
         // Opened any other way (GitHub Pages, the file itself) this does nothing.
+        // On an https page (GitHub Pages), OctoPrint on the home network is plain http. Chrome allows that only
+        // for requests marked as going to the local network (it then asks once for "local network" access).
+        (function () {
+            if (location.protocol !== 'https:' || !window.fetch) return;
+            const LOCAL = /^http:\/\/(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|[^/:]+\.local(?=[:/]|$))/i;
+            const nativeFetch = window.fetch.bind(window);
+            window.fetch = function (input, init) {
+                const url = typeof input === 'string' ? input : (input && input.url) || '';
+                if (LOCAL.test(url)) init = Object.assign({ targetAddressSpace: /^http:\/\/(localhost|127\.)/i.test(url) ? 'loopback' : 'local' }, init || {});
+                return nativeFetch(input, init);
+            };
+        })();
+
         const plotterSync = (function () {
             const SYNCED = /^(plotter_|octoprint_|gemini_api_key$)/;
             if (!/^https?:$/.test(location.protocol) || /\.github\.io$/.test(location.hostname)) return null;
@@ -10240,7 +10253,9 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                     urlVal = "http://" + urlVal;
                 }
                 const parsed = new URL(urlVal);
-                return parsed.protocol + "//" + parsed.host;
+                // keep the relay path of a computer running sync_server.py (http://<computer>:8790/octoprint)
+                const relay = /^\/octoprint(\/|$)/i.test(parsed.pathname) ? '/octoprint' : '';
+                return parsed.protocol + "//" + parsed.host + relay;
             } catch(e) {
                 return urlVal.replace(/\/$/, "");
             }
