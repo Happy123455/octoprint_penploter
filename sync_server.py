@@ -28,6 +28,7 @@ Endpoints used by the page (index.html enables syncing only when they exist):
     *    /octoprint/<path>             -> forwarded to OctoPrint
 """
 import argparse
+import gzip
 import http.client
 import json
 import os
@@ -208,6 +209,20 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json(changes_since(since))
         if url.path == '/':
             self.path = '/index.html'
+            url = urlparse(self.path)
+        # the app is ~850 KB; gzip it (~4x smaller) so it loads quickly over weak Wi-Fi
+        if url.path.endswith(('.html', '.js', '.css', '.json')) and 'gzip' in self.headers.get('Accept-Encoding', ''):
+            fp = os.path.join(HERE, url.path.lstrip('/'))
+            if os.path.isfile(fp) and os.path.realpath(fp).startswith(HERE):
+                with open(fp, 'rb') as f:
+                    body = gzip.compress(f.read(), 6)
+                self.send_response(200)
+                self.send_header('Content-Type', self.guess_type(fp))
+                self.send_header('Content-Encoding', 'gzip')
+                self.send_header('Content-Length', str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
         return super().do_GET()
 
     def do_POST(self):

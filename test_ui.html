@@ -10354,7 +10354,29 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                 showToast(msg, "error");
             });
         });
-        
+
+        // Quiet connection check (read-only GET, no toasts): on load and every 30 s, so the status shows whether
+        // OctoPrint is reachable without pressing "Test connection".
+        async function quietConnectionCheck() {
+            const url = getCleanOctoprintUrl();
+            const apiKey = octoprintApiKeyInput.value.trim();
+            if (!url || !apiKey || document.hidden) return;
+            if (/^Connecting/i.test(octoprintConnStatus.textContent)) return;
+            try {
+                const res = await fetch(`${url}/api/version`, { headers: { 'X-Api-Key': apiKey } });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                octoprintConnStatus.textContent = `Connected to OctoPrint v${data.server}`;
+                octoprintConnStatus.className = "text-[11px] text-emerald-400 text-center font-semibold";
+            } catch (e) {
+                octoprintConnStatus.textContent = "Connection Failed";
+                octoprintConnStatus.className = "text-[11px] text-red-400 text-center";
+            }
+        }
+        setTimeout(quietConnectionCheck, 1500);
+        setInterval(quietConnectionCheck, 30000);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) quietConnectionCheck(); });
+
         // Helper to upload Gcode file to OctoPrint
         function uploadToOctoprint(startPrint) {
             if (!generatedGCode) {
