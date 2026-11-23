@@ -321,7 +321,10 @@
                         <div class="card">
                             <div class="card-hd">
                                 <h2 class="card-title"><svg class="i"><use href="#i-type"/></svg>Text to write</h2>
-                                <span class="link" id="loadDemoBtn">Load demo story</span>
+                                <div class="flex items-center gap-3">
+                                    <span class="link" id="loadDemoBtn">Load demo story</span>
+                                    <button id="btnOpenDocEditor" type="button" class="btn btn-sm btn-primary" title="Write like in Google Docs: headings, alignment, tables, formulas, pictures, Word / PDF import and a page preview"><svg class="i-sm"><use href="#i-page"/></svg>Document editor</button>
+                                </div>
                             </div>
                             <div class="card-bd">
                                 <div class="flex flex-col-reverse gap-2">
@@ -714,7 +717,24 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <input type="file" id="graphPhotoInput" accept="image/*" class="file" />
                                 </div>
 
+                                <p class="hint">Tip: you can also drag a photo straight onto the preview.</p>
                                 <div id="graphOverlayControls" class="space-y-3 hidden">
+                                    <div class="row">
+                                        <span class="text-[11px] text-slate-400">Line the photo up by</span>
+                                        <div class="seg">
+                                            <button type="button" class="seg-btn" data-photo-anchor="page" title="Mark the page's calibration points on the photo (studio)">Page points</button>
+                                            <button type="button" class="seg-btn" data-photo-anchor="pen" title="Put the pen tip on any two marks of the page and tap the same marks on the photo">Pen points</button>
+                                        </div>
+                                    </div>
+                                    <div id="penAnchorBox" class="sub hidden">
+                                        <p class="hint"><b>Point 1</b> places the photo: put the pen tip on any mark of the printed page (a box corner, a dot), then tap that mark on the photo. <b>Point 2</b>, a second mark far from the first, sets the size and angle.</p>
+                                        <div class="grid grid-cols-2 gap-1.5">
+                                            <button id="btnPenAnchor1" type="button" class="btn btn-sm btn-primary">1 · Pen is on a mark</button>
+                                            <button id="btnPenAnchor2" type="button" class="btn btn-sm btn-primary">2 · Pen is on a mark</button>
+                                        </div>
+                                        <div id="penAnchorStatus" class="text-[10px] font-mono text-slate-400 space-y-0.5"></div>
+                                        <button id="btnPenAnchorReset" type="button" class="btn btn-sm btn-ghost w-full">Clear both points</button>
+                                    </div>
                                     <button id="btnOpenPhotoCalibStudio" type="button" class="btn btn-go w-full">
                                         <svg class="i-sm"><use href="#i-pin"/></svg>Align photo points (studio)
                                     </button>
@@ -890,6 +910,29 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     <!-- ======================= CALIBRATE ======================= -->
                     <section data-panel="calibrate" class="hidden space-y-3">
 
+                        <!-- Before every print: the usual order, all in one place -->
+                        <div class="card border-indigo-900/60">
+                            <div class="card-bd">
+                                <!-- Quick start: the usual order before every print -->
+                                <div class="grid grid-cols-4 gap-1.5" id="calibQuickStart">
+                                    <button id="btnQsHome" type="button" class="btn btn-sm btn-secondary flex-col h-auto py-1.5 gap-0.5" title="Home the printer (G28)"><span class="text-[9px] text-slate-500">1</span><svg class="i-sm"><use href="#i-home"/></svg>Home</button>
+                                    <button id="btnQsPark" type="button" class="btn btn-sm btn-secondary flex-col h-auto py-1.5 gap-0.5" title="Travel to the park position (set under Machine)"><span class="text-[9px] text-slate-500">2</span><svg class="i-sm"><use href="#i-parking"/></svg>Park</button>
+                                    <button id="btnQsCalib" type="button" class="btn btn-sm btn-primary flex-col h-auto py-1.5 gap-0.5" title="Start calibrating the points in the chosen mode"><span class="text-[9px] text-indigo-200/70">3</span><svg class="i-sm"><use href="#i-target"/></svg>Points</button>
+                                    <button id="btnQsPrint" type="button" class="btn btn-sm btn-go flex-col h-auto py-1.5 gap-0.5" title="Generate the G-code and print it"><span class="text-[9px] text-emerald-100/70">4</span><svg class="i-sm"><use href="#i-play"/></svg>Print</button>
+                                </div>
+
+                                <div class="row">
+                                    <span class="text-[11px] text-slate-400">Calibration points</span>
+                                    <div class="seg" role="radiogroup" aria-label="Calibration points">
+                                        <button id="calibModeFour" type="button" role="radio" class="seg-btn" title="Capture all four corners and average the angle over every edge (default)">4-point</button>
+                                        <button id="calibModeTwo" type="button" role="radio" class="seg-btn" title="Capture only Point 1 (top-left) and Point 4 (bottom-right); Points 2 and 3 are computed">2-point</button>
+                                    </div>
+                                </div>
+                                <p class="hint" id="calibHint">Jog to the reference points on your paper and capture their physical coordinates. <b>4-point</b> captures every corner; <b>2-point</b> needs only Point 1 (top-left) and Point 4 (bottom-right).</p>
+
+                            </div>
+                        </div>
+
                         <!-- Ruled paper calibration wizard -->
                         <div id="ruledPaperCalibWizardContainer" class="card transition-all duration-300">
                             <div class="card-hd">
@@ -976,16 +1019,35 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <label class="check-row text-[11px] text-emerald-300" title="Automatically step to the next point after capturing">
                                         <input type="checkbox" id="enableCalibAutomation" checked class="check accent-emerald-500" />Auto-step
                                     </label>
-                                    <label class="check-row text-[11px] text-sky-300" title="Capture only Point 1 (top-left) and Point 4 (bottom-right). The map is a rigid rotation + shift, which these two points determine exactly; the page diagonal between them gives the most precise angle. Points 2 and 3 are computed.">
-                                        <input type="checkbox" id="calibTwoPoint" checked class="check" />Quick 2-point
-                                    </label>
+                                    <input type="checkbox" id="calibTwoPoint" class="hidden" />
                                     <label class="check-row text-[11px] text-indigo-300" title="Apply the calibration map to generated G-code">
                                         <input type="checkbox" id="use3PointCalib" class="check" />Enable map
                                     </label>
                                 </div>
                             </div>
                             <div class="card-bd">
-                                <p class="hint" id="calibHint">Jog to the reference points on your paper and capture their physical coordinates. <b>Quick 2-point</b> needs only Point 1 (top-left) and Point 4 (bottom-right); turn it off to capture all four and average the angle over every edge.</p>
+                                <!-- Pen height while aiming at a point -->
+                                <div class="sub" id="calibAimBox">
+                                    <div class="row">
+                                        <span class="sub-title" title="Gap between the pen tip and the paper while you aim">Aim gap above paper</span>
+                                        <label class="check-row text-[11px] text-emerald-300" title="After travelling to each point, lower the pen close to the paper so you can see the tip line up. On Capture it goes back up to where it was before, then travels to the next point.">
+                                            <input type="checkbox" id="calibAutoLower" checked class="check accent-emerald-500" />Lower at each point
+                                        </label>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <button id="btnAimUp" type="button" class="btn btn-sm btn-secondary btn-icon" title="Raise the aiming height 0.2 mm">▲</button>
+                                        <div class="relative flex-1" title="How far above the paper (above the pen-down height) the tip hovers while you aim">
+                                            <input type="number" id="calibAimGap" value="1.0" min="0" max="10" step="0.1" class="field field-sm field-mono text-center pr-8" />
+                                            <span class="unit">mm</span>
+                                        </div>
+                                        <button id="btnAimDown" type="button" class="btn btn-sm btn-secondary btn-icon" title="Lower the aiming height 0.2 mm">▼</button>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        <button id="btnAimLower" type="button" class="btn btn-sm btn-go-soft" title="Lower the pen to the aiming height here">Lower to aim</button>
+                                        <button id="btnAimRaise" type="button" class="btn btn-sm btn-secondary" title="Lift the pen back to the height it had before lowering">Lift back up</button>
+                                    </div>
+                                    <p class="hint" id="calibAimStatus">Travel between points always happens at the safe pen-up height.</p>
+                                </div>
 
                                 <div class="callout callout-bad">
                                     <b>Home the printer first.</b> Home the carriage (button below or LCD) <b>before</b> jogging and recording, so the software's coordinates match the printer's physical ones.
@@ -1304,6 +1366,39 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                 <p class="hint">When a print finishes: resets calibration points, homes the printer (G28) and travels to the park position.</p>
                             </div>
                         </div>
+
+                        <!-- App: pop-ups and button usage -->
+                        <div class="card">
+                            <div class="card-hd">
+                                <h2 class="card-title"><svg class="i"><use href="#i-sliders"/></svg>App</h2>
+                            </div>
+                            <div class="card-bd">
+                                <div class="row">
+                                    <span class="text-[11px] text-slate-400">Pop-up messages</span>
+                                    <div class="seg">
+                                        <button type="button" class="seg-btn" data-toast-level="all" title="Show every message">All</button>
+                                        <button type="button" class="seg-btn" data-toast-level="important" title="Hide routine messages (moves, jogs)">Important</button>
+                                        <button type="button" class="seg-btn" data-toast-level="errors" title="Only warnings and errors">Errors</button>
+                                    </div>
+                                </div>
+                                <p class="hint">Pop-ups appear at the top and let taps pass through, so they never get in the way of buttons. While aiming at calibration points they show inside the aiming bar instead.</p>
+
+                                <div class="divider"></div>
+                                <div class="row">
+                                    <span class="sub-title">Buttons you use most</span>
+                                    <span id="usageSummary" class="text-[10px] text-slate-500 font-mono"></span>
+                                </div>
+                                <div id="usageList" class="space-y-1"></div>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <button id="btnUsageExport" type="button" class="btn btn-sm btn-secondary"><svg class="i-sm"><use href="#i-download"/></svg>Export</button>
+                                    <button id="btnUsageReset" type="button" class="btn btn-sm btn-ghost">Reset</button>
+                                    <label class="check-row text-[11px] ml-auto" title="Count which buttons and controls you press (stored on this device, and on the computer when the sync server is running)">
+                                        <input type="checkbox" id="usageTrackingOn" checked class="check" />Track usage
+                                    </label>
+                                </div>
+                                <p class="hint">Counts which buttons you press, so the ones you use most can be made easier to reach. Nothing leaves your own devices: it is saved in this browser and, when the sync server is running, in its state file on your computer.</p>
+                            </div>
+                        </div>
                     </section>
 
                 </div><!-- /#sectionScroller -->
@@ -1427,6 +1522,18 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             <button id="btnDismissSlowStartTuning" class="btn btn-sm btn-ghost w-full">Dismiss / tuning complete</button>
                         </div>
 
+                        <!-- Photo anchoring bar: pin the page photo to where the pen tip really is -->
+                        <div id="photoPickBar" class="hidden absolute top-2 left-1/2 -translate-x-1/2 z-20 w-[min(94%,34rem)] rounded-xl border border-emerald-500/50 bg-slate-900/95 shadow-2xl px-3 py-2 space-y-1.5">
+                            <div id="photoPickText" class="text-[11px] leading-snug text-slate-200"></div>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <button id="btnPickPen1" type="button" class="btn btn-sm btn-primary">1 · Pen is on a mark</button>
+                                <button id="btnPickPen2" type="button" class="btn btn-sm btn-primary">2 · Pen is on a mark</button>
+                                <button id="btnPickCancel" type="button" class="btn btn-sm btn-secondary hidden">Cancel</button>
+                                <button id="btnPickDone" type="button" class="btn btn-sm btn-ghost ml-auto">Done</button>
+                            </div>
+                        </div>
+                        <div id="photoDropZone" class="hidden absolute inset-2 z-40 rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-950/60 flex items-center justify-center text-emerald-200 text-sm font-semibold pointer-events-none">Drop the page photo here</div>
+
                         <!-- FPS real-time calibration HUD overlay -->
                         <div id="fpsCalibHud" class="hidden absolute inset-0 bg-slate-950/25 flex flex-col items-center justify-between p-3 sm:p-6 z-30 select-none cursor-crosshair" style="touch-action: none;">
                             <div class="bg-slate-900/95 border border-indigo-500/50 rounded-2xl px-3 py-2 sm:px-5 sm:py-3 shadow-2xl flex flex-wrap items-center justify-between gap-2 sm:gap-4 max-w-xl w-full">
@@ -1465,6 +1572,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     <span id="fpsSensitivityVal" class="font-mono text-[10px] text-indigo-300 font-bold">0.050 mm/px</span>
                                     <span class="kbd fps-desktop-only">◀ ▶ or &lt; &gt;</span>
                                 </div>
+                                <div class="flex items-center gap-1.5" title="Pen height while aiming (keys W / S)">
+                                    <span class="text-[11px] text-slate-400 font-medium">Pen</span>
+                                    <button id="btnHudAimLower" type="button" class="btn btn-sm btn-go-soft px-2" title="Lower the pen to the aiming height (S)">▼ Lower</button>
+                                    <button id="btnHudAimDown" type="button" class="btn btn-sm btn-secondary px-2" title="Aim 0.2 mm lower">−</button>
+                                    <span id="hudAimGap" class="font-mono text-[10px] text-emerald-300 font-bold w-14 text-center">1.0 mm</span>
+                                    <button id="btnHudAimUp" type="button" class="btn btn-sm btn-secondary px-2" title="Aim 0.2 mm higher">+</button>
+                                    <button id="btnHudAimRaise" type="button" class="btn btn-sm btn-secondary px-2" title="Lift back to the height before lowering (W)">▲ Lift</button>
+                                </div>
+                                <div id="hudMessage" class="w-full text-[10px] text-slate-400 truncate min-h-[14px]" aria-live="polite"></div>
                                 <div class="flex items-center gap-2">
                                     <button id="btnLockFpsPoint" type="button" class="btn btn-sm btn-go hidden" title="Lock the pen position as this calibration point">
                                         <svg class="i-sm"><use href="#i-target"/></svg>Lock point
@@ -2014,7 +2130,195 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
     </div>
 
     <!-- Toast notifications -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-[300] flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+    <!-- ======================= DOCUMENT EDITOR ======================= -->
+    <style>
+        #docModal .tb { display:inline-flex; align-items:center; justify-content:center; gap:4px; height:30px; min-width:30px; padding:0 8px; border-radius:6px; font-size:12px; color:#cbd5e1; border:1px solid transparent; background:transparent; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+        #docModal .tb:hover { background:rgba(51,65,85,.6); color:#fff; }
+        #docModal .tb.on { background:rgba(79,70,229,.35); border-color:rgba(99,102,241,.6); color:#fff; }
+        #docModal .tb:disabled { opacity:.35; cursor:not-allowed; }
+        #docModal .tb-sep { width:1px; height:20px; background:#334155; margin:0 4px; flex-shrink:0; }
+        #docScroll { background:#0b1120; }
+        #docSheet {
+            --ls: 28px;
+            position:relative; margin:0 auto; width:100%; max-width:820px; min-height:calc(var(--ls) * 32);
+            background-color:#fffef9; color:#1e293b; border-radius:4px; box-shadow:0 10px 30px rgba(0,0,0,.45);
+            background-image:
+                linear-gradient(to right, transparent calc(var(--ml) - 6px), rgba(239,68,68,.55) calc(var(--ml) - 6px), rgba(239,68,68,.55) calc(var(--ml) - 5px), transparent calc(var(--ml) - 5px)),
+                repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--ls) - 1px), rgba(59,130,246,.28) calc(var(--ls) - 1px), rgba(59,130,246,.28) var(--ls));
+            background-position: 0 var(--top), 0 var(--top);
+            padding: var(--top) var(--mr) calc(var(--ls) * 2) var(--ml);
+            font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-size: calc(var(--ls) * .56); line-height: var(--ls);
+            outline:none; caret-color:#4f46e5; -webkit-user-select:text; user-select:text; overflow-wrap:anywhere;
+        }
+        #docSheet p, #docSheet div:not(.doc-tbl-wrap) { margin:0; min-height:var(--ls); }
+        #docSheet h1 { margin:0; font-size:1.4em; font-weight:700; line-height:calc(var(--ls) * 2); }
+        #docSheet h2 { margin:0; font-size:1.18em; font-weight:700; line-height:var(--ls); }
+        #docSheet ul, #docSheet ol { margin:0; padding-left:1.6em; }
+        #docSheet ul { list-style:disc; } #docSheet ol { list-style:decimal; }
+        #docSheet table { border-collapse:collapse; margin:0; width:auto; max-width:100%; }
+        #docSheet td, #docSheet th { border:1.5px solid #334155; padding:0 8px; min-width:48px; height:var(--ls); vertical-align:middle; font-weight:400; text-align:left; }
+        #docSheet tr:first-child td { background:rgba(99,102,241,.06); }
+        #docSheet hr.doc-break { border:0; border-top:2px dashed #a5b4fc; margin:calc(var(--ls) / 2 - 1px) 0; height:0; position:relative; overflow:visible; }
+        #docSheet hr.doc-break::after { content:'Page break'; position:absolute; right:0; top:-9px; font-size:10px; color:#6366f1; background:#fffef9; padding:0 4px; }
+        #docSheet img.doc-pic { cursor:pointer; outline:2px solid transparent; outline-offset:2px; border-radius:2px; }
+        #docSheet img.doc-pic.sel { outline-color:#6366f1; }
+        #docSheet img.doc-pic[data-align="left"] { display:block; margin:6px auto 6px 0; }
+        #docSheet img.doc-pic[data-align="center"] { display:block; margin:6px auto; }
+        #docSheet img.doc-pic[data-align="right"] { display:block; margin:6px 0 6px auto; }
+        #docSheet img.doc-pic[data-align="inline"] { display:inline-block; vertical-align:baseline; margin:0 2px; }
+        #docSheet .doc-f { display:inline-block; padding:0 3px; margin:0 1px; border-radius:4px; background:rgba(99,102,241,.08); border:1px dashed rgba(99,102,241,.45); cursor:pointer; color:#1e1b4b; line-height:1.2; vertical-align:middle; }
+        #docSheet .doc-f.display { display:block; width:fit-content; margin:2px auto; padding:2px 8px; }
+        #docSheet .doc-f .raw { font-family:'Fira Code', ui-monospace, monospace; font-size:.85em; }
+        #docSheet:empty::before { content:attr(data-placeholder); color:#94a3b8; }
+        #docPreviewPages canvas { display:block; margin:0 auto; background:#fff; border-radius:3px; box-shadow:0 10px 30px rgba(0,0,0,.5); max-width:100%; height:auto; }
+        .doc-pop { position:absolute; z-index:5; }
+    </style>
+    <div id="docModal" class="hidden fixed inset-0 z-[195] flex flex-col bg-slate-950">
+        <!-- header -->
+        <div class="shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 border-b border-slate-800 bg-slate-900/90">
+            <svg class="i text-indigo-400"><use href="#i-page"/></svg>
+            <input id="docTitle" class="field field-sm w-40 sm:w-56 font-medium" placeholder="Untitled document" />
+            <select id="docPicker" class="field field-sm w-auto max-w-[9rem]" title="Open another document"></select>
+            <div class="seg ml-auto">
+                <button id="docModeEdit" type="button" class="seg-btn seg-on"><svg class="i-sm"><use href="#i-pencil"/></svg>Edit</button>
+                <button id="docModePreview" type="button" class="seg-btn"><svg class="i-sm"><use href="#i-eye"/></svg>Preview</button>
+            </div>
+            <label class="btn btn-sm btn-secondary cursor-pointer" title="Open a Word (.docx), PDF, Markdown, text or HTML file"><svg class="i-sm"><use href="#i-upload"/></svg><span class="hidden sm:inline">Import</span><input id="docImportFile" type="file" accept=".docx,.pdf,.md,.markdown,.txt,.html,.htm" class="hidden" /></label>
+            <button id="docExportPdf" type="button" class="btn btn-sm btn-secondary" title="Download the handwritten pages as a PDF"><svg class="i-sm"><use href="#i-download"/></svg><span class="hidden sm:inline">PDF</span></button>
+            <button id="docApply" type="button" class="btn btn-sm btn-primary" title="Lay the document out as pages for printing"><svg class="i-sm"><use href="#i-send"/></svg>Send to pages</button>
+            <button id="docClose" type="button" class="btn btn-sm btn-ghost btn-icon" title="Close (changes are kept)"><svg class="i-sm"><use href="#i-x"/></svg></button>
+        </div>
+        <!-- toolbar -->
+        <div id="docToolbar" class="shrink-0 flex items-center gap-0.5 px-2 py-1 border-b border-slate-800 bg-slate-900/60 overflow-x-auto">
+            <select id="docBlockStyle" class="field field-sm w-auto mr-1" title="Paragraph style">
+                <option value="p">Normal text</option>
+                <option value="h1">Heading 1</option>
+                <option value="h2">Heading 2</option>
+            </select>
+            <span class="tb-sep"></span>
+            <button type="button" class="tb" data-doc-align="left" title="Align left">⫷</button>
+            <button type="button" class="tb" data-doc-align="center" title="Center">≡</button>
+            <button type="button" class="tb" data-doc-align="right" title="Align right">⫸</button>
+            <button type="button" class="tb" data-doc-align="justify" title="Justify (both edges straight)">☰</button>
+            <span class="tb-sep"></span>
+            <button type="button" class="tb" id="docBullets" title="Bulleted list">• List</button>
+            <button type="button" class="tb" id="docNumbers" title="Numbered list">1. List</button>
+            <span class="tb-sep"></span>
+            <button type="button" class="tb" id="docInsTable" title="Insert table"><svg class="i-sm"><use href="#i-table"/></svg>Table</button>
+            <button type="button" class="tb" id="docInsFormula" title="Insert formula (LaTeX)"><svg class="i-sm"><use href="#i-sigma"/></svg>Formula</button>
+            <label class="tb" title="Insert picture"><svg class="i-sm"><use href="#i-image"/></svg>Picture<input id="docInsPicture" type="file" accept="image/*" multiple class="hidden" /></label>
+            <button type="button" class="tb" id="docInsBreak" title="Start a new page here"><svg class="i-sm"><use href="#i-scissors"/></svg>Page break</button>
+            <span class="tb-sep"></span>
+            <button type="button" class="tb" id="docUndo" title="Undo (Ctrl/Cmd+Z)"><svg class="i-sm"><use href="#i-undo"/></svg></button>
+            <button type="button" class="tb" id="docRedo" title="Redo (Ctrl/Cmd+Shift+Z)"><svg class="i-sm -scale-x-100"><use href="#i-undo"/></svg></button>
+            <span class="tb-sep"></span>
+            <label class="flex items-center gap-1 text-[11px] text-slate-400 shrink-0 px-1" title="Most ruled lines written on one page; more text moves on to the next page">
+                Lines/page <input id="docLines" type="number" min="5" max="60" step="1" value="30" class="field field-sm field-mono w-14 text-center" />
+            </label>
+            <!-- shown while the caret is in a table -->
+            <span id="docTableTools" class="hidden items-center gap-0.5 shrink-0">
+                <span class="tb-sep"></span>
+                <button type="button" class="tb" data-doc-table="row-add" title="Add row below">+ Row</button>
+                <button type="button" class="tb" data-doc-table="col-add" title="Add column right">+ Col</button>
+                <button type="button" class="tb" data-doc-table="row-del" title="Delete row">− Row</button>
+                <button type="button" class="tb" data-doc-table="col-del" title="Delete column">− Col</button>
+                <button type="button" class="tb text-red-300" data-doc-table="delete" title="Delete table">✕ Table</button>
+            </span>
+        </div>
+        <!-- body -->
+        <div id="docScroll" class="flex-1 min-h-0 overflow-auto px-2 py-4 sm:px-6 relative">
+            <div id="docEditWrap">
+                <div id="docSheet" contenteditable="true" spellcheck="true" data-placeholder="Start typing, paste, or import a Word / PDF file…"></div>
+            </div>
+            <div id="docPreviewWrap" class="hidden max-w-[820px] mx-auto">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3 text-[11px] text-slate-400">
+                    <span id="docPreviewInfo">Laying out pages…</span>
+                    <label class="check-row"><input type="checkbox" id="docPreviewLines" checked class="check" />Show ruled lines</label>
+                </div>
+                <div id="docPreviewPages" class="space-y-5"></div>
+            </div>
+
+            <!-- picture options -->
+            <div id="docPicPop" class="doc-pop hidden card bg-slate-900 shadow-2xl p-2 space-y-2 w-[290px]">
+                <div class="seg">
+                    <button type="button" class="seg-btn" data-pic-align="left">Left</button>
+                    <button type="button" class="seg-btn" data-pic-align="center">Center</button>
+                    <button type="button" class="seg-btn" data-pic-align="right">Right</button>
+                    <button type="button" class="seg-btn" data-pic-align="inline">Inline</button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] text-slate-400 w-10">Width</span>
+                    <input type="range" id="docPicWidth" min="8" max="180" step="1" class="slider flex-1" />
+                    <span id="docPicWidthVal" class="val w-14 text-right">60 mm</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] text-slate-400 w-10">Lines</span>
+                    <select id="docPicStyle" class="field field-sm flex-1">
+                        <option value="contours">Crisp outlines</option>
+                        <option value="sketch">Single-stroke centerline</option>
+                        <option value="detailed">Outlines + fine detail</option>
+                        <option value="hatch">Shaded hatching</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[11px] text-slate-400 w-10">Ink</span>
+                    <input type="range" id="docPicThreshold" min="30" max="230" step="2" class="slider flex-1" title="Line sensitivity" />
+                    <label class="check-row text-[11px]"><input type="checkbox" id="docPicInvert" class="check" />Invert</label>
+                </div>
+                <button type="button" id="docPicRemove" class="btn btn-sm btn-danger w-full"><svg class="i-sm"><use href="#i-trash"/></svg>Remove picture</button>
+            </div>
+
+            <!-- formula editor -->
+            <div id="docFormulaPop" class="doc-pop hidden card bg-slate-900 shadow-2xl p-3 space-y-2 w-[min(92vw,380px)]">
+                <div class="row">
+                    <span class="sub-title">Formula (LaTeX)</span>
+                    <label class="check-row text-[11px]"><input type="checkbox" id="docFormulaDisplay" class="check" />On its own line</label>
+                </div>
+                <textarea id="docFormulaTex" rows="2" class="field field-mono text-[13px] select-text" placeholder="e.g. \frac{a+b}{2} or x^2 + y^2 = r^2"></textarea>
+                <div class="flex flex-wrap gap-1" id="docFormulaQuick">
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="\frac{a}{b}">a/b</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="\sqrt{x}">√x</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="x^{2}">x²</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="x_{1}">x₁</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="\times">×</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="\pm">±</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="\leq">≤</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="\geq">≥</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="\alpha">α</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="\theta">θ</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="\pi">π</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="\Delta">Δ</button>
+                    <button type="button" class="btn btn-sm btn-secondary h-6 px-1.5" data-tex="^\circ">°</button>
+                </div>
+                <div id="docFormulaRender" class="min-h-[40px] rounded-md bg-white text-slate-900 px-2 py-1.5 text-center overflow-x-auto"></div>
+                <div class="flex gap-2">
+                    <button type="button" id="docFormulaRemove" class="btn btn-sm btn-ghost text-red-300">Remove</button>
+                    <button type="button" id="docFormulaCancel" class="btn btn-sm btn-secondary ml-auto">Cancel</button>
+                    <button type="button" id="docFormulaSave" class="btn btn-sm btn-primary">Done</button>
+                </div>
+            </div>
+
+            <!-- new table -->
+            <div id="docTablePop" class="doc-pop hidden card bg-slate-900 shadow-2xl p-3 space-y-2 w-60">
+                <span class="sub-title">Insert table</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <div><label class="lbl" for="docTblRows">Rows</label><input id="docTblRows" type="number" min="1" max="30" value="3" class="field field-sm field-mono" /></div>
+                    <div><label class="lbl" for="docTblCols">Columns</label><input id="docTblCols" type="number" min="1" max="8" value="3" class="field field-sm field-mono" /></div>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" id="docTblCancel" class="btn btn-sm btn-secondary ml-auto">Cancel</button>
+                    <button type="button" id="docTblInsert" class="btn btn-sm btn-primary">Insert</button>
+                </div>
+            </div>
+        </div>
+        <!-- status -->
+        <div class="shrink-0 flex items-center gap-3 px-3 py-1.5 border-t border-slate-800 bg-slate-900/90 text-[11px] text-slate-400">
+            <span id="docStatus">Saved</span>
+            <span id="docPageCount" class="ml-auto font-mono"></span>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed top-2 left-1/2 -translate-x-1/2 z-[300] flex flex-col items-center gap-1 w-[min(92vw,26rem)] pointer-events-none" aria-live="polite"></div>
 
     <!-- Bubble-text explainer -->
     <div id="bubbleTextModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
@@ -2426,38 +2730,56 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         })();
 
         // --- CUSTOM TOASTS AND MODALS SYSTEM ---
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `p-3.5 rounded-xl border text-xs font-semibold shadow-2xl flex items-center justify-between gap-3 transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto select-none`;
-            
-            if (type === 'success') {
-                toast.className += ' bg-emerald-950/90 border-emerald-500/30 text-emerald-300';
-            } else if (type === 'error') {
-                toast.className += ' bg-red-950/90 border-red-500/30 text-red-300';
-            } else {
-                toast.className += ' bg-indigo-950/90 border-indigo-500/30 text-indigo-300';
+        // Pop-up messages sit in a thin strip at the top and never take touches (taps go straight through to the
+        // controls under them), so they can't be hit by accident while operating the printer. While aiming at
+        // calibration points they are written into the aiming overlay's own status line instead.
+        // Levels (Machine > App): all | important (no routine info) | errors (only errors and warnings).
+        function toastLevel() {
+            return safeGetItem('plotter_toast_level') || 'important';
+        }
+        function showToast(message, type = 'info', opts = {}) {
+            const level = toastLevel();
+            const important = type === 'error' || type === 'warning';
+            const hud = document.getElementById('fpsCalibHud');
+            const hudMsg = document.getElementById('hudMessage');
+            if (hud && hudMsg && !hud.classList.contains('hidden') && type !== 'error') {
+                hudMsg.textContent = String(message).replace(/<[^>]*>/g, '');
+                hudMsg.className = `w-full text-[10px] truncate min-h-[14px] ${type === 'success' ? 'text-emerald-300' : type === 'warning' ? 'text-amber-300' : 'text-slate-300'}`;
+                return;
             }
+            if (!important) {
+                if (level === 'errors') return;
+                if (level === 'important' && (type === 'info' || opts.quiet)) return;
+            }
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            // the same message again just restarts its timer
+            const dup = Array.from(container.children).find(t => t.dataset.msg === String(message));
+            if (dup) { dup._restart && dup._restart(); return; }
+            while (container.children.length >= 3) container.firstChild.remove();
 
-            toast.innerHTML = `
-                <span>${message}</span>
-                <button class="hover:text-white font-extrabold text-sm">&times;</button>
-            `;
-
+            const toast = document.createElement('div');
+            toast.dataset.msg = String(message);
+            toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+            toast.className = `px-3 py-1.5 rounded-lg border text-[11px] font-medium shadow-xl backdrop-blur transition-all duration-300 -translate-y-1 opacity-0 pointer-events-none select-none max-w-full truncate`;
+            if (type === 'success') toast.className += ' bg-emerald-950/85 border-emerald-500/30 text-emerald-200';
+            else if (type === 'error') toast.className += ' bg-red-950/90 border-red-500/40 text-red-200 whitespace-normal';
+            else if (type === 'warning') toast.className += ' bg-amber-950/90 border-amber-500/30 text-amber-200 whitespace-normal';
+            else toast.className += ' bg-slate-900/85 border-slate-600/40 text-slate-200';
+            const span = document.createElement('span');
+            span.innerHTML = message;
+            toast.appendChild(span);
             container.appendChild(toast);
-            
-            // Slide-up Animation
-            setTimeout(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
-            }, 10);
+            setTimeout(() => toast.classList.remove('-translate-y-1', 'opacity-0'), 10);
 
-            const closeToast = () => {
-                toast.classList.add('opacity-0', 'translate-y-1');
-                setTimeout(() => { toast.remove(); }, 300);
+            const life = type === 'error' ? 6000 : important ? 4000 : 2500;
+            let timer = null;
+            const close = () => {
+                toast.classList.add('opacity-0', '-translate-y-1');
+                setTimeout(() => toast.remove(), 300);
             };
-
-            toast.querySelector('button').addEventListener('click', closeToast);
-            setTimeout(closeToast, 4000);
+            toast._restart = () => { clearTimeout(timer); timer = setTimeout(close, life); };
+            toast._restart();
         }
 
         let onConfirmAction = null;
@@ -5003,12 +5325,43 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     }
                 } else {
                     currentTable = null;
-                    blocks.push({ type: 'text', text: lineText, lineIdx: idx });
+                    // document markup: [pagebreak] (handled by the pager, draws nothing), [img=id] on its own line,
+                    // and a paragraph alignment prefix [center] / [right] / [justify] / [left]
+                    if (/^\s*\[pagebreak\]\s*$/.test(lineText)) return;
+                    const im = lineText.match(/^\s*\[img=([A-Za-z0-9]+)\]\s*$/);
+                    if (im) { blocks.push({ type: 'image', id: im[1], lineIdx: idx }); return; }
+                    const al = lineText.match(/^\[(center|right|justify|left)\]/);
+                    blocks.push({ type: 'text', text: al ? lineText.slice(al[0].length) : lineText, align: al ? al[1] : null, lineIdx: idx });
                 }
             });
+
+            // Pictures placed by the document editor: each one takes whole ruled lines (block) or sits on the
+            // baseline in the text (inline). imageSlots[id] = {x, y, w, h} in page millimetres.
+            const imageSpecs = window.docImageSpecs || {};
+            const imageSlots = {};
+            const printableW = rightMarginX - settings.leftMargin;
+            function imageSize(spec, maxH) {
+                let w = Math.min(spec.w, printableW), h = spec.h * (w / spec.w);
+                if (maxH && h > maxH) { w *= maxH / h; h = maxH; }
+                return { w, h };
+            }
             
             for (let block of blocks) {
                 window.currentRenderingLineIdx = block.lineIdx !== undefined ? block.lineIdx : (block.startLineIdx || 0);
+                if (block.type === 'image') {
+                    const spec = imageSpecs[block.id];
+                    if (!spec) continue;
+                    const sp = settings.lineSpacing;
+                    const { w, h } = imageSize(spec);
+                    const rows = Math.max(1, Math.ceil((h + 1.6) / sp));
+                    const x = spec.align === 'center' ? settings.leftMargin + (printableW - w) / 2
+                        : spec.align === 'right' ? rightMarginX - w : settings.leftMargin;
+                    // centred in the rows it takes, starting just under the ruled line above
+                    const top = currentLineY - sp + (rows * sp - h) / 2;
+                    imageSlots[block.id] = { x, y: top, w, h };
+                    currentLineY += rows * sp;
+                    continue;
+                }
                 if (block.type === 'table') {
                     currentLineY = renderTableBlock(block, currentLineY, paths, settings, pseudoRandom, getCharWidth, getTokenWidth, activeFontMode, StrokeFont, DrawnFont, uploadedFont, skeletonizeStrokes, generateGlyphHatchFill, drawMathElements);
                 } else if (block.text.includes('\\frac{') || block.text.includes('\\sqrt{') || block.text.includes('\\bar{')) {
@@ -5079,6 +5432,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                 tokWidth = lay.width;
                                 tok.layout = lay;
                             }
+                            tok.w = tokWidth;
                             
                             if (currentX + tokWidth > rightMarginX && currentLineTokens.length > 0) {
                                 linesOfTokens.push(currentLineTokens);
@@ -5108,6 +5462,13 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             const row = placeMathRow(currentLineY, maxHA, maxHB);
                             const textBaselineY = row.base;
                             let x = isFirstLine ? settings.leftMargin : wrapMarginX;
+                            if (block.align === 'center' || block.align === 'right') {
+                                let used = 0, k = lineTokens.length;
+                                while (k > 0 && lineTokens[k - 1].type === 'text' && /^\s+$/.test(lineTokens[k - 1].text)) k--;
+                                for (let j = 0; j < k; j++) used += lineTokens[j].w || 0;
+                                const free = Math.max(0, rightMarginX - x - used);
+                                x += block.align === 'center' ? free / 2 : free;
+                            }
                             
                             for (let tok of lineTokens) {
                                 if (tok.type === 'text') {
@@ -5160,6 +5521,27 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     
                     const parts = lineText.split(/(\[size=\d+(?:\.\d+)?\]|\[\/size\]|\[scale=\d+(?:\.\d+)?\]|\[\/scale\])/);
                     let scaleStack = [1.0];
+
+                    // Words of the current row, so an aligned paragraph can be moved into place once the row is full:
+                    // {p0, p1} path range, {c0, c1} character range, x0..x1 extent, slot (inline picture)
+                    const align = block.align;
+                    let rowWords = [];
+                    function finishRow(lastRow) {
+                        const words = rowWords;
+                        rowWords = [];
+                        if (!align || align === 'left' || !words.length) return;
+                        const free = rightMarginX - words[words.length - 1].x1;
+                        if (free <= 0.05) return;
+                        const n = words.length;
+                        words.forEach((wd, i) => {
+                            const dx = align === 'center' ? free / 2 : align === 'right' ? free
+                                : (!lastRow && n > 1 ? free * i / (n - 1) : 0);
+                            if (!dx) return;
+                            for (let k = wd.p0; k < wd.p1; k++) for (const pt of paths[k]) pt.x += dx;
+                            for (let k = wd.c0; k < wd.c1; k++) { renderedCharactersOnSheet[k].minX += dx; renderedCharactersOnSheet[k].maxX += dx; }
+                            if (wd.slot) wd.slot.x += dx;
+                        });
+                    }
                     
                     for (let part of parts) {
                         if (!part) continue;
@@ -5192,11 +5574,38 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     spaceWidth += (pseudoRandom() - 0.5) * settings.wordSpacingJitter * token.length;
                                 }
                                 if (currentX + spaceWidth > rightMarginX) {
+                                    finishRow(false);
                                     currentX = wrapMarginX;
                                     currentLineY += settings.lineSpacing;
                                 } else {
                                     currentX += spaceWidth;
                                 }
+                                continue;
+                            }
+
+                            // inline picture: sits on the baseline like a word; a tall one starts a row and pushes it down
+                            const inl = token.match(/^\[img=([A-Za-z0-9]+)\]$/);
+                            if (inl) {
+                                const spec = imageSpecs[inl[1]];
+                                if (!spec) continue;
+                                const sp = settings.lineSpacing;
+                                const { w, h } = imageSize(spec, sp * 6);
+                                if (currentX + w > rightMarginX && currentX > wrapMarginX) {
+                                    finishRow(false);
+                                    currentX = wrapMarginX;
+                                    currentLineY += sp;
+                                }
+                                const extra = Math.max(0, Math.ceil((h - sp + 1.2) / sp));
+                                if (extra > 0 && currentX > wrapMarginX) {
+                                    finishRow(false);
+                                    currentX = wrapMarginX;
+                                    currentLineY += sp;
+                                }
+                                currentLineY += extra * sp;
+                                const slot = { x: currentX, y: currentLineY - settings.letterYOffset - h, w, h };
+                                imageSlots[inl[1]] = slot;
+                                rowWords.push({ p0: paths.length, p1: paths.length, c0: renderedCharactersOnSheet.length, c1: renderedCharactersOnSheet.length, x0: currentX, x1: currentX + w, slot });
+                                currentX += w;
                                 continue;
                             }
                             
@@ -5211,11 +5620,13 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                             }
                             
                             if (currentX + wordWidth > rightMarginX && currentX > wrapMarginX) {
+                                finishRow(false);
                                 currentX = wrapMarginX;
                                 currentLineY += settings.lineSpacing;
                             }
                             
                             wordCounter++;
+                            const rowWord = { p0: paths.length, c0: renderedCharactersOnSheet.length, x0: currentX };
                             
                             for (let wToken of wordTokens) {
                                 let tokenScale = currentScale;
@@ -5374,12 +5785,19 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                                     currentX += charWidthMM + settings.charSpacing + charSpacingJitterAmt;
                                 }
                             }
+                            rowWord.p1 = paths.length;
+                            rowWord.c1 = renderedCharactersOnSheet.length;
+                            rowWord.x1 = currentX - settings.charSpacing;
+                            rowWords.push(rowWord);
                         }
                     }
+                    finishRow(true);
                     currentLineY += settings.lineSpacing;
                 }
             }
             
+            paths.imageSlots = imageSlots;
+            window.lastLayoutImageSlots = imageSlots;
             return paths;
         }
 
@@ -6093,6 +6511,15 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         // A text block (kind: 'text') is handwriting laid out once and then treated like an image: its strokes
         // are stretched and rotated as geometry, so the pen line stays the same thickness.
         let imageBlocks = [];
+        // Picture sizes from the document editor, needed by the layout engine from the very first page layout
+        window.docImageSpecs = (function () {
+            const specs = {};
+            try {
+                Object.values(JSON.parse(safeGetItem('plotter_docs') || '{}') || {}).forEach(d =>
+                    Object.entries((d && d.images) || {}).forEach(([id, im]) => { specs[id] = { w: im.w, h: im.h, align: im.align }; }));
+            } catch (e) {}
+            return specs;
+        })();
 
         function newImageBlock(kind = 'image') {
             return {
@@ -6103,6 +6530,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
         }
 
         function blockIsLive(b) {
+            if (b && b.docImg && !b._docOnPage) return false;   // a document picture shows only on its own page
             return !!b && (!!b.img || ((b.kind === 'text' || b.kind === 'graph') && b._rawStrokes && b._rawStrokes.length > 0));
         }
 
@@ -6623,7 +7051,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
 
         // Check if a point in design space (dPt) is over an image resize/rotate handle or inside the image
         function getImageHandleAtPoint(dPt, zoomScale = 1.0, imageBlock = selectedImageBlock()) {
-            if (!blockIsLive(imageBlock)) return null;
+            if (!blockIsLive(imageBlock) || imageBlock.docImg) return null;   // document pictures are placed by the text
             if (imageBlock.kind === 'graph') {
                 return dPt.x >= imageBlock.x && dPt.x <= imageBlock.x + imageBlock.width && dPt.y >= imageBlock.y && dPt.y <= imageBlock.y + imageBlock.height ? 'move' : null;
             }
@@ -7244,6 +7672,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
             if (!list) return;
             list.innerHTML = '';
             imageBlocks.forEach(b => {
+                if (b.docImg) return;   // managed in the document editor
                 const on = b === imageBlock;
                 const btn = document.createElement('button');
                 btn.type = 'button';
@@ -7596,7 +8025,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 const wasText = imageBlock.kind === 'text';
                 imageBlocks = imageBlocks.filter(b => b !== imageBlock);
                 if (imageBlockFileInput) imageBlockFileInput.value = "";
-                selectImageBlock(imageBlocks[imageBlocks.length - 1]);
+                selectImageBlock(imageBlocks.filter(b => !b.docImg).pop());
                 showToast(wasText ? "Text block removed" : "Image removed", "info");
             });
         }
@@ -8342,8 +8771,14 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                         if (topOpacityContainer) topOpacityContainer.classList.remove('hidden');
                         updateGraphOpacityUI();
                         triggerPreviewUpdate();
-                        showToast("Loaded graph photo! Opening Photo Alignment Studio...", "success");
-                        setTimeout(openPhotoCalibStudio, 300);
+                        if (photoCalibration.anchor === 'pen' && window.openPhotoPickBar) {
+                            photoCalibration.pen = { pts: [null, null], t: null };
+                            safeSetItem('plotter_photo_calib', JSON.stringify(photoCalibration));
+                            window.openPhotoPickBar();
+                        } else {
+                            showToast("Loaded graph photo! Opening Photo Alignment Studio...", "success");
+                            setTimeout(openPhotoCalibStudio, 300);
+                        }
                     };
                     img.src = evt.target.result;
                 };
@@ -8404,6 +8839,13 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                     if (graphOverlayImg && graphOverlayOpacity > 0) {
                         pCtx.save();
                         pCtx.globalAlpha = graphOverlayOpacity;
+                        if (photoCalibration.anchor === 'pen' && typeof penPhotoCanvasTransform === 'function') {
+                            pCtx.transform(...penPhotoCanvasTransform(mmToPx));
+                            pCtx.drawImage(graphOverlayImg, 0, 0);
+                            pCtx.restore();
+                            drawPenPhotoMarks(pCtx, mmToPx);
+                            return;
+                        }
                         
                         const toPx = (pt) => {
                             if (calibMatrix) {
@@ -8695,6 +9137,7 @@ We solved the outline "bubble" text issue by rendering true single-stroke vector
                 if (window.handwritingLayoutDirty || !window.cachedHandwritingPaths) {
                     window.cachedHandwritingPaths = computeHandwritingLayout(settings);
                     window.handwritingLayoutDirty = false;
+                    if (typeof applyDocImageSlots === 'function') applyDocImageSlots(window.cachedHandwritingPaths.imageSlots);
                     updateMissingCharsUI(lastMissingChars);
                 }
                 const paths = window.cachedHandwritingPaths || [];
@@ -9693,6 +10136,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         function generatePlotterGCode(silent = false) {
             const settings = getSettings();
             const textPaths = computeHandwritingLayout(settings);
+            if (typeof applyDocImageSlots === 'function') applyDocImageSlots(textPaths.imageSlots);
             const paths = [...textPaths];
             imageBlocks.forEach(b => {
                 if (blockIsLive(b) && b.strokes && b.strokes.length > 0) paths.push(...b.strokes);
@@ -10880,6 +11324,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
 
 
         function homePrinter() {
+            if (typeof calibAim !== 'undefined') calibAim.lowered = false;
             jogVirtualX = 0.0;
             jogVirtualY = 0.0;
             const settings = getSettings();
@@ -10917,64 +11362,153 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             });
         }
 
+        // --- PEN HEIGHT WHILE AIMING AT CALIBRATION POINTS ---
+        // "Lower to aim" brings the tip to a small gap above the paper so you can see it line up with the mark.
+        // The height it had before is remembered: Capture (and any longer move) lifts back to it first, so the pen
+        // never travels close enough to the paper to streak it. After an automatic step to the next point the pen
+        // is lowered again there.
+        const calibAim = { lowered: false, restoreZ: null };
+        function calibAimGap() {
+            const el = document.getElementById('calibAimGap');
+            const v = el ? parseFloat(el.value) : 1.0;
+            return isNaN(v) ? 1.0 : Math.max(0, Math.min(10, v));
+        }
+        function calibAimZ() {
+            return getEffectiveZHeights().effectiveZDown + calibAimGap();
+        }
+        function calibAutoLowerOn() {
+            const el = document.getElementById('calibAutoLower');
+            return !el || el.checked;
+        }
+        function updateCalibAimUI() {
+            const gap = calibAimGap().toFixed(1);
+            const hud = document.getElementById('hudAimGap');
+            if (hud) hud.textContent = `${gap} mm`;
+            const st = document.getElementById('calibAimStatus');
+            if (st) st.textContent = calibAim.lowered
+                ? `Pen lowered to Z ${jogVirtualZ.toFixed(2)} (${gap} mm above the paper). Capture lifts it back to Z ${calibAim.restoreZ.toFixed(2)}.`
+                : 'Travel between points always happens at the safe pen-up height.';
+            ['btnAimLower', 'btnHudAimLower'].forEach(id => {
+                const b = document.getElementById(id);
+                if (b) b.classList.toggle('ring-2', calibAim.lowered);
+            });
+        }
+        // G-code to lower to the aiming height (remembering the height to come back to)
+        function aimLowerCommands() {
+            if (!calibAim.lowered) {
+                calibAim.restoreZ = Math.max(jogVirtualZ, getEffectiveZHeights().effectiveZUp);
+                calibAim.lowered = true;
+            }
+            jogVirtualZ = calibAimZ();
+            return [`G1 Z${jogVirtualZ.toFixed(2)} F600`];
+        }
+        // G-code to lift back to the remembered height (nothing when not lowered)
+        function aimRaiseCommands() {
+            if (!calibAim.lowered) return [];
+            calibAim.lowered = false;
+            jogVirtualZ = calibAim.restoreZ;
+            return [`G0 Z${jogVirtualZ.toFixed(2)} F1500`];
+        }
+        function lowerToAim() {
+            const cmds = aimLowerCommands();
+            updateVirtualUI();
+            updateCalibAimUI();
+            sendJogGCodeCommands(["G90", ...cmds]);
+            showToast(`Pen lowered to ${calibAimGap().toFixed(1)} mm above the paper`, "info", { quiet: true });
+        }
+        function raiseFromAim(silent) {
+            const cmds = aimRaiseCommands();
+            updateVirtualUI();
+            updateCalibAimUI();
+            if (!cmds.length) return;
+            sendJogGCodeCommands(["G90", ...cmds]);
+            if (!silent) showToast(`Pen lifted back to Z ${jogVirtualZ.toFixed(2)}`, "info", { quiet: true });
+        }
+        function nudgeAimGap(delta) {
+            const el = document.getElementById('calibAimGap');
+            if (!el) return;
+            el.value = Math.max(0, Math.min(10, calibAimGap() + delta)).toFixed(1);
+            safeSetItem('plotter_calib_aim_gap', el.value);
+            if (calibAim.lowered) {
+                jogVirtualZ = calibAimZ();
+                updateVirtualUI();
+                sendJogGCodeCommands(["G90", `G1 Z${jogVirtualZ.toFixed(2)} F600`]);
+            }
+            updateCalibAimUI();
+        }
+        (function initCalibAim() {
+            const gapEl = document.getElementById('calibAimGap');
+            const saved = safeGetItem('plotter_calib_aim_gap');
+            if (gapEl && saved !== null && !isNaN(parseFloat(saved))) gapEl.value = saved;
+            const autoEl = document.getElementById('calibAutoLower');
+            const savedAuto = safeGetItem('plotter_calib_auto_lower');
+            if (autoEl && savedAuto !== null) autoEl.checked = savedAuto !== 'false';
+            if (autoEl) autoEl.addEventListener('change', () => safeSetItem('plotter_calib_auto_lower', autoEl.checked ? 'true' : 'false'));
+            if (gapEl) gapEl.addEventListener('change', () => { safeSetItem('plotter_calib_aim_gap', gapEl.value); nudgeAimGap(0); });
+            const on = (id, fn) => { const b = document.getElementById(id); if (b) b.addEventListener('click', fn); };
+            on('btnAimLower', lowerToAim);
+            on('btnHudAimLower', lowerToAim);
+            on('btnAimRaise', () => raiseFromAim(false));
+            on('btnHudAimRaise', () => raiseFromAim(false));
+            on('btnAimUp', () => nudgeAimGap(0.2));
+            on('btnHudAimUp', () => nudgeAimGap(0.2));
+            on('btnAimDown', () => nudgeAimGap(-0.2));
+            on('btnHudAimDown', () => nudgeAimGap(-0.2));
+            updateCalibAimUI();
+        })();
+
+        // Move the pen to (x, y) without dragging it over the paper: a lowered pen is lifted back to its earlier
+        // height first (short nudges of a few mm stay at the aiming height), and travel is never below the pen-up
+        // height. The pen is lowered again at the destination when it was lowered before, or when opts.aim asks
+        // for it (automatic steps between calibration points) and "Lower at each point" is on.
+        function moveSafely(x, y, opts = {}) {
+            const clampedX = Math.max(-16.6, Math.min(220.0, x));
+            const clampedY = Math.max(0.0, Math.min(220.0, y));
+            const dist = Math.hypot(clampedX - jogVirtualX, clampedY - jogVirtualY);
+            const wasLowered = calibAim.lowered;
+            const cmds = ["G90"];
+            if (wasLowered && dist <= 8) {
+                cmds.push(`G0 X${clampedX.toFixed(2)} Y${clampedY.toFixed(2)} F1500`);
+            } else {
+                cmds.push(...aimRaiseCommands());
+                const travelZ = Math.max(getEffectiveZHeights().effectiveZUp, jogVirtualZ);
+                jogVirtualZ = travelZ;
+                cmds.push(`G0 Z${travelZ.toFixed(2)} F1500`, `G0 X${clampedX.toFixed(2)} Y${clampedY.toFixed(2)} F3000`);
+                if (wasLowered || (opts.aim && calibAutoLowerOn())) cmds.push(...aimLowerCommands());
+            }
+            jogVirtualX = clampedX;
+            jogVirtualY = clampedY;
+            updateVirtualUI();
+            updateCalibAimUI();
+            sendJogGCodeCommands(cmds);
+            return { x: clampedX, y: clampedY };
+        }
+
         // Travel to specific point on the bed (always elevating Z before horizontal travel)
-        function travelToPoint(x, y) {
+        function travelToPoint(x, y, opts = {}) {
             if (isNaN(x) || isNaN(y)) {
                 showToast("Point coordinates not set!", "warning");
                 return;
             }
-            const clampedX = Math.max(-16.6, Math.min(220.0, x));
-            const clampedY = Math.max(0.0, Math.min(220.0, y));
-            
-            jogVirtualX = clampedX;
-            jogVirtualY = clampedY;
-
-            const zHeights = getEffectiveZHeights();
-            const safeTravelZ = zHeights.effectiveZUp;
-            jogVirtualZ = safeTravelZ;
-            updateVirtualUI();
+            const t = moveSafely(x, y, opts);
             if (typeof renderPreview === 'function') renderPreview();
-            
-            showToast(`✈️ Moving pen to X: ${clampedX.toFixed(2)}, Y: ${clampedY.toFixed(2)} (Z: ${safeTravelZ.toFixed(2)}mm)`, "info");
-            sendJogGCodeCommands([
-                "G90",
-                `G0 Z${safeTravelZ.toFixed(2)} F1500`,
-                `G0 X${clampedX.toFixed(2)} Y${clampedY.toFixed(2)} F3000`
-            ]);
+            showToast(`✈️ Moving pen to X: ${t.x.toFixed(2)}, Y: ${t.y.toFixed(2)}${calibAim.lowered ? ' (lowered to aim)' : ''}`, "info", { quiet: true });
         }
 
         document.getElementById('btnJogHome').addEventListener('click', homePrinter);
 
-        function performJumpYDown() {
+        function performJumpYDown(opts = {}) {
             const distance = parseFloat(document.getElementById('jumpYDistanceInput').value) || 146.0;
-            jogVirtualY = Math.max(0.0, jogVirtualY - distance);
-            const zHeights = getEffectiveZHeights();
-            const safeTravelZ = zHeights.effectiveZUp;
-            jogVirtualZ = safeTravelZ;
-            updateVirtualUI();
-            sendJogGCodeCommands([
-                "G90",
-                `G0 Z${safeTravelZ.toFixed(2)} F1500`,
-                `G0 X${jogVirtualX.toFixed(2)} Y${jogVirtualY.toFixed(2)} F3000`
-            ]);
+            moveSafely(jogVirtualX, Math.max(0.0, jogVirtualY - distance), opts);
             triggerPreviewUpdate();
-            showToast(`Jumped Y down by ${distance.toFixed(1)}mm!`, "info");
+            showToast(`Jumped Y down by ${distance.toFixed(1)}mm!`, "info", { quiet: true });
         }
 
-        function performJumpXRight() {
+        function performJumpXRight(opts = {}) {
             const distance = parseFloat(document.getElementById('jumpXDistanceInput').value) || 168.5;
-            jogVirtualX = Math.min(220.0, jogVirtualX + distance);
-            const zHeights = getEffectiveZHeights();
-            const safeTravelZ = zHeights.effectiveZUp;
-            jogVirtualZ = safeTravelZ;
-            updateVirtualUI();
-            sendJogGCodeCommands([
-                "G90",
-                `G0 Z${safeTravelZ.toFixed(2)} F1500`,
-                `G0 X${jogVirtualX.toFixed(2)} Y${jogVirtualY.toFixed(2)} F3000`
-            ]);
+            moveSafely(Math.min(220.0, jogVirtualX + distance), jogVirtualY, opts);
             triggerPreviewUpdate();
-            showToast(`Jumped X right by ${distance.toFixed(1)}mm!`, "info");
+            showToast(`Jumped X right by ${distance.toFixed(1)}mm!`, "info", { quiet: true });
         }
 
         document.getElementById('btnJumpYDown').addEventListener('click', performJumpYDown);
@@ -10984,6 +11518,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         document.getElementById('btnJogPenDown')?.addEventListener('click', () => {
             const zHeights = getEffectiveZHeights();
             jogVirtualZ = zHeights.effectiveZDown;
+            calibAim.lowered = false; updateCalibAimUI();
             updateVirtualUI();
             sendJogGCodeCommands(["G90", `G1 Z${zHeights.effectiveZDown.toFixed(2)} F800`]);
             showToast(`⬇️ Lowered pen to contact height (Z: ${zHeights.effectiveZDown.toFixed(2)}mm)`, "info");
@@ -10991,6 +11526,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         document.getElementById('btnJogPenUp')?.addEventListener('click', () => {
             const zHeights = getEffectiveZHeights();
             jogVirtualZ = zHeights.effectiveZUp;
+            calibAim.lowered = false; updateCalibAimUI();
             updateVirtualUI();
             sendJogGCodeCommands(["G90", `G0 Z${zHeights.effectiveZUp.toFixed(2)} F1500`]);
             showToast(`⬆️ Raised pen to travel clearance (Z: ${zHeights.effectiveZUp.toFixed(2)}mm)`, "info");
@@ -10999,6 +11535,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             const zHeights = getEffectiveZHeights();
             const highZ = zHeights.elevation + 25.0;
             jogVirtualZ = highZ;
+            calibAim.lowered = false; updateCalibAimUI();
             updateVirtualUI();
             sendJogGCodeCommands(["G90", `G0 Z${highZ.toFixed(2)} F2400`]);
             showToast(`⏫ Raised pen high (Z: ${highZ.toFixed(2)}mm)`, "info");
@@ -11019,7 +11556,8 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
             document.getElementById(`calibP${index}Y`).value = jogVirtualY.toFixed(2);
             updateCalibLabels();
             saveCalibPointsToLocalStorage();
-            showToast(`Point ${index} captured successfully!`, "success");
+            showToast(`Point ${index} captured`, "success", { quiet: true });
+            raiseFromAim(true);
             triggerPreviewUpdate();
             autoEnableCalibMap();
 
@@ -11030,12 +11568,12 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                     // Quick 2-point: travel straight to where Point 4 should be
                     setTimeout(() => {
                         const t = predictCalibP4({ x: jogVirtualX, y: jogVirtualY });
-                        travelToPoint(t.x, t.y);
+                        travelToPoint(t.x, t.y, { aim: true });
                     }, 500);
                 } else if (index === 1) {
                     // Rule 2: when 1st point is set then automate the "C" button action (Jump X Right)
                     setTimeout(() => {
-                        performJumpXRight();
+                        performJumpXRight({ aim: true });
                     }, 500);
                 } else if (index === 2) {
                     // Rule 3: when 2nd point is set then travel to the 1st point and hit "X" button action (Jump Y Down)
@@ -11044,7 +11582,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                         if (p1) {
                             travelToPoint(p1.x, p1.y);
                             setTimeout(() => {
-                                performJumpYDown();
+                                performJumpYDown({ aim: true });
                             }, 400);
                         }
                     }, 500);
@@ -11059,7 +11597,7 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
                             const p4_proj_y = p2.y + p3.y - p1.y;
                             let targetX = Math.max(-16.6, Math.min(220.0, p4_proj_x));
                             let targetY = Math.max(0.0, Math.min(220.0, p4_proj_y));
-                            travelToPoint(targetX, targetY);
+                            travelToPoint(targetX, targetY, { aim: true });
                         }
                     }, 500);
                 }
@@ -11084,22 +11622,22 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         document.getElementById('btnGoToP1').addEventListener('click', () => {
             const x = parseFloat(document.getElementById('calibP1X').value);
             const y = parseFloat(document.getElementById('calibP1Y').value);
-            travelToPoint(x, y);
+            travelToPoint(x, y, { aim: true });
         });
         document.getElementById('btnGoToP2').addEventListener('click', () => {
             const x = parseFloat(document.getElementById('calibP2X').value);
             const y = parseFloat(document.getElementById('calibP2Y').value);
-            travelToPoint(x, y);
+            travelToPoint(x, y, { aim: true });
         });
         document.getElementById('btnGoToP3').addEventListener('click', () => {
             const x = parseFloat(document.getElementById('calibP3X').value);
             const y = parseFloat(document.getElementById('calibP3Y').value);
-            travelToPoint(x, y);
+            travelToPoint(x, y, { aim: true });
         });
         document.getElementById('btnGoToP4').addEventListener('click', () => {
             const x = parseFloat(document.getElementById('calibP4X').value);
             const y = parseFloat(document.getElementById('calibP4Y').value);
-            travelToPoint(x, y);
+            travelToPoint(x, y, { aim: true });
         });
 
         // Inputs & reset
@@ -11238,10 +11776,48 @@ This is a live preview test demonstrating perfect line alignment. By virtualizin
         function applyCalibModeUI() {
             const quick = isCalibTwoPoint();
             document.querySelectorAll('[data-calib-row="2"], [data-calib-row="3"]').forEach(r => r.classList.toggle('hidden', quick));
+            [['calibModeFour', !quick], ['calibModeTwo', quick]].forEach(([id, on]) => {
+                const b = document.getElementById(id);
+                if (!b) return;
+                b.classList.toggle('seg-on-accent', on);
+                b.setAttribute('aria-checked', on ? 'true' : 'false');
+            });
             if (typeof updateFpsCalibButtonState === 'function') updateFpsCalibButtonState();
             if (typeof updateCalibrationErrorBadge === 'function') updateCalibrationErrorBadge();
         }
+        // 4-point is the default; the choice is remembered (and shared between devices by the sync server)
+        function setCalibMode(two) {
+            const el = document.getElementById('calibTwoPoint');
+            if (!el || el.checked === two) { applyCalibModeUI(); return; }
+            el.checked = two;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        (function initCalibMode() {
+            const el = document.getElementById('calibTwoPoint');
+            if (el) el.checked = safeGetItem('plotter_calib_mode') === '2';
+            document.getElementById('calibModeFour')?.addEventListener('click', () => setCalibMode(false));
+            document.getElementById('calibModeTwo')?.addEventListener('click', () => setCalibMode(true));
+            window.addEventListener('plotter-sync', (e) => {
+                if (e.detail && e.detail.keys.includes('plotter_calib_mode') && el) {
+                    el.checked = safeGetItem('plotter_calib_mode') === '2';
+                    applyCalibModeUI();
+                    triggerPreviewUpdate();
+                }
+            });
+            // quick start: Home -> Park -> Points -> Print
+            document.getElementById('btnQsHome')?.addEventListener('click', homePrinter);
+            document.getElementById('btnQsPark')?.addEventListener('click', () => document.getElementById('btnManualPark')?.click());
+            document.getElementById('btnQsCalib')?.addEventListener('click', () => {
+                if (!getNextUnsetCalibPointIndex()) {
+                    showToast("All points are captured. Press Reset under the points to calibrate again.", "warning");
+                    return;
+                }
+                enterFpsCalibMode();
+            });
+            document.getElementById('btnQsPrint')?.addEventListener('click', () => document.getElementById('btnGenerateAndPrint')?.click());
+        })();
         document.getElementById('calibTwoPoint').addEventListener('change', () => {
+            safeSetItem('plotter_calib_mode', isCalibTwoPoint() ? '2' : '4');
             applyCalibModeUI();
             window.handwritingLayoutDirty = true;
             triggerPreviewUpdate();
@@ -13099,6 +13675,13 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 return;
             }
 
+            // Pen height while aiming: S lowers to the aiming height, W lifts back up
+            if (isFpsCalibMode && !e.metaKey && !e.ctrlKey && (e.key === 's' || e.key === 'S' || e.key === 'w' || e.key === 'W')) {
+                if (e.key === 's' || e.key === 'S') lowerToAim(); else raiseFromAim(false);
+                e.preventDefault();
+                return;
+            }
+
             // Keyboard sensitivity adjustments while in FPS Calibration mode (Arrow keys, < >, [ ], + -)
             if (isFpsCalibMode) {
                 const isIncrease = (e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === '>' || e.key === '.' || e.key === ']' || e.key === '+' || e.key === '=');
@@ -13484,7 +14067,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
             const start = k < old.length ? old[k][0] : 0;
             const later = new Map();
             old.slice(k + 1).forEach((r, j) => { if (r[0] > from) later.set(r[0], k + 1 + j); });
-            const res = await paginateRanges(src, start, new Set(later.keys()));
+            const res = await paginateRanges(src, start, new Set(later.keys()), null, { maxLines: g.docLines || 0 });
             if ((g.flowVer || 0) !== ver || g.flowText !== src || !g.flow) return;   // edited meanwhile: next pass
             let ranges = old.slice(0, k).concat(res.ranges);
             if (res.reusedFrom !== null) ranges = ranges.concat(old.slice(later.get(res.reusedFrom)));
@@ -13545,14 +14128,21 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
 
         // Does this text fit on one sheet with the current settings? Runs the real layout engine and applies the
         // same off-bed test as "Split overflow".
-        function pageTextFits(text, settings, calibMatrix) {
-            computeHandwritingLayout(Object.assign({}, settings, { text }));
-            return !renderedCharactersOnSheet.some(char => {
-                const cy = (char.minY + char.maxY) / 2;
-                const y = calibMatrix ? mapDesignToBed(char.minX, cy, calibMatrix).y
+        // maxLines (optional, documents): no writing below that ruled line.
+        function pageTextFits(text, settings, calibMatrix, maxLines) {
+            const laid = computeHandwritingLayout(Object.assign({}, settings, { text }));
+            const offBed = (x, cy) => {
+                const y = calibMatrix ? mapDesignToBed(x, cy, calibMatrix).y
                     : (297 - cy) + settings.paperYShift - settings.penOffsetY;
                 return y < 0 || y > 220;
-            });
+            };
+            const lastLine = maxLines > 0 ? settings.topLineOffset + (maxLines - 1) * settings.lineSpacing : Infinity;
+            if (renderedCharactersOnSheet.some(char => {
+                const cy = (char.minY + char.maxY) / 2;
+                return offBed(char.minX, cy) || cy > lastLine + 0.3;
+            })) return false;
+            const slots = Object.values((laid && laid.imageSlots) || {});
+            return !slots.some(sl => offBed(sl.x, sl.y + sl.h - 0.5) || sl.y + sl.h > lastLine + settings.lineSpacing * 0.35);
         }
 
         // Page ranges for text laid out from offset `from`: [[start, end], ...], each page being src.slice(start, end).
@@ -13560,13 +14150,15 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         // and math lines are only split mid-line when a single line is taller than a page. `reuse` holds old page
         // starts after an edit (already shifted): when a new page starts at one of them, the rest of the old
         // layout is still valid, so layout stops there and reports it as reusedFrom.
-        async function paginateRanges(src, from, reuse, onProgress) {
+        async function paginateRanges(src, from, reuse, onProgress, opts = {}) {
             const settings = getSettings();
+            const maxLines = opts.maxLines || 0;
+            const isBreak = (s, e) => /^\s*\[pagebreak\]\s*$/.test(src.slice(s, e));
             // How much text fits on a sheet depends on the paper, not on where the calibration put it on the bed:
             // a calibrated top line close to the pen's reach made every line "not fit" and split the text one
             // word per page, so the fit is always judged on the plain page layout.
-            const fits = (s, e) => pageTextFits(src.slice(s, e), settings, null);
-            const cap = (getBedLayoutStats().ruledLines || 24) + 4;
+            const fits = (s, e) => pageTextFits(src.slice(s, e), settings, null, maxLines);
+            const cap = Math.max(maxLines, getBedLayoutStats().ruledLines || 24) + 4;
             const ranges = [];
             let pos = from;
             while (true) {
@@ -13581,14 +14173,29 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 }
                 if (pos >= src.length && (ranges.length || from > 0)) break;
                 if (reuse && ranges.length && reuse.has(pos)) return { ranges, reusedFrom: pos };
-                // line ends from pos, at most `cap` lines (a page can't hold more)
+                // a [pagebreak] line ends the page: skip it (and any blank lines) when it starts one
+                {
+                    const nl0 = src.indexOf('\n', pos);
+                    if (isBreak(pos, nl0 < 0 ? src.length : nl0)) {
+                        pos = nl0 < 0 ? src.length : nl0 + 1;
+                        if (pos >= src.length) break;
+                        continue;
+                    }
+                }
+                // line ends from pos, at most `cap` lines (a page can't hold more), stopping before a page break
                 const ends = [];
-                let q = pos;
+                let q = pos, breakAfter = null;
                 while (ends.length < cap) {
                     const nl = src.indexOf('\n', q);
+                    const lineEnd = nl < 0 ? src.length : nl;
+                    if (isBreak(q, lineEnd)) { breakAfter = nl < 0 ? src.length : nl + 1; break; }
                     if (nl < 0) { ends.push(src.length); break; }
                     ends.push(nl);
                     q = nl + 1;
+                }
+                if (!ends.length) {   // page break right here: nothing more on this page
+                    pos = breakAfter;
+                    continue;
                 }
                 const reachesEnd = ends[ends.length - 1] === src.length;
                 // largest n whose first n lines fit (lo always fits, hi never does)
@@ -13599,6 +14206,14 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                     if (fits(pos, ends[mid - 1])) lo = mid; else hi = mid;
                 }
                 if (lo === ends.length && reachesEnd) { ranges.push([pos, src.length]); break; }
+                if (lo === ends.length && breakAfter !== null) {
+                    ranges.push([pos, ends[lo - 1]]);
+                    pos = breakAfter;
+                    if (onProgress) onProgress(ranges.length);
+                    await new Promise(r => setTimeout(r, 0));
+                    if (pos >= src.length) break;
+                    continue;
+                }
                 let end = lo > 0 ? ends[lo - 1] : pos;
                 let next = lo > 0 ? ends[lo - 1] + 1 : pos;
                 // fill the remaining space with the start of the next paragraph
@@ -14871,8 +15486,8 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         const BLOCK_FIELDS = ['kind', 'text', 'x', 'y', 'width', 'height', 'rotation', 'threshold', 'style', 'invert', 'showUnderlay', 'keepAspect'];
         function readBlocks() {
             return JSON.stringify({
-                selected: imageBlocks.indexOf(imageBlock),
-                blocks: imageBlocks.map(b => Object.assign(Object.fromEntries(BLOCK_FIELDS.map(f => [f, b[f]])),
+                selected: imageBlocks.filter(b => !b.docImg).indexOf(imageBlock),
+                blocks: imageBlocks.filter(b => !b.docImg).map(b => Object.assign(Object.fromEntries(BLOCK_FIELDS.map(f => [f, b[f]])),
                     b.kind === 'image' ? { src: b._src || null } : b.kind === 'graph' ? { graph: b.graph } : {}))
             });
         }
@@ -14914,7 +15529,7 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
                 }
                 return b;
             });
-            imageBlocks = built;
+            imageBlocks = built.concat(imageBlocks.filter(b => b.docImg));   // document pictures are kept
             selectImageBlock(built[o.selected] || built[built.length - 1]);
         }
 
@@ -15065,6 +15680,1637 @@ Do not include any chat commentary, explanation, or markdown code fences (e.g. d
         }
         new MutationObserver(syncConnPill).observe(connStatus, { childList: true, characterData: true, subtree: true });
         syncConnPill();
+    })();
+    </script>
+    <script>
+    // ================= DOCUMENT EDITOR =================
+    // A Google-Docs-style editor whose content becomes the handwriting text the layout engine already
+    // understands: headings ([scale=…]), alignment ([center] / [right] / [justify]), bullets, tables (| a | b |),
+    // formulas ($…$), pictures ([img=id], placed on whole ruled lines or inline) and page breaks ([pagebreak]).
+    // "Send to pages" puts the document in an auto-flow page group, so it is split into pages that fit the sheet
+    // (at most "Lines/page" lines each) and printed page by page like any other pages.
+    // Documents are kept in localStorage 'plotter_docs' (shared between devices by the sync server).
+    (function () {
+        const $ = id => document.getElementById(id);
+        const modal = $('docModal'), sheet = $('docSheet');
+        if (!modal || !sheet) return;
+
+        // ---------- storage ----------
+        function loadDocs() {
+            try { const d = JSON.parse(safeGetItem('plotter_docs') || '{}'); return d && typeof d === 'object' ? d : {}; }
+            catch (e) { return {}; }
+        }
+        let docs = loadDocs();
+        let cur = null;          // the open document
+        let dirty = false;       // edited since it was last sent to pages
+        function persist() {
+            try { localStorage.setItem('plotter_docs', JSON.stringify(docs)); }
+            catch (e) { showToast("Couldn't save the document: browser storage is full. Try smaller pictures.", "error"); }
+        }
+        const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        function newDoc(title) {
+            const d = { id: uid('doc'), title: title || 'Untitled document', html: '', images: {}, lines: 30, text: '', updated: Date.now() };
+            docs[d.id] = d;
+            return d;
+        }
+        const groupOfDoc = id => pageGroups.find(g => g.docId === id) || null;
+        const printableW = () => { const s = getSettings(); return Math.max(20, 210 - s.leftMargin - s.rightMargin); };
+        const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+        // ---------- pictures: specs for the layout engine, vectors, page blocks ----------
+        function refreshSpecs() {
+            const specs = {};
+            Object.values(docs).forEach(d => Object.entries(d.images || {}).forEach(([id, im]) => {
+                specs[id] = { w: im.w, h: im.h, align: im.align };
+            }));
+            window.docImageSpecs = specs;
+        }
+        const imgCache = new Map();
+        function loadImg(src) {
+            if (!imgCache.has(src)) imgCache.set(src, new Promise((res, rej) => {
+                const im = new Image();
+                im.onload = () => res(im);
+                im.onerror = () => rej(new Error('picture could not be read'));
+                im.src = src;
+            }));
+            return imgCache.get(src);
+        }
+        const vecCache = new Map();
+        function getVector(im) {
+            const key = [im.src.length, im.src.slice(-48), im.threshold, im.style, im.invert ? 1 : 0].join('|');
+            if (!vecCache.has(key)) vecCache.set(key, loadImg(im.src).then(img => {
+                const tmp = newImageBlock('image');
+                Object.assign(tmp, { img, threshold: im.threshold, style: im.style, invert: !!im.invert, width: im.w, height: im.h });
+                const keep = imageBlock;
+                imageBlock = tmp;
+                try { vectorizeImageBlock(); } finally { imageBlock = keep; }
+                return { img, raw: tmp._rawStrokes || [], rw: tmp._rasterW, rh: tmp._rasterH };
+            }));
+            return vecCache.get(key);
+        }
+        // One hidden page block per picture of a document that has pages; it is drawn and printed only on the
+        // page whose text holds its [img=id] (see applyDocImageSlots).
+        function syncImageBlocks() {
+            refreshSpecs();
+            const want = new Map();
+            Object.values(docs).forEach(d => {
+                if (!groupOfDoc(d.id)) return;
+                Object.entries(d.images || {}).forEach(([id, im]) => want.set(id, im));
+            });
+            imageBlocks = imageBlocks.filter(b => !b.docImg || want.has(b.docImg));
+            want.forEach((im, id) => {
+                let b = imageBlocks.find(x => x.docImg === id);
+                if (!b) {
+                    b = newImageBlock('image');
+                    b.docImg = id;
+                    b.showUnderlay = false;
+                    imageBlocks.push(b);
+                }
+                const sig = [im.src.length, im.threshold, im.style, im.invert ? 1 : 0].join('|');
+                if (b._docSig === sig) return;
+                b._docSig = sig;
+                getVector(im).then(v => {
+                    if (b._docSig !== sig) return;
+                    Object.assign(b, { img: v.img, _rawStrokes: v.raw, _rasterW: v.rw, _rasterH: v.rh });
+                    rescaleImageStrokes(b);
+                    window.handwritingLayoutDirty = true;
+                    triggerPreviewUpdate();
+                }).catch(() => {});
+            });
+            window.handwritingLayoutDirty = true;
+            triggerPreviewUpdate();
+        }
+        // Called by the page preview and the G-code generator after laying out a page's text
+        window.applyDocImageSlots = function (slots) {
+            slots = slots || {};
+            imageBlocks.forEach(b => {
+                if (!b.docImg) return;
+                const sl = slots[b.docImg];
+                b._docOnPage = !!sl;
+                if (sl && (b.x !== sl.x || b.y !== sl.y || b.width !== sl.w || b.height !== sl.h || b.rotation)) {
+                    Object.assign(b, { x: sl.x, y: sl.y, width: sl.w, height: sl.h, rotation: 0 });
+                    rescaleImageStrokes(b);
+                }
+            });
+        };
+
+        // A picture is stored downscaled (PNG, or JPEG when that is much smaller), with an automatic ink threshold.
+        function compactPicture(img) {
+            const k = Math.min(1, 1200 / Math.max(img.width, img.height));
+            const c = document.createElement('canvas');
+            c.width = Math.max(1, Math.round(img.width * k));
+            c.height = Math.max(1, Math.round(img.height * k));
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, c.width, c.height);
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            const png = c.toDataURL('image/png');
+            if (png.length < 350000) return png;
+            const jpg = c.toDataURL('image/jpeg', 0.85);
+            return jpg.length < png.length ? jpg : png;
+        }
+        function autoThreshold(img) {
+            try {
+                const tc = document.createElement('canvas');
+                tc.width = 160; tc.height = 160;
+                const tctx = tc.getContext('2d');
+                tctx.drawImage(img, 0, 0, 160, 160);
+                const v = otsuThreshold(tctx.getImageData(0, 0, 160, 160).data);
+                return v >= 30 && v <= 230 ? v : 128;
+            } catch (e) { return 128; }
+        }
+        async function registerPicture(src, align = 'center', widthMm) {
+            const img = await loadImg(src);
+            const data = compactPicture(img);
+            const pw = printableW();
+            let w = Math.min(widthMm || 70, pw);
+            let h = w * img.height / img.width;
+            if (h > 120) { w *= 120 / h; h = 120; }
+            if (align === 'inline' && h > 20) { w *= 20 / h; h = 20; }
+            const id = uid('im').replace(/[^A-Za-z0-9]/g, '');
+            cur.images[id] = { src: data, w: +w.toFixed(1), h: +h.toFixed(1), align, threshold: autoThreshold(img), style: 'contours', invert: false };
+            return id;
+        }
+        function picHtml(id) {
+            const im = cur.images[id];
+            if (!im) return '';
+            return `<img class="doc-pic" data-id="${id}" data-align="${im.align}" src="${im.src}" style="width:${Math.min(100, im.w / printableW() * 100).toFixed(2)}%" alt="">`;
+        }
+
+        // ---------- formulas ----------
+        let katexReady = null;
+        function loadScript(src) {
+            return new Promise((res, rej) => {
+                const s = document.createElement('script');
+                s.src = src; s.onload = res; s.onerror = () => rej(new Error('could not load ' + src.split('/').pop()));
+                document.head.appendChild(s);
+            });
+        }
+        function loadKatex() {
+            if (!katexReady) {
+                const css = document.createElement('link');
+                css.rel = 'stylesheet';
+                css.href = 'https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css';
+                document.head.appendChild(css);
+                katexReady = loadScript('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js').catch(() => null);
+            }
+            return katexReady;
+        }
+        function texHtml(tex, display) {
+            if (window.katex) {
+                try { return window.katex.renderToString(tex || '\\square', { throwOnError: false, displayMode: !!display }); } catch (e) {}
+            }
+            return `<span class="raw">${esc(tex || '…')}</span>`;
+        }
+        function chipHtml(tex, display) {
+            return `<span class="doc-f${display ? ' display' : ''}" contenteditable="false" data-tex="${esc(tex)}">${texHtml(tex, display)}</span>`;
+        }
+        function renderChips(root = sheet) {
+            root.querySelectorAll('.doc-f').forEach(c => { c.innerHTML = texHtml(c.dataset.tex, c.classList.contains('display')); });
+        }
+
+        // ---------- document HTML -> handwriting text ----------
+        const BLOCK_TAGS = /^(P|DIV|H[1-6]|UL|OL|LI|TABLE|THEAD|TBODY|TR|HR|BLOCKQUOTE|PRE|SECTION|ARTICLE|HEADER|FOOTER|FIGURE)$/;
+        // inline content of one block -> lines; picture / display-formula lines are marked raw (no prefix)
+        function inlineLines(el) {
+            const lines = [];
+            let cur = '';
+            const flush = () => { if (cur.trim()) lines.push({ t: cur.replace(/\s+$/, '') }); cur = ''; };
+            const walk = (node) => {
+                node.childNodes.forEach(n => {
+                    if (n.nodeType === 3) {
+                        cur += n.nodeValue.replace(/[\t\n\r ]+/g, ' ').replace(/ /g, ' ');
+                    } else if (n.nodeType === 1) {
+                        if (n.tagName === 'BR') { flush(); if (!lines.length) lines.push({ t: '' }); }
+                        else if (n.classList.contains('doc-f')) {
+                            const tex = n.dataset.tex || '';
+                            if (!tex.trim()) return;
+                            if (n.classList.contains('display')) { flush(); lines.push({ t: `[center]$${tex}$`, raw: true }); }
+                            else cur += `$${tex}$`;
+                        } else if (n.tagName === 'IMG' && n.classList.contains('doc-pic')) {
+                            const id = n.dataset.id;
+                            if ((n.dataset.align || 'center') === 'inline') cur += (cur && !/\s$/.test(cur) ? ' ' : '') + `[img=${id}] `;
+                            else { flush(); lines.push({ t: `[img=${id}]`, raw: true }); }
+                        } else if (n.tagName === 'SUP') { cur += `^{${n.textContent}}`; }
+                        else if (n.tagName === 'SUB') { cur += `_{${n.textContent}}`; }
+                        else if (n.tagName === 'HR') { flush(); lines.push({ t: n.classList.contains('doc-break') ? '[pagebreak]' : '', raw: true }); }
+                        else walk(n);
+                    }
+                });
+            };
+            walk(el);
+            flush();
+            return lines;
+        }
+        function alignOf(el) {
+            const a = (el.style && el.style.textAlign) || el.getAttribute('align') || '';
+            return /center/.test(a) ? 'center' : /right|end/.test(a) ? 'right' : /justify/.test(a) ? 'justify' : '';
+        }
+        function docToText(root) {
+            const out = [];
+            const para = (el, kind) => {
+                const al = alignOf(el);
+                const lines = inlineLines(el);
+                if (!lines.length) { out.push(''); return; }
+                lines.forEach(l => {
+                    if (l.raw) { out.push(l.t); return; }
+                    let t = l.t.replace(/^\s+/, m => m.replace(/ /g, ' '));
+                    if (kind === 'h1') t = `[scale=1.35]${t.trim()}[/scale]`;
+                    else if (kind === 'h2') t = `[scale=1.15]${t.trim()}[/scale]`;
+                    out.push((al ? `[${al}]` : '') + t);
+                });
+            };
+            const list = (el, depth) => {
+                let n = 0;
+                el.childNodes.forEach(li => {
+                    if (li.nodeType !== 1) return;
+                    if (li.tagName === 'UL' || li.tagName === 'OL') { list(li, depth + 1); return; }
+                    n++;
+                    const marker = el.tagName === 'OL' ? `${n}. ` : '• ';
+                    const pad = '  '.repeat(depth);
+                    const clone = li.cloneNode(true);
+                    clone.querySelectorAll('ul,ol').forEach(x => x.remove());
+                    const lines = inlineLines(clone);
+                    if (!lines.length) out.push(pad + marker.trim());
+                    lines.forEach((l, i) => out.push(l.raw ? l.t : pad + (i === 0 ? marker : '  ') + l.t.trim()));
+                    li.querySelectorAll(':scope > ul, :scope > ol').forEach(sub => list(sub, depth + 1));
+                });
+            };
+            const table = (el) => {
+                const rows = Array.from(el.querySelectorAll('tr'));
+                rows.forEach((tr, i) => {
+                    const cells = Array.from(tr.children).filter(c => /^T[DH]$/.test(c.tagName));
+                    const txt = cells.map(c => inlineLines(c).map(l => l.t.replace(/^\[img=\w+\]$/, '')).join(' ').replace(/\|/g, '/').trim() || ' ');
+                    out.push('| ' + txt.join(' | ') + ' |');
+                    if (i === 0 && rows.length > 1) out.push('|' + cells.map(() => ' --- ').join('|') + '|');
+                });
+            };
+            const block = (el) => {
+                if (el.nodeType === 3) { if (el.nodeValue.trim()) out.push(el.nodeValue.replace(/\s+/g, ' ').trim()); return; }
+                if (el.nodeType !== 1) return;
+                const tag = el.tagName;
+                if (tag === 'HR') { out.push(el.classList.contains('doc-break') ? '[pagebreak]' : ''); return; }
+                if (tag === 'TABLE') { table(el); return; }
+                if (tag === 'UL' || tag === 'OL') { list(el, 0); return; }
+                if (/^H1$/.test(tag)) { para(el, 'h1'); return; }
+                if (/^H[2-6]$/.test(tag)) { para(el, 'h2'); return; }
+                if ((tag === 'DIV' || tag === 'SECTION' || tag === 'ARTICLE' || tag === 'BLOCKQUOTE' || tag === 'FIGURE')
+                    && Array.from(el.children).some(c => BLOCK_TAGS.test(c.tagName))) {
+                    el.childNodes.forEach(block);
+                    return;
+                }
+                if (el.classList.contains('doc-f') || tag === 'IMG' || tag === 'SPAN' || tag === 'B' || tag === 'I') {
+                    const w = document.createElement('p');
+                    w.appendChild(el.cloneNode(true));
+                    para(w, 'p');
+                    return;
+                }
+                para(el, 'p');
+            };
+            root.childNodes.forEach(block);
+            while (out.length && !out[out.length - 1].trim()) out.pop();
+            return out.join('\n');
+        }
+
+        // ---------- handwriting text / Markdown -> document HTML ----------
+        function inlineToHtml(t) {
+            let h = esc(t);
+            h = h.replace(/\*\*(.+?)\*\*/g, '$1');
+            h = h.replace(/\[img=([A-Za-z0-9]+)\]/g, (m, id) => (cur && cur.images[id]) ? picHtml(id) : '');
+            h = h.replace(/\$([^$]+)\$/g, (m, tex) => chipHtml(tex.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&'), false));
+            return h;
+        }
+        function textToDoc(text) {
+            const src = String(text || '').replace(/\r\n?/g, '\n')
+                .replace(/\$\$([\s\S]*?)\$\$/g, (m, eq) => '\n\u0001' + eq.trim().replace(/\n/g, ' ') + '\n');
+            const lines = src.split('\n');
+            const html = [];
+            let list = null;
+            const closeList = () => { if (list) { html.push(`</${list}>`); list = null; } };
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                if (/^\s*\|.*\|\s*$/.test(line)) {
+                    closeList();
+                    const rows = [];
+                    while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
+                        const cells = lines[i].trim().slice(1, -1).split('|').map(c => c.trim());
+                        if (!cells.every(c => /^:?-{2,}:?$/.test(c) || c === '')) rows.push(cells);
+                        i++;
+                    }
+                    i--;
+                    html.push('<table><tbody>' + rows.map(r => '<tr>' + r.map(c => `<td>${inlineToHtml(c) || '<br>'}</td>`).join('') + '</tr>').join('') + '</tbody></table>');
+                    continue;
+                }
+                if (/^\s*\[pagebreak\]\s*$/.test(line)) { closeList(); html.push('<hr class="doc-break">'); continue; }
+                const pic = line.match(/^\s*\[img=([A-Za-z0-9]+)\]\s*$/);
+                if (pic) { closeList(); if (cur.images[pic[1]]) html.push(`<p>${picHtml(pic[1])}</p>`); continue; }
+                if (line.startsWith('\u0001')) { closeList(); html.push(`<p>${chipHtml(line.slice(1), true)}</p>`); continue; }
+                const disp = line.match(/^\s*(?:\[center\])?\$([^$]+)\$\s*$/);
+                if (disp) { closeList(); html.push(`<p>${chipHtml(disp[1].trim(), true)}</p>`); continue; }
+                let al = '';
+                const am = line.match(/^\[(center|right|justify|left)\]/);
+                if (am) { al = am[1] === 'left' ? '' : am[1]; line = line.slice(am[0].length); }
+                const style = al ? ` style="text-align:${al}"` : '';
+                const sc = line.match(/^\[scale=([\d.]+)\](.*)\[\/scale\]\s*$/);
+                const hm = line.match(/^\s*(#{1,6})\s+(.*)$/);
+                if (sc || hm) {
+                    closeList();
+                    const big = sc ? parseFloat(sc[1]) >= 1.25 : hm[1].length === 1;
+                    html.push(`<h${big ? 1 : 2}${style}>${inlineToHtml(sc ? sc[2] : hm[2])}</h${big ? 1 : 2}>`);
+                    continue;
+                }
+                const bm = line.match(/^\s*(?:[•*\-+])\s+(.*)$/), nm = line.match(/^\s*\d+[.)]\s+(.*)$/);
+                if (bm || nm) {
+                    const want = bm ? 'ul' : 'ol';
+                    if (list !== want) { closeList(); html.push(`<${want}>`); list = want; }
+                    html.push(`<li>${inlineToHtml((bm || nm)[1])}</li>`);
+                    continue;
+                }
+                closeList();
+                html.push(line.trim() ? `<p${style}>${inlineToHtml(line)}</p>` : '<p><br></p>');
+            }
+            closeList();
+            return html.join('');
+        }
+
+        // ---------- import: HTML (pasted, Word), PDF ----------
+        async function importHtml(html) {
+            const dom = new DOMParser().parseFromString(html, 'text/html');
+            const out = [];
+            const pics = [];
+            const inline = (node) => {
+                let h = '';
+                node.childNodes.forEach(n => {
+                    if (n.nodeType === 3) h += esc(n.nodeValue.replace(/[\t\n\r ]+/g, ' '));
+                    else if (n.nodeType === 1) {
+                        if (n.tagName === 'BR') h += '<br>';
+                        else if (n.tagName === 'IMG' && n.getAttribute('src')) {
+                            const key = `\u0002${pics.length}\u0002`;
+                            pics.push(n.getAttribute('src'));
+                            h += key;
+                        } else if (n.tagName === 'SUP') h += `<sup>${esc(n.textContent)}</sup>`;
+                        else if (n.tagName === 'SUB') h += `<sub>${esc(n.textContent)}</sub>`;
+                        else if (n.tagName === 'SCRIPT' || n.tagName === 'STYLE') {}
+                        else h += inline(n);
+                    }
+                });
+                return h;
+            };
+            const walk = (node) => {
+                node.childNodes.forEach(n => {
+                    if (n.nodeType === 3) { if (n.nodeValue.trim()) out.push(`<p>${esc(n.nodeValue.trim())}</p>`); return; }
+                    if (n.nodeType !== 1) return;
+                    const tag = n.tagName;
+                    let al = alignOf(n);
+                    const mark = n.textContent.match(/^\s*\u27E6(center|right|justify)\u27E7/);
+                    if (mark) {
+                        al = mark[1];
+                        const tw = document.createTreeWalker(n, NodeFilter.SHOW_TEXT);
+                        for (let t = tw.nextNode(); t; t = tw.nextNode()) {
+                            if (t.nodeValue.includes('\u27E6')) { t.nodeValue = t.nodeValue.replace(/\u27E6\w+\u27E7/, ''); break; }
+                        }
+                    }
+                    const style = al ? ` style="text-align:${al}"` : '';
+                    if (/^H1$/.test(tag)) out.push(`<h1${style}>${inline(n)}</h1>`);
+                    else if (/^H[2-6]$/.test(tag)) out.push(`<h2${style}>${inline(n)}</h2>`);
+                    else if (tag === 'UL' || tag === 'OL') {
+                        out.push(`<${tag.toLowerCase()}>` + Array.from(n.querySelectorAll(':scope > li')).map(li => `<li>${inline(li)}</li>`).join('') + `</${tag.toLowerCase()}>`);
+                    } else if (tag === 'TABLE') {
+                        out.push('<table><tbody>' + Array.from(n.querySelectorAll('tr')).map(tr => '<tr>' + Array.from(tr.children).map(c => `<td>${esc(c.textContent.replace(/\s+/g, ' ').trim()) || '<br>'}</td>`).join('') + '</tr>').join('') + '</tbody></table>');
+                    } else if (tag === 'HR') out.push('<p><br></p>');
+                    else if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'META' || tag === 'LINK') {}
+                    else if (Array.from(n.children).some(c => BLOCK_TAGS.test(c.tagName))) walk(n);
+                    else if (tag === 'IMG') { const key = `\u0002${pics.length}\u0002`; pics.push(n.getAttribute('src')); out.push(`<p>${key}</p>`); }
+                    else { const h = inline(n); out.push(h.trim() ? `<p${style}>${h}</p>` : '<p><br></p>'); }
+                });
+            };
+            walk(dom.body);
+            let result = out.join('');
+            for (let i = 0; i < pics.length; i++) {
+                let rep = '';
+                try {
+                    // a picture alone in its paragraph is a centred block, one inside text stays inline
+                    const alone = new RegExp(`<p>\\u0002${i}\\u0002</p>`).test(result);
+                    const id = await registerPicture(pics[i], alone ? 'center' : 'inline');
+                    rep = picHtml(id);
+                } catch (e) {}
+                result = result.replace(`\u0002${i}\u0002`, rep);
+            }
+            return result;
+        }
+        async function importDocx(file) {
+            if (!window.mammoth) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js');
+            // mammoth drops paragraph alignment: mark aligned paragraphs with a leading tag that importHtml turns
+            // back into text-align
+            const ALIGN = { center: 'center', right: 'right', both: 'justify', distribute: 'justify', end: 'right' };
+            const transformDocument = window.mammoth.transforms.paragraph(p => {
+                const al = ALIGN[p.alignment];
+                if (!al) return p;
+                return Object.assign({}, p, { children: [{ type: 'run', children: [{ type: 'text', value: `\u27E6${al}\u27E7` }] }].concat(p.children) });
+            });
+            const res = await window.mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() }, { transformDocument });
+            return importHtml(res.value);
+        }
+        async function importPdf(file, onProgress) {
+            if (!window.pdfjsLib) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+            const html = [];
+            for (let p = 1; p <= pdf.numPages; p++) {
+                if (onProgress) onProgress(p, pdf.numPages);
+                const page = await pdf.getPage(p);
+                const tc = await page.getTextContent();
+                const items = tc.items.filter(it => it.str && it.str.trim());
+                let scanned = false;
+                if (items.reduce((n, it) => n + it.str.trim().length, 0) < 25) {
+                    const OPS = window.pdfjsLib.OPS;
+                    const ops = await page.getOperatorList();
+                    scanned = ops.fnArray.some(f => f === OPS.paintImageXObject || f === OPS.paintJpegXObject || f === OPS.paintInlineImageXObject);
+                }
+                if (scanned) {
+                    // a scanned page (a picture with hardly any text): bring it in as a picture
+                    const vp = page.getViewport({ scale: 1.6 });
+                    const c = document.createElement('canvas');
+                    c.width = vp.width; c.height = vp.height;
+                    await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+                    const id = await registerPicture(c.toDataURL('image/png'), 'center', printableW());
+                    html.push(`<p>${picHtml(id)}</p>`);
+                    continue;
+                }
+                // group the text into lines by their baseline, then lines into paragraphs by the gaps between them
+                const rows = [];
+                items.forEach(it => {
+                    const y = it.transform[5], x = it.transform[4], hgt = Math.abs(it.transform[3]) || it.height || 10;
+                    let r = rows.find(r => Math.abs(r.y - y) < hgt * 0.45);
+                    if (!r) { r = { y, h: hgt, parts: [] }; rows.push(r); }
+                    r.h = Math.max(r.h, hgt);
+                    r.parts.push({ x, w: it.width, s: it.str, h: hgt });
+                });
+                rows.sort((a, b) => b.y - a.y);
+                const hs = rows.map(r => r.h).sort((a, b) => a - b);
+                const body = hs[Math.floor((hs.length - 1) / 2)] || 10;   // body text size (lower median)
+                let para = null, prevY = null;
+                const flush = () => { if (para) html.push(para.tag === 'p' ? `<p>${esc(para.text)}</p>` : `<${para.tag}>${esc(para.text)}</${para.tag}>`); para = null; };
+                rows.forEach(r => {
+                    r.parts.sort((a, b) => a.x - b.x);
+                    let text = '', end = null;
+                    r.parts.forEach(pt => {
+                        if (end !== null && pt.x - end > pt.h * 0.18 && !/\s$/.test(text)) text += ' ';
+                        text += pt.s;
+                        end = pt.x + pt.w;
+                    });
+                    text = text.replace(/\s+/g, ' ').trim();
+                    const tag = r.h > body * 1.5 ? 'h1' : r.h > body * 1.18 ? 'h2' : 'p';
+                    const gap = prevY === null ? 0 : prevY - r.y;
+                    prevY = r.y;
+                    const bullet = /^[•●▪◦\-–]\s+/.test(text);
+                    if (!para || para.tag !== tag || gap > body * 1.75 || bullet || tag !== 'p') {
+                        flush();
+                        para = { tag, text: bullet ? '• ' + text.replace(/^[•●▪◦\-–]\s+/, '') : text };
+                    } else {
+                        para.text = /-$/.test(para.text) ? para.text.slice(0, -1) + text : para.text + ' ' + text;
+                    }
+                });
+                flush();
+            }
+            return html.join('');
+        }
+
+        // ---------- editor sheet ----------
+        // The sheet is drawn to scale (210 mm wide, ruled lines at the real spacing) when the screen is wide enough
+        function layoutSheet() {
+            const s = getSettings();
+            const W = sheet.clientWidth || 800;
+            const mm = W / 210;
+            let ls = s.lineSpacing * mm, ml = s.leftMargin * mm, mr = s.rightMargin * mm, top = Math.max(0, (s.topLineOffset - s.lineSpacing)) * mm;
+            if (ls < 22) { const k = 22 / ls; ls = 22; ml = Math.max(14, ml * k * 0.45); mr = Math.max(10, mr * k * 0.3); top = 10; }
+            sheet.style.setProperty('--ls', ls + 'px');
+            sheet.style.setProperty('--ml', ml + 'px');
+            sheet.style.setProperty('--mr', mr + 'px');
+            sheet.style.setProperty('--top', Math.min(top, ls * 6) + 'px');
+            sheet.querySelectorAll('img.doc-pic').forEach(img => {
+                const im = cur && cur.images[img.dataset.id];
+                if (im) img.style.width = Math.min(100, im.w / printableW() * 100).toFixed(2) + '%';
+            });
+        }
+        window.addEventListener('resize', () => { if (!modal.classList.contains('hidden')) layoutSheet(); });
+
+        function sheetHtmlForStorage() {
+            const c = sheet.cloneNode(true);
+            c.querySelectorAll('img.doc-pic').forEach(img => { img.removeAttribute('src'); img.classList.remove('sel'); });
+            c.querySelectorAll('.doc-f').forEach(f => { f.innerHTML = ''; });
+            return c.innerHTML;
+        }
+        function loadSheet(d) {
+            sheet.innerHTML = d.html || '';
+            sheet.querySelectorAll('img.doc-pic').forEach(img => {
+                const im = d.images[img.dataset.id];
+                if (im) { img.src = im.src; img.dataset.align = im.align; } else img.remove();
+            });
+            renderChips();
+            layoutSheet();
+        }
+        let saveTimer = null;
+        function saveNow() {
+            clearTimeout(saveTimer);
+            saveTimer = null;
+            if (!cur) return;
+            // pictures: the sheet is the truth (undo can bring one back; its src is still on the element)
+            const images = {};
+            sheet.querySelectorAll('img.doc-pic').forEach(img => {
+                const id = img.dataset.id;
+                const im = cur.images[id] || (img.src.startsWith('data:') ? { src: img.src, w: 60, h: 40, threshold: 128, style: 'contours', invert: false } : null);
+                if (!im) return;
+                im.align = img.dataset.align || 'center';
+                images[id] = im;
+            });
+            cur.images = images;
+            cur.title = ($('docTitle').value || '').trim() || 'Untitled document';
+            cur.lines = Math.max(5, Math.min(60, parseInt($('docLines').value, 10) || 30));
+            cur.html = sheetHtmlForStorage();
+            cur.text = docToText(sheet);
+            cur.updated = Date.now();
+            persist();
+            refreshSpecs();
+            $('docStatus').textContent = 'Saved on this device' + (groupOfDoc(cur.id) && dirty ? ' · not yet on the pages' : '');
+        }
+        function queueSave() {
+            dirty = true;
+            $('docStatus').textContent = 'Editing…';
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(saveNow, 600);
+        }
+        sheet.addEventListener('input', queueSave);
+
+        // keep the selection, so toolbar buttons and pop-ups act where the caret was
+        let lastRange = null;
+        document.addEventListener('selectionchange', () => {
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return;
+            const r = sel.getRangeAt(0);
+            if (!sheet.contains(r.commonAncestorContainer)) return;
+            lastRange = r.cloneRange();
+            updateToolbarState();
+        });
+        function restoreRange() {
+            sheet.focus({ preventScroll: true });
+            if (!lastRange) {
+                const r = document.createRange();
+                r.selectNodeContents(sheet);
+                r.collapse(false);
+                lastRange = r;
+            }
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(lastRange);
+        }
+        function exec(cmd, val) {
+            restoreRange();
+            document.execCommand(cmd, false, val);
+            queueSave();
+            updateToolbarState();
+        }
+        // Inline content (a formula, an inline picture) goes exactly at the caret; block content (tables,
+        // pictures, page breaks, imported text) goes after the paragraph the caret is in, or replaces it when
+        // that paragraph is empty. (execCommand('insertHTML') splits paragraphs around non-editable chips.)
+        function topBlockAt(range) {
+            let n = range.startContainer;
+            if (n === sheet) return sheet.childNodes[range.startOffset - 1] || null;
+            while (n && n.parentNode !== sheet) n = n.parentNode;
+            return n;
+        }
+        function caretAfter(node) {
+            const r = document.createRange();
+            r.setStartAfter(node);
+            r.collapse(true);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(r);
+            lastRange = r.cloneRange();
+        }
+        function insertInline(html) {
+            restoreRange();
+            const sel = window.getSelection();
+            const r = sel.getRangeAt(0);
+            if (!sheet.contains(r.startContainer) || r.startContainer === sheet) { insertHtml(`<p>${html}</p>`); return; }
+            r.deleteContents();
+            const frag = r.createContextualFragment(html);
+            const last = frag.lastChild;
+            r.insertNode(frag);
+            if (last) caretAfter(last);
+            renderChips();
+            queueSave();
+        }
+        function insertHtml(html) {
+            restoreRange();
+            const sel = window.getSelection();
+            const r = sel.rangeCount ? sel.getRangeAt(0) : null;
+            const tpl = document.createElement('template');
+            tpl.innerHTML = html;
+            const nodes = Array.from(tpl.content.childNodes);
+            if (!nodes.length) return;
+            const block = r && sheet.contains(r.startContainer) ? topBlockAt(r) : null;
+            const isEmpty = block && block.nodeType === 1 && /^(P|DIV|H[1-6])$/.test(block.tagName) && !block.textContent.trim() && !block.querySelector('img,.doc-f,table');
+            if (block && isEmpty) block.replaceWith(...nodes);
+            else if (block) block.after(...nodes);
+            else sheet.append(...nodes);
+            let tail = nodes[nodes.length - 1];
+            if (!(tail.nodeType === 1 && /^(P|H[1-6])$/.test(tail.tagName) && !tail.textContent.trim())) {
+                const p = document.createElement('p');
+                p.innerHTML = '<br>';
+                tail.after(p);
+                tail = p;
+            }
+            const cr = document.createRange();
+            cr.setStart(tail, 0);
+            cr.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(cr);
+            lastRange = cr.cloneRange();
+            renderChips();
+            layoutSheet();
+            queueSave();
+        }
+        // buttons must not take the focus (that would drop the caret on phones)
+        $('docToolbar').addEventListener('mousedown', e => { if (e.target.closest('.tb')) e.preventDefault(); });
+
+        function currentBlock() {
+            const sel = window.getSelection();
+            let n = sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
+            while (n && n !== sheet && !(n.nodeType === 1 && /^(P|DIV|H[1-6]|LI)$/.test(n.tagName))) n = n.parentNode;
+            return n && n !== sheet ? n : null;
+        }
+        function currentCell() {
+            const sel = window.getSelection();
+            let n = sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
+            while (n && n !== sheet && !(n.nodeType === 1 && /^T[DH]$/.test(n.tagName))) n = n.parentNode;
+            return n && n !== sheet ? n : null;
+        }
+        function updateToolbarState() {
+            const b = currentBlock();
+            const al = b ? (alignOf(b) || 'left') : 'left';
+            document.querySelectorAll('[data-doc-align]').forEach(x => x.classList.toggle('on', x.dataset.docAlign === al));
+            const tag = b ? b.tagName : 'P';
+            $('docBlockStyle').value = tag === 'H1' ? 'h1' : /^H[2-6]$/.test(tag) ? 'h2' : 'p';
+            let ul = false, ol = false;
+            try { ul = document.queryCommandState('insertUnorderedList'); ol = document.queryCommandState('insertOrderedList'); } catch (e) {}
+            $('docBullets').classList.toggle('on', ul);
+            $('docNumbers').classList.toggle('on', ol);
+            const tt = $('docTableTools');
+            const inTable = !!currentCell();
+            tt.classList.toggle('hidden', !inTable);
+            tt.classList.toggle('inline-flex', inTable);
+        }
+
+        // ---------- toolbar ----------
+        try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) {}
+        $('docBlockStyle').addEventListener('change', e => exec('formatBlock', `<${e.target.value}>`));
+        const ALIGN_CMD = { left: 'justifyLeft', center: 'justifyCenter', right: 'justifyRight', justify: 'justifyFull' };
+        document.querySelectorAll('[data-doc-align]').forEach(b => b.addEventListener('click', () => exec(ALIGN_CMD[b.dataset.docAlign])));
+        $('docBullets').addEventListener('click', () => exec('insertUnorderedList'));
+        $('docNumbers').addEventListener('click', () => exec('insertOrderedList'));
+        $('docUndo').addEventListener('click', () => exec('undo'));
+        $('docRedo').addEventListener('click', () => exec('redo'));
+        $('docInsBreak').addEventListener('click', () => insertHtml('<hr class="doc-break">'));
+        $('docLines').addEventListener('change', queueSave);
+        $('docTitle').addEventListener('input', queueSave);
+
+        // pop-ups are placed under the thing they edit, inside the scrolling area
+        const scroller = $('docScroll');
+        function placePop(pop, anchorRect) {
+            pop.classList.remove('hidden');
+            const sr = scroller.getBoundingClientRect();
+            const pw = pop.offsetWidth, ph = pop.offsetHeight;
+            let x = anchorRect.left - sr.left + scroller.scrollLeft;
+            let y = anchorRect.bottom - sr.top + scroller.scrollTop + 6;
+            x = Math.max(scroller.scrollLeft + 6, Math.min(x, scroller.scrollLeft + scroller.clientWidth - pw - 6));
+            if (anchorRect.bottom + ph + 12 > sr.bottom && anchorRect.top - sr.top > ph + 12) y = anchorRect.top - sr.top + scroller.scrollTop - ph - 6;
+            pop.style.left = x + 'px';
+            pop.style.top = y + 'px';
+        }
+        function caretRect() {
+            const r = lastRange ? lastRange.getBoundingClientRect() : null;
+            return r && (r.width || r.height) ? r : sheet.getBoundingClientRect();
+        }
+        const closePops = () => ['docPicPop', 'docFormulaPop', 'docTablePop'].forEach(id => $(id).classList.add('hidden'));
+
+        // tables
+        $('docInsTable').addEventListener('click', () => { closePops(); placePop($('docTablePop'), caretRect()); });
+        $('docTblCancel').addEventListener('click', closePops);
+        $('docTblInsert').addEventListener('click', () => {
+            const r = Math.max(1, Math.min(30, parseInt($('docTblRows').value, 10) || 3));
+            const c = Math.max(1, Math.min(8, parseInt($('docTblCols').value, 10) || 3));
+            closePops();
+            insertHtml('<table><tbody>' + Array.from({ length: r }, () => '<tr>' + '<td><br></td>'.repeat(c) + '</tr>').join('') + '</tbody></table>');
+        });
+        document.querySelectorAll('[data-doc-table]').forEach(b => b.addEventListener('click', () => {
+            const cell = currentCell();
+            if (!cell) return;
+            const tr = cell.parentNode, table = cell.closest('table');
+            const col = Array.from(tr.children).indexOf(cell);
+            switch (b.dataset.docTable) {
+                case 'row-add': { const n = tr.cloneNode(true); n.querySelectorAll('td,th').forEach(c => c.innerHTML = '<br>'); tr.after(n); break; }
+                case 'row-del': if (table.querySelectorAll('tr').length > 1) tr.remove(); else table.remove(); break;
+                case 'col-add': table.querySelectorAll('tr').forEach(row => { const c = document.createElement('td'); c.innerHTML = '<br>'; (row.children[col] || row.lastElementChild).after(c); }); break;
+                case 'col-del': if (tr.children.length > 1) table.querySelectorAll('tr').forEach(row => row.children[col] && row.children[col].remove()); else table.remove(); break;
+                case 'delete': table.remove(); break;
+            }
+            queueSave();
+            updateToolbarState();
+        }));
+
+        // formulas
+        let formulaTarget = null;   // the chip being edited, or null for a new one
+        function openFormula(chip) {
+            closePops();
+            formulaTarget = chip;
+            $('docFormulaTex').value = chip ? chip.dataset.tex || '' : '';
+            $('docFormulaDisplay').checked = chip ? chip.classList.contains('display') : false;
+            $('docFormulaRemove').classList.toggle('hidden', !chip);
+            updateFormulaPreview();
+            placePop($('docFormulaPop'), chip ? chip.getBoundingClientRect() : caretRect());
+            setTimeout(() => $('docFormulaTex').focus(), 0);
+            loadKatex().then(updateFormulaPreview);
+        }
+        function updateFormulaPreview() {
+            $('docFormulaRender').innerHTML = texHtml($('docFormulaTex').value, true);
+        }
+        $('docFormulaTex').addEventListener('input', updateFormulaPreview);
+        $('docFormulaTex').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('docFormulaSave').click(); } });
+        document.querySelectorAll('#docFormulaQuick [data-tex]').forEach(b => b.addEventListener('click', () => {
+            const ta = $('docFormulaTex');
+            const a = ta.selectionStart, z = ta.selectionEnd;
+            ta.value = ta.value.slice(0, a) + b.dataset.tex + ta.value.slice(z);
+            ta.focus();
+            ta.selectionStart = ta.selectionEnd = a + b.dataset.tex.length;
+            updateFormulaPreview();
+        }));
+        $('docInsFormula').addEventListener('click', () => openFormula(null));
+        $('docFormulaCancel').addEventListener('click', closePops);
+        $('docFormulaRemove').addEventListener('click', () => { if (formulaTarget) formulaTarget.remove(); closePops(); queueSave(); });
+        $('docFormulaSave').addEventListener('click', () => {
+            const tex = $('docFormulaTex').value.trim();
+            const display = $('docFormulaDisplay').checked;
+            closePops();
+            if (formulaTarget) {
+                if (!tex) formulaTarget.remove();
+                else { formulaTarget.dataset.tex = tex; formulaTarget.classList.toggle('display', display); formulaTarget.innerHTML = texHtml(tex, display); }
+                queueSave();
+            } else if (tex) {
+                if (display) insertHtml(`<p>${chipHtml(tex, true)}</p>`);
+                else insertInline(chipHtml(tex, false) + '\u00a0');
+            }
+        });
+
+        // pictures
+        let picTarget = null;
+        function openPicture(img) {
+            closePops();
+            sheet.querySelectorAll('img.doc-pic.sel').forEach(x => x.classList.remove('sel'));
+            picTarget = img;
+            img.classList.add('sel');
+            const im = cur.images[img.dataset.id];
+            if (!im) return;
+            document.querySelectorAll('[data-pic-align]').forEach(b => b.classList.toggle('seg-on', b.dataset.picAlign === (img.dataset.align || 'center')));
+            const w = $('docPicWidth');
+            w.max = Math.round(printableW());
+            w.value = im.w;
+            $('docPicWidthVal').textContent = `${Math.round(im.w)} mm`;
+            $('docPicStyle').value = im.style || 'contours';
+            $('docPicThreshold').value = im.threshold || 128;
+            $('docPicInvert').checked = !!im.invert;
+            placePop($('docPicPop'), img.getBoundingClientRect());
+        }
+        function picChanged() {
+            const im = picTarget && cur.images[picTarget.dataset.id];
+            if (!im) return;
+            picTarget.style.width = Math.min(100, im.w / printableW() * 100).toFixed(2) + '%';
+            queueSave();
+        }
+        document.querySelectorAll('[data-pic-align]').forEach(b => b.addEventListener('click', () => {
+            if (!picTarget) return;
+            const im = cur.images[picTarget.dataset.id];
+            picTarget.dataset.align = b.dataset.picAlign;
+            if (im) {
+                im.align = b.dataset.picAlign;
+                if (im.align === 'inline' && im.h > 20) { im.w = +(im.w * 20 / im.h).toFixed(1); im.h = 20; }
+            }
+            document.querySelectorAll('[data-pic-align]').forEach(x => x.classList.toggle('seg-on', x === b));
+            picChanged();
+            openPicture(picTarget);
+        }));
+        $('docPicWidth').addEventListener('input', e => {
+            const im = picTarget && cur.images[picTarget.dataset.id];
+            if (!im) return;
+            const w = parseFloat(e.target.value);
+            im.h = +(im.h * w / im.w).toFixed(1);
+            im.w = w;
+            $('docPicWidthVal').textContent = `${Math.round(w)} mm`;
+            picChanged();
+        });
+        $('docPicStyle').addEventListener('change', e => { const im = picTarget && cur.images[picTarget.dataset.id]; if (im) { im.style = e.target.value; queueSave(); } });
+        $('docPicThreshold').addEventListener('change', e => { const im = picTarget && cur.images[picTarget.dataset.id]; if (im) { im.threshold = parseInt(e.target.value, 10); queueSave(); } });
+        $('docPicInvert').addEventListener('change', e => { const im = picTarget && cur.images[picTarget.dataset.id]; if (im) { im.invert = e.target.checked; queueSave(); } });
+        $('docPicRemove').addEventListener('click', () => { if (picTarget) picTarget.remove(); picTarget = null; closePops(); queueSave(); });
+        $('docInsPicture').addEventListener('change', async e => {
+            const files = Array.from(e.target.files || []);
+            e.target.value = '';
+            let html = '';
+            for (const f of files) {
+                try {
+                    const src = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+                    const id = await registerPicture(src, 'center');
+                    html += `<p>${picHtml(id)}</p>`;
+                } catch (err) { showToast(`Couldn't add ${f.name}: ${err.message}`, "error"); }
+            }
+            if (html) insertHtml(html);
+        });
+
+        sheet.addEventListener('click', e => {
+            const chip = e.target.closest('.doc-f');
+            if (chip && sheet.contains(chip)) { openFormula(chip); return; }
+            const img = e.target.closest('img.doc-pic');
+            if (img) { openPicture(img); return; }
+            closePops();
+            sheet.querySelectorAll('img.doc-pic.sel').forEach(x => x.classList.remove('sel'));
+        });
+        scroller.addEventListener('scroll', () => { if (!$('docPicPop').classList.contains('hidden') && picTarget) placePop($('docPicPop'), picTarget.getBoundingClientRect()); });
+
+        // paste: pictures and formatted text keep their structure; Markdown (chat answers) is converted
+        sheet.addEventListener('paste', async e => {
+            const cd = e.clipboardData;
+            if (!cd) return;
+            const files = Array.from(cd.files || []).filter(f => /^image\//.test(f.type));
+            const html = cd.getData('text/html');
+            const text = cd.getData('text/plain');
+            if (files.length) {
+                e.preventDefault();
+                let out = '';
+                for (const f of files) {
+                    const src = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f); });
+                    out += `<p>${picHtml(await registerPicture(src, 'center'))}</p>`;
+                }
+                insertHtml(out);
+            } else if (text && /(^|\n)\s*(#{1,6}\s|\|.*\||\$\$|[*\-+]\s)|\$[^$\n]+\$/.test(text) && !/<table|<img/i.test(html || '')) {
+                e.preventDefault();
+                insertHtml(textToDoc(text));
+            } else if (html) {
+                e.preventDefault();
+                insertHtml(await importHtml(html));
+            }
+        });
+
+        // ---------- import ----------
+        $('docImportFile').addEventListener('change', async e => {
+            const f = e.target.files && e.target.files[0];
+            e.target.value = '';
+            if (!f || !cur) return;
+            const name = f.name.toLowerCase();
+            $('docStatus').textContent = `Opening ${f.name}…`;
+            try {
+                let html;
+                if (name.endsWith('.docx')) html = await importDocx(f);
+                else if (name.endsWith('.pdf')) html = await importPdf(f, (p, n) => { $('docStatus').textContent = `Reading PDF page ${p} of ${n}…`; });
+                else if (/\.html?$/.test(name)) html = await importHtml(await f.text());
+                else html = textToDoc(await f.text());
+                const empty = !sheet.textContent.trim() && !sheet.querySelector('img,table,.doc-f');
+                if (empty) {
+                    sheet.innerHTML = html;
+                    renderChips();
+                    if (!($('docTitle').value || '').trim() || /^Untitled/.test($('docTitle').value)) $('docTitle').value = f.name.replace(/\.[^.]+$/, '');
+                } else {
+                    insertHtml(html);
+                }
+                layoutSheet();
+                queueSave();
+                showToast(`Imported ${f.name}${name.endsWith('.docx') ? ' (Word equations are not imported; add them with Formula)' : ''}`, "success");
+            } catch (err) {
+                console.error(err);
+                $('docStatus').textContent = 'Import failed';
+                showToast(`Couldn't import ${f.name}: ${err.message}`, "error");
+            }
+        });
+
+        // ---------- preview: every page in handwriting, laid out exactly as it will be printed ----------
+        let previewRun = 0;
+        let lastPages = null;
+        async function layoutPages() {
+            saveNow();
+            const text = cur.text || '';
+            const { ranges } = await paginateRanges(text, 0, null, n => { $('docPreviewInfo').textContent = `Laying out… page ${n}`; }, { maxLines: cur.lines });
+            const s = getSettings();
+            const pages = (ranges.length ? ranges : [[0, text.length]]).map(([a, z]) => {
+                const paths = computeHandwritingLayout(Object.assign({}, s, { text: text.slice(a, z) }));
+                return { paths: paths.filter(p => p && p.length > 1), slots: paths.imageSlots || {} };
+            });
+            const vectors = {};
+            await Promise.all(Object.entries(cur.images).map(async ([id, im]) => {
+                try { vectors[id] = await getVector(im); } catch (e) {}
+            }));
+            window.handwritingLayoutDirty = true;   // the workbench preview lays its own page out again
+            triggerPreviewUpdate();
+            return { pages, vectors, settings: s };
+        }
+        function pagePictureStrokes(page, vectors) {
+            const out = [];
+            Object.entries(page.slots).forEach(([id, sl]) => {
+                const v = vectors[id];
+                if (!v || !v.rw) return;
+                const kx = sl.w / v.rw, ky = sl.h / v.rh;
+                v.raw.forEach(st => { if (st && st.length > 1) out.push(st.map(p => ({ x: sl.x + p.x * kx, y: sl.y + p.y * ky }))); });
+            });
+            return out;
+        }
+        function drawPaper(ctx, k, s, lines) {
+            ctx.fillStyle = '#fffef9';
+            ctx.fillRect(0, 0, 210 * k, 297 * k);
+            if (!lines) return;
+            ctx.lineWidth = Math.max(1, 0.2 * k);
+            if (currentPaperType === 'graph') {
+                for (let x = 0; x <= 210; x += 5) { ctx.strokeStyle = x % 10 ? 'rgba(16,185,129,.18)' : 'rgba(16,185,129,.4)'; ctx.beginPath(); ctx.moveTo(x * k, 0); ctx.lineTo(x * k, 297 * k); ctx.stroke(); }
+                for (let y = 0; y <= 297; y += 5) { ctx.strokeStyle = y % 10 ? 'rgba(16,185,129,.18)' : 'rgba(16,185,129,.4)'; ctx.beginPath(); ctx.moveTo(0, y * k); ctx.lineTo(210 * k, y * k); ctx.stroke(); }
+                return;
+            }
+            ctx.strokeStyle = 'rgba(59,130,246,.35)';
+            for (let y = s.topLineOffset; y < 297 - 4; y += s.lineSpacing) { ctx.beginPath(); ctx.moveTo(0, y * k); ctx.lineTo(210 * k, y * k); ctx.stroke(); }
+            ctx.strokeStyle = 'rgba(239,68,68,.6)';
+            ctx.beginPath(); ctx.moveTo((s.leftMargin - 1.5) * k, 0); ctx.lineTo((s.leftMargin - 1.5) * k, 297 * k); ctx.stroke();
+        }
+        function drawStrokes(ctx, k, strokes, color, width) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            strokes.forEach(st => {
+                ctx.beginPath();
+                ctx.moveTo(st[0].x * k, st[0].y * k);
+                for (let i = 1; i < st.length; i++) ctx.lineTo(st[i].x * k, st[i].y * k);
+                ctx.stroke();
+            });
+        }
+        async function renderDocPreview() {
+            const run = ++previewRun;
+            const box = $('docPreviewPages');
+            $('docPreviewInfo').textContent = 'Laying out pages…';
+            const res = await layoutPages();
+            if (run !== previewRun) return;
+            lastPages = res;
+            box.innerHTML = '';
+            const k = 4;   // px per mm
+            const lines = $('docPreviewLines').checked;
+            res.pages.forEach((pg, i) => {
+                const wrap = document.createElement('div');
+                const c = document.createElement('canvas');
+                c.width = 210 * k; c.height = 297 * k;
+                const ctx = c.getContext('2d');
+                drawPaper(ctx, k, res.settings, lines);
+                drawStrokes(ctx, k, pagePictureStrokes(pg, res.vectors), '#1e293b', 0.3 * k);
+                drawStrokes(ctx, k, pg.paths, '#1d4ed8', 0.38 * k);
+                const lbl = document.createElement('div');
+                lbl.className = 'text-center text-[10px] text-slate-500 mt-1.5';
+                lbl.textContent = `Page ${i + 1} of ${res.pages.length}`;
+                wrap.appendChild(c);
+                wrap.appendChild(lbl);
+                box.appendChild(wrap);
+            });
+            const n = res.pages.length;
+            $('docPreviewInfo').textContent = `${n} page${n === 1 ? '' : 's'} · at most ${cur.lines} lines each · exactly what the pen will write`;
+            $('docPageCount').textContent = `${n} page${n === 1 ? '' : 's'}`;
+        }
+        $('docPreviewLines').addEventListener('change', () => { if (lastPages) renderDocPreview(); });
+
+        function setMode(preview) {
+            closePops();
+            $('docModeEdit').classList.toggle('seg-on', !preview);
+            $('docModePreview').classList.toggle('seg-on', preview);
+            $('docEditWrap').classList.toggle('hidden', preview);
+            $('docPreviewWrap').classList.toggle('hidden', !preview);
+            $('docToolbar').classList.toggle('hidden', preview);
+            if (preview) renderDocPreview().catch(err => { console.error(err); $('docPreviewInfo').textContent = 'Preview failed: ' + err.message; });
+        }
+        $('docModeEdit').addEventListener('click', () => setMode(false));
+        $('docModePreview').addEventListener('click', () => setMode(true));
+
+        // ---------- PDF ----------
+        $('docExportPdf').addEventListener('click', async () => {
+            const btn = $('docExportPdf');
+            btn.disabled = true;
+            try {
+                if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+                const res = await layoutPages();
+                const pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+                const lines = $('docPreviewLines').checked;
+                const s = res.settings;
+                res.pages.forEach((pg, i) => {
+                    if (i) pdf.addPage();
+                    if (lines && currentPaperType !== 'graph') {
+                        pdf.setLineWidth(0.15);
+                        pdf.setDrawColor(170, 200, 245);
+                        for (let y = s.topLineOffset; y < 293; y += s.lineSpacing) pdf.line(0, y, 210, y);
+                        pdf.setDrawColor(240, 150, 150);
+                        pdf.line(s.leftMargin - 1.5, 0, s.leftMargin - 1.5, 297);
+                    }
+                    const draw = (strokes, rgb, w) => {
+                        pdf.setDrawColor(...rgb);
+                        pdf.setLineWidth(w);
+                        pdf.setLineCap('round');
+                        pdf.setLineJoin('round');
+                        strokes.forEach(st => {
+                            const d = [];
+                            for (let j = 1; j < st.length; j++) d.push([st[j].x - st[j - 1].x, st[j].y - st[j - 1].y]);
+                            if (d.length) pdf.lines(d, st[0].x, st[0].y, [1, 1], 'S', false);
+                        });
+                    };
+                    draw(pagePictureStrokes(pg, res.vectors), [30, 41, 59], 0.3);
+                    draw(pg.paths, [29, 78, 216], 0.38);
+                });
+                pdf.save(`${(cur.title || 'document').replace(/[\\/:*?"<>|]+/g, '_')}.pdf`);
+                showToast(`PDF saved: ${res.pages.length} page${res.pages.length === 1 ? '' : 's'}`, "success");
+            } catch (err) {
+                console.error(err);
+                showToast("Couldn't make the PDF: " + err.message, "error");
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        // ---------- send to pages ----------
+        function sendToPages(quiet) {
+            saveNow();
+            syncPageGroups();
+            let g = groupOfDoc(cur.id);
+            if (!g) {
+                const gid = newPageGroupId();
+                g = { id: gid, name: cur.title, collapsed: false };
+                pageGroups.push(g);
+                pagesText.push('');
+                pageGroupOf.push(gid);
+            }
+            Object.assign(g, {
+                name: cur.title, docId: cur.id, docLines: cur.lines, flow: true, flowAlgo: FLOW_ALGO,
+                flowText: cur.text || '', flowRanges: null, flowFrom: 0, flowVer: (g.flowVer || 0) + 1
+            });
+            dirty = false;
+            syncImageBlocks();
+            syncPageGroups();
+            currentPageIdx = pageGroupOf.indexOf(g.id);
+            commitPagesChange();
+            scheduleFlowReflow(0);
+            $('docStatus').textContent = 'Saved · on the pages';
+            if (!quiet) showToast(`"${cur.title}" is on the pages (group "${g.name}")`, "success");
+        }
+        $('docApply').addEventListener('click', () => { sendToPages(false); closeEditor(true); });
+
+        // ---------- open / close / switch ----------
+        function fillPicker() {
+            const p = $('docPicker');
+            const list = Object.values(docs).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+            p.innerHTML = list.map(d => `<option value="${d.id}">${esc(d.title)}</option>`).join('')
+                + '<option value="__new">+ New document</option><option value="__pages">+ New from current pages</option>'
+                + (list.length > 1 ? '<option value="__delete">Delete this document…</option>' : '');
+            if (cur) p.value = cur.id;
+        }
+        function openDoc(d) {
+            if (cur && cur !== d) saveNow();
+            cur = d;
+            if (!cur.images) cur.images = {};
+            safeSetItem('plotter_doc_last', d.id);
+            $('docTitle').value = d.title || '';
+            $('docLines').value = d.lines || 30;
+            // pages typed directly in the page editor since: bring those edits into the document
+            const g = groupOfDoc(d.id);
+            if (g && typeof g.flowText === 'string' && d.text !== undefined && g.flowText !== d.text) {
+                d.html = '';
+                sheet.innerHTML = textToDoc(g.flowText);
+                d.html = sheetHtmlForStorage();
+                d.text = g.flowText;
+                persist();
+                renderChips();
+                layoutSheet();
+            } else {
+                loadSheet(d);
+            }
+            lastRange = null;
+            dirty = false;
+            const n = g ? pageGroupOf.filter(id => id === g.id).length : 0;
+            $('docStatus').textContent = g ? 'Saved · on the pages' : 'Saved on this device · press Send to pages to print it';
+            $('docPageCount').textContent = g ? `${n} page${n === 1 ? '' : 's'}` : '';
+            fillPicker();
+        }
+        $('docPicker').addEventListener('change', e => {
+            const v = e.target.value;
+            if (v === '__new') { openDoc(newDoc()); persist(); }
+            else if (v === '__pages') {
+                const g = pageGroupById(pageGroupOf[currentPageIdx]);
+                const d = newDoc(g && g.name !== 'Pages' ? g.name : 'From pages');
+                cur && saveNow();
+                cur = d;
+                d.images = {};
+                const text = pagesText.filter((_, i) => pageGroupOf[i] === pageGroupOf[currentPageIdx]).join('\n');
+                d.html = textToDoc(text);
+                openDoc(d);
+                saveNow();
+            } else if (v === '__delete') {
+                const victim = cur;
+                fillPicker();
+                showConfirmModal("Delete document", `Delete "${victim.title}"? Its pages stay as plain pages. This can't be undone.`, () => {
+                    delete docs[victim.id];
+                    const g = groupOfDoc(victim.id);
+                    if (g) { delete g.docId; delete g.docLines; }
+                    persist();
+                    syncImageBlocks();
+                    const next = Object.values(docs).sort((a, b) => (b.updated || 0) - (a.updated || 0))[0] || newDoc();
+                    cur = null;
+                    openDoc(next);
+                });
+            } else if (docs[v]) openDoc(docs[v]);
+        });
+
+        function openEditor() {
+            docs = loadDocs();
+            const g = pageGroupById(pageGroupOf[currentPageIdx]);
+            let d = (g && g.docId && docs[g.docId]) || docs[safeGetItem('plotter_doc_last')] || Object.values(docs).sort((a, b) => (b.updated || 0) - (a.updated || 0))[0];
+            if (!d) { d = newDoc(); persist(); }
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            cur = null;
+            openDoc(d);
+            setMode(false);
+            loadKatex().then(() => { if (window.katex) renderChips(); });
+            setTimeout(() => { layoutSheet(); sheet.focus({ preventScroll: true }); }, 0);
+        }
+        function closeEditor(skipApply) {
+            saveNow();
+            // a document that is already on the pages keeps them up to date
+            if (!skipApply && dirty && cur && groupOfDoc(cur.id)) sendToPages(true);
+            closePops();
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+        $('btnOpenDocEditor')?.addEventListener('click', openEditor);
+        $('docClose').addEventListener('click', () => closeEditor(false));
+        document.addEventListener('keydown', e => {
+            if (modal.classList.contains('hidden')) return;
+            if (e.key === 'Escape') {
+                if (['docPicPop', 'docFormulaPop', 'docTablePop'].some(id => !$(id).classList.contains('hidden'))) closePops();
+                else closeEditor(false);
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }, true);
+
+        // another device changed the documents
+        window.addEventListener('plotter-sync', e => {
+            if (!e.detail || !e.detail.keys.includes('plotter_docs')) return;
+            docs = loadDocs();
+            syncImageBlocks();
+            if (!modal.classList.contains('hidden') && cur && docs[cur.id] && !dirty) openDoc(docs[cur.id]);
+        });
+
+        // start-up: pictures of documents that are on pages
+        setTimeout(syncImageBlocks, 0);
+    })();
+    </script>
+    <script>
+    // ================= BUTTON USAGE =================
+    // Counts which buttons and controls are pressed, to find out what to make easier to reach. Each device keeps
+    // its own key 'plotter_usage_<device>' (so two devices never overwrite each other's counts); the sync server
+    // stores them with the rest of the shared state on the computer. Nothing is sent anywhere else.
+    (function () {
+        const $ = id => document.getElementById(id);
+        let device = null;
+        try {
+            device = localStorage.getItem('usage_device_id');   // not synced: one id per browser
+            if (!device) {
+                device = (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'phone' : 'computer') + '-' + Math.random().toString(36).slice(2, 7);
+                localStorage.setItem('usage_device_id', device);
+            }
+        } catch (e) { device = 'browser'; }
+        const KEY = 'plotter_usage_' + device;
+        const enabled = () => safeGetItem('plotter_usage_off') !== 'true';
+        let data;
+        try { data = JSON.parse(safeGetItem(KEY) || 'null'); } catch (e) { data = null; }
+        if (!data || typeof data !== 'object' || !data.counts) data = { device, since: new Date().toISOString(), counts: {}, recent: [] };
+        data.sessions = (data.sessions || 0) + 1;
+
+        let saveTimer = null;
+        function save() {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => { safeSetItem(KEY, JSON.stringify(data)); render(); }, 2500);
+        }
+        save();
+
+        function labelOf(el) {
+            const own = (el.getAttribute('aria-label') || '').trim();
+            if (own) return own;
+            let t = '';
+            if (el.tagName === 'SELECT') t = (el.labels && el.labels[0] ? el.labels[0].textContent : el.id) + ': ' + (el.selectedOptions[0] ? el.selectedOptions[0].textContent : '');
+            else if (el.tagName === 'INPUT') t = (el.closest('label') ? el.closest('label').textContent : (el.labels && el.labels[0] ? el.labels[0].textContent : el.id || el.type));
+            else t = el.textContent;
+            t = (t || '').replace(/[✕×]/g, '').replace(/\s+/g, ' ').trim();
+            if (!t) t = el.title || el.id || el.tagName.toLowerCase();
+            return t.length > 48 ? t.slice(0, 47) + '…' : t;
+        }
+        function whereOf(el) {
+            const panel = el.closest('[data-panel]');
+            if (panel) return panel.dataset.panel;
+            const modal = el.closest('[id$="Modal"], #fpsCalibHud, #docModal');
+            if (modal) return modal.id;
+            if (el.closest('header')) return 'header';
+            return 'workspace';
+        }
+        function keyOf(el) {
+            if (el.id) return '#' + el.id;
+            const ds = Object.entries(el.dataset || {}).filter(([k]) => k !== 'msg').map(([k, v]) => `${k}=${v}`).join(',');
+            return `${whereOf(el)}:${ds || labelOf(el)}`;
+        }
+        function record(el, kind) {
+            if (!enabled() || !el || el.closest('#usageList')) return;
+            const key = keyOf(el);
+            const c = data.counts[key] || (data.counts[key] = { n: 0, label: labelOf(el), where: whereOf(el), kind });
+            c.n++;
+            c.label = labelOf(el);
+            c.last = Date.now();
+            data.recent.push([Date.now(), key]);
+            if (data.recent.length > 500) data.recent.splice(0, data.recent.length - 500);
+            save();
+        }
+        const CLICKABLE = 'button, [role="button"], [role="radio"], .seg-btn, .link, .tb, summary, a[href]';
+        document.addEventListener('click', e => {
+            const el = e.target.closest(CLICKABLE);
+            if (el && !el.disabled) record(el, 'click');
+        }, true);
+        document.addEventListener('change', e => {
+            const el = e.target;
+            if (el && (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && /^(checkbox|radio|file|range)$/.test(el.type)))) record(el, 'change');
+        }, true);
+        // keyboard shortcuts are worth knowing too
+        document.addEventListener('keydown', e => {
+            if (!enabled() || e.repeat || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || '')) || e.target.isContentEditable) return;
+            if (e.key.length !== 1 && !/^(Escape|Enter|Arrow\w+)$/.test(e.key)) return;
+            const combo = (e.metaKey ? 'Cmd+' : '') + (e.ctrlKey ? 'Ctrl+' : '') + (e.altKey ? 'Alt+' : '') + (e.key.length === 1 ? e.key.toUpperCase() : e.key);
+            const key = 'key:' + combo;
+            const c = data.counts[key] || (data.counts[key] = { n: 0, label: 'Key ' + combo, where: 'keyboard', kind: 'key' });
+            c.n++;
+            c.last = Date.now();
+            save();
+        }, true);
+
+        // all devices' counts together
+        function merged() {
+            const all = {};
+            const devices = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (!/^plotter_usage_/.test(k) || k === 'plotter_usage_off') continue;
+                let d;
+                try { d = k === KEY ? data : JSON.parse(localStorage.getItem(k)); } catch (e) { continue; }
+                if (!d || !d.counts) continue;
+                devices.push(d.device || k.slice(14));
+                Object.entries(d.counts).forEach(([key, c]) => {
+                    const m = all[key] || (all[key] = { n: 0, label: c.label, where: c.where, kind: c.kind });
+                    m.n += c.n;
+                });
+            }
+            return { all, devices };
+        }
+        function render() {
+            const list = $('usageList');
+            if (!list) return;
+            const { all, devices } = merged();
+            const rows = Object.values(all).sort((a, b) => b.n - a.n);
+            const total = rows.reduce((n, r) => n + r.n, 0);
+            $('usageSummary').textContent = total ? `${total} presses · ${devices.length} device${devices.length === 1 ? '' : 's'}` : '';
+            const top = rows.slice(0, 12);
+            const max = top.length ? top[0].n : 1;
+            list.innerHTML = '';
+            if (!top.length) { list.innerHTML = '<p class="hint">Nothing counted yet.</p>'; return; }
+            top.forEach(r => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-2 text-[11px]';
+                const name = document.createElement('span');
+                name.className = 'w-40 truncate text-slate-300';
+                name.textContent = r.label;
+                name.title = `${r.label} (${r.where})`;
+                const bar = document.createElement('div');
+                bar.className = 'flex-1 h-1.5 rounded bg-slate-800 overflow-hidden';
+                bar.innerHTML = `<div class="h-full bg-indigo-500/70" style="width:${Math.max(4, r.n / max * 100).toFixed(1)}%"></div>`;
+                const n = document.createElement('span');
+                n.className = 'w-8 text-right font-mono text-slate-400';
+                n.textContent = r.n;
+                row.append(name, bar, n);
+                list.appendChild(row);
+            });
+        }
+        $('btnUsageExport')?.addEventListener('click', () => {
+            const out = { exported: new Date().toISOString(), devices: {} };
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (/^plotter_usage_/.test(k) && k !== 'plotter_usage_off') { try { out.devices[k.slice(14)] = JSON.parse(localStorage.getItem(k)); } catch (e) {} }
+            }
+            const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'plotter-button-usage.json';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        });
+        $('btnUsageReset')?.addEventListener('click', () => {
+            showConfirmModal("Reset usage counts", "Clear the button counts on this device?", () => {
+                data = { device, since: new Date().toISOString(), counts: {}, recent: [], sessions: 1 };
+                safeSetItem(KEY, JSON.stringify(data));
+                render();
+            });
+        });
+        const onBox = $('usageTrackingOn');
+        if (onBox) {
+            onBox.checked = enabled();
+            onBox.addEventListener('change', () => safeSetItem('plotter_usage_off', onBox.checked ? 'false' : 'true'));
+        }
+        // pop-up level buttons (Machine > App)
+        function showLevel() {
+            const lv = toastLevel();
+            document.querySelectorAll('[data-toast-level]').forEach(b => b.classList.toggle('seg-on', b.dataset.toastLevel === lv));
+        }
+        document.querySelectorAll('[data-toast-level]').forEach(b => b.addEventListener('click', () => {
+            safeSetItem('plotter_toast_level', b.dataset.toastLevel);
+            showLevel();
+        }));
+        showLevel();
+        window.addEventListener('plotter-sync', e => {
+            if (!e.detail) return;
+            if (e.detail.keys.some(k => /^plotter_usage_/.test(k))) render();
+            if (e.detail.keys.includes('plotter_toast_level')) showLevel();
+        });
+        render();
+    })();
+    </script>
+    <script>
+    // ================= PAGE PHOTO ANCHORED TO THE PEN =================
+    // For printed pages (an assignment with a box to draw in): the photo is placed in bed millimetres by two
+    // marks. Point 1: the pen tip rests on a mark of the real page and you tap that mark on the photo, so the photo
+    // is shifted until the mark sits under the pen. Point 2: a second mark fixes the size and angle (one uniform
+    // scale + rotation, so the photo is never distorted); the change it needed is reported.
+    // Photo coordinates are u = px / width, v = py / width (independent of the stored resolution).
+    // View coordinates are bed X and 220 - bed Y (the preview's y-down axes), so the map has no mirror:
+    //   X = s (cos r · u − sin r · v) + tx,   Y = s (sin r · u + cos r · v) + ty
+    (function () {
+        const $ = id => document.getElementById(id);
+        const pc = () => photoCalibration;
+        let picking = 0;   // 1 or 2 while waiting for a tap on the photo
+
+        function savePhotoCalib() { safeSetItem('plotter_photo_calib', JSON.stringify(photoCalibration)); }
+
+        // Default before any point: the photo's width spans the page, its top-left on the page's top-left
+        function defaultPenT() {
+            const s = getSettings();
+            const cm = s.use3PointCalib ? getCalibMapping() : null;
+            if (cm) {
+                const o = mapDesignToBed(0, 0, cm), x = mapDesignToBed(210, 0, cm);
+                const X0 = o.x, Y0 = 220 - o.y, X1 = x.x, Y1 = 220 - x.y;
+                return { s: Math.hypot(X1 - X0, Y1 - Y0), r: Math.atan2(Y1 - Y0, X1 - X0), tx: X0, ty: Y0 };
+            }
+            return { s: 210, r: 0, tx: s.paperXShift, ty: 220 - s.paperYShift - 297 };
+        }
+        function penT() {
+            const p = pc().pen;
+            return p && p.t ? p.t : defaultPenT();
+        }
+        function fwd(t, u, v) {
+            const c = Math.cos(t.r), n = Math.sin(t.r);
+            return { X: t.s * (c * u - n * v) + t.tx, Y: t.s * (n * u + c * v) + t.ty };
+        }
+        function inv(t, X, Y) {
+            const c = Math.cos(t.r), n = Math.sin(t.r), dx = (X - t.tx) / t.s, dy = (Y - t.ty) / t.s;
+            return { u: c * dx + n * dy, v: -n * dx + c * dy };
+        }
+        // canvas transform from photo pixels (used by the preview)
+        window.penPhotoCanvasTransform = function (mm) {
+            const t = penT(), W = graphOverlayImg ? graphOverlayImg.width : 1;
+            const c = Math.cos(t.r), n = Math.sin(t.r);
+            return [mm * t.s * c / W, mm * t.s * n / W, -mm * t.s * n / W, mm * t.s * c / W, mm * t.tx, mm * t.ty];
+        };
+        window.drawPenPhotoMarks = function (ctx, mm) {
+            const pts = (pc().pen && pc().pen.pts) || [];
+            pts.forEach((p, i) => {
+                if (!p) return;
+                const x = p.bx * mm, y = (220 - p.by) * mm;
+                ctx.save();
+                ctx.strokeStyle = i ? '#0ea5e9' : '#10b981';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x, y, 9, 0, Math.PI * 2);
+                ctx.moveTo(x - 16, y); ctx.lineTo(x - 4, y); ctx.moveTo(x + 4, y); ctx.lineTo(x + 16, y);
+                ctx.moveTo(x, y - 16); ctx.lineTo(x, y - 4); ctx.moveTo(x, y + 4); ctx.lineTo(x, y + 16);
+                ctx.stroke();
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.font = 'bold 13px sans-serif';
+                ctx.fillText(String(i + 1), x + 11, y - 11);
+                ctx.restore();
+            });
+        };
+
+        // a tap on the photo while the pen rests on the matching mark
+        function pickAt(bedX, bedY) {
+            const k = picking;
+            picking = 0;
+            if (!graphOverlayImg) return;
+            const c = pc();
+            if (!c.pen) c.pen = { pts: [null, null], t: null };
+            const old = penT();
+            const q = inv(old, bedX, 220 - bedY);
+            c.pen.pts[k - 1] = { u: q.u, v: q.v, bx: jogVirtualX, by: jogVirtualY };
+            const [a, b] = c.pen.pts;
+            let note = '';
+            if (a && b) {
+                const du = b.u - a.u, dv = b.v - a.v;
+                const dX = b.bx - a.bx, dY = -(b.by - a.by);
+                const photoLen = Math.hypot(du, dv), penLen = Math.hypot(dX, dY);
+                if (photoLen < 1e-4 || penLen < 5) {
+                    c.pen.pts[k - 1] = null;
+                    showToast(penLen < 5 ? "The two pen positions are too close: use a second mark farther away" : "The two photo points are the same spot", "warning");
+                    updateUI();
+                    return;
+                }
+                const sNew = penLen / photoLen;
+                const rNew = Math.atan2(dY, dX) - Math.atan2(dv, du);
+                const t = { s: sNew, r: rNew, tx: 0, ty: 0 };
+                const p = fwd(t, a.u, a.v);
+                t.tx = a.bx - p.X; t.ty = (220 - a.by) - p.Y;
+                // how far the second mark was from where the photo put it before
+                const predicted = fwd(old, k === 2 ? b.u : a.u, k === 2 ? b.v : a.v);
+                const target = k === 2 ? { X: b.bx, Y: 220 - b.by } : { X: a.bx, Y: 220 - a.by };
+                const miss = Math.hypot(predicted.X - target.X, predicted.Y - target.Y);
+                let rot = ((rNew - old.r) * 180 / Math.PI) % 360;
+                if (rot > 180) rot -= 360; if (rot < -180) rot += 360;
+                // the first two-point fit replaces a rough guess; only a redo is a real check of the marks
+                const first = !c.pen.two;
+                c.pen.t = t;
+                c.pen.two = true;
+                c.pen.check = { stretch: (sNew / old.s - 1) * 100, rot, miss, span: penLen, first };
+                note = first ? `size and angle set from marks ${penLen.toFixed(0)} mm apart`
+                    : `size ${c.pen.check.stretch >= 0 ? '+' : ''}${c.pen.check.stretch.toFixed(1)}%, angle ${rot.toFixed(1)}°, the mark was ${miss.toFixed(1)} mm off`;
+            } else {
+                // one point: keep size and angle, move the photo so the tapped mark sits under the pen
+                const one = a || b;
+                const t = Object.assign({}, old);
+                const p = fwd(t, one.u, one.v);
+                t.tx += one.bx - p.X; t.ty += (220 - one.by) - p.Y;
+                c.pen.t = t;
+                c.pen.two = false;
+                delete c.pen.check;
+            }
+            savePhotoCalib();
+            triggerPreviewUpdate();
+            updateUI();
+            showToast(`Point ${k} locked to the pen${note ? ': ' + note : ''}`, "success");
+        }
+
+        function fmt(p) { return p ? `pen X ${p.bx.toFixed(1)} Y ${p.by.toFixed(1)}` : 'not set'; }
+        function updateUI() {
+            const c = pc();
+            const pen = c.anchor === 'pen';
+            document.querySelectorAll('[data-photo-anchor]').forEach(b => b.classList.toggle('seg-on-go', b.dataset.photoAnchor === (pen ? 'pen' : 'page')));
+            $('penAnchorBox')?.classList.toggle('hidden', !pen);
+            const studio = $('btnOpenPhotoCalibStudio');
+            if (studio) studio.classList.toggle('hidden', pen);
+            const pts = (c.pen && c.pen.pts) || [];
+            const ck = c.pen && c.pen.check;
+            const lines = [`1 · ${fmt(pts[0])}`, `2 · ${fmt(pts[1])}`];
+            if (ck && ck.first) lines.push(`Size and angle set from the two marks (${ck.span.toFixed(0)} mm apart)`);
+            else if (ck) lines.push(`Redo changed the size by ${ck.stretch >= 0 ? '+' : ''}${ck.stretch.toFixed(1)}% and the angle by ${ck.rot.toFixed(1)}°; the mark was ${ck.miss.toFixed(1)} mm off` +
+                (Math.abs(ck.stretch) > 3 || Math.abs(ck.rot) > 2 || ck.miss > 2 ? ' — check both marks' : ''));
+            if ($('penAnchorStatus')) $('penAnchorStatus').innerHTML = lines.map(l => `<div>${l}</div>`).join('');
+            const bar = $('photoPickBar');
+            if (!bar || bar.classList.contains('hidden')) return;
+            const pos = `X ${jogVirtualX.toFixed(1)} Y ${jogVirtualY.toFixed(1)}`;
+            $('photoPickText').innerHTML = picking
+                ? `<b class="text-emerald-300">Tap the mark on the photo</b> where the pen tip is now (${pos}). Zoom in for precision.`
+                : !pts[0] && !pts[1]
+                    ? `Move the pen tip exactly onto a mark of the printed page (Calibrate: jog, or aim with the pen lowered), then press <b>1</b> and tap that mark on the photo.`
+                    : !(pts[0] && pts[1])
+                        ? `Photo placed. Now move the pen onto a <b>second mark far away</b>, press <b>${pts[0] ? 2 : 1}</b> and tap it on the photo to fix the size.`
+                        : `Both points locked${ck && !ck.first ? ` (last redo: ${ck.miss.toFixed(1)} mm off, size ${ck.stretch >= 0 ? '+' : ''}${ck.stretch.toFixed(1)}%)` : ''}. To double-check, move the pen onto either mark again and redo that point: a good photo moves less than a millimetre.`;
+            $('btnPickPen1').classList.toggle('hidden', !!picking);
+            $('btnPickPen2').classList.toggle('hidden', !!picking);
+            $('btnPickCancel').classList.toggle('hidden', !picking);
+            $('btnPickPen1').textContent = `1 · Pen is on a mark${pts[0] ? ' ✓' : ''}`;
+            $('btnPickPen2').textContent = `2 · Pen is on a mark${pts[1] ? ' ✓' : ''}`;
+        }
+
+        function showPreview() {
+            if (typeof switchTab === 'function' && typeof tabCanvas !== 'undefined' && typeof contentCanvas !== 'undefined') switchTab(tabCanvas, contentCanvas);
+            const bar = $('photoPickBar');
+            if (bar && window.innerWidth < 1024) bar.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }
+        function setAnchor(mode) {
+            pc().anchor = mode;
+            savePhotoCalib();
+            if (mode !== 'pen') { picking = 0; $('photoPickBar')?.classList.add('hidden'); }
+            triggerPreviewUpdate();
+            updateUI();
+        }
+        window.openPhotoPickBar = function () {
+            if (!graphOverlayImg) { showToast("Add a page photo first (drop it on the preview)", "warning"); return; }
+            if (pc().anchor !== 'pen') setAnchor('pen');
+            $('photoPickBar').classList.remove('hidden');
+            showPreview();
+            updateUI();
+        };
+        function startPick(k) {
+            if (!graphOverlayImg) { showToast("Add a page photo first (drop it on the preview)", "warning"); return; }
+            window.openPhotoPickBar();
+            picking = k;
+            updateUI();
+        }
+        document.querySelectorAll('[data-photo-anchor]').forEach(b => b.addEventListener('click', () => {
+            setAnchor(b.dataset.photoAnchor);
+            if (b.dataset.photoAnchor === 'pen') window.openPhotoPickBar();
+        }));
+        $('btnPenAnchor1')?.addEventListener('click', () => startPick(1));
+        $('btnPenAnchor2')?.addEventListener('click', () => startPick(2));
+        $('btnPickPen1')?.addEventListener('click', () => startPick(1));
+        $('btnPickPen2')?.addEventListener('click', () => startPick(2));
+        $('btnPickCancel')?.addEventListener('click', () => { picking = 0; updateUI(); });
+        $('btnPickDone')?.addEventListener('click', () => { picking = 0; $('photoPickBar').classList.add('hidden'); });
+        $('btnPenAnchorReset')?.addEventListener('click', () => {
+            pc().pen = { pts: [null, null], t: null };
+            savePhotoCalib();
+            triggerPreviewUpdate();
+            updateUI();
+        });
+
+        // While waiting for a tap, the preview's own tap actions (moving the pen, dragging) are held back
+        const cv = previewCanvas;
+        let downAt = null;
+        const swallow = e => { e.stopImmediatePropagation(); if (e.cancelable) e.preventDefault(); };
+        cv.addEventListener('mousedown', e => { if (picking && e.button === 0) { downAt = { x: e.clientX, y: e.clientY }; swallow(e); } }, true);
+        cv.addEventListener('mouseup', e => {
+            if (!picking || e.button !== 0) return;
+            swallow(e);
+            if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 8) {
+                const b = screenToBedCoords(e.clientX, e.clientY, cv.getBoundingClientRect());
+                pickAt(b.bedX, b.bedY);
+            }
+            downAt = null;
+        }, true);
+        cv.addEventListener('dblclick', e => { if (picking) swallow(e); }, true);
+        cv.addEventListener('touchstart', e => { if (picking && e.touches.length === 1) { const t = e.touches[0]; downAt = { x: t.clientX, y: t.clientY }; e.stopImmediatePropagation(); } }, true);
+        cv.addEventListener('touchend', e => {
+            if (!picking || !downAt || e.touches.length) return;
+            const t = e.changedTouches[0];
+            swallow(e);
+            if (Math.hypot(t.clientX - downAt.x, t.clientY - downAt.y) < 10) {
+                const b = screenToBedCoords(t.clientX, t.clientY, cv.getBoundingClientRect());
+                pickAt(b.bedX, b.bedY);
+            }
+            downAt = null;
+        }, true);
+        document.addEventListener('keydown', e => { if (picking && e.key === 'Escape') { picking = 0; updateUI(); e.stopImmediatePropagation(); } }, true);
+
+        // Drag a photo onto the preview: it becomes the page photo, lined up by pen points
+        function loadPhotoFile(file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const img = new Image();
+                img.onload = () => {
+                    graphOverlayImg = img;
+                    savePagePhoto(img);
+                    pc().anchor = 'pen';
+                    pc().pen = { pts: [null, null], t: null };
+                    if (graphOpacityRange && graphOverlayOpacity < 0.3) { graphOverlayOpacity = 0.6; }
+                    savePhotoCalib();
+                    if (graphOverlayControls) graphOverlayControls.classList.remove('hidden');
+                    if (typeof topOpacityContainer !== 'undefined' && topOpacityContainer) topOpacityContainer.classList.remove('hidden');
+                    if (typeof updateGraphOpacityUI === 'function') updateGraphOpacityUI();
+                    triggerPreviewUpdate();
+                    window.openPhotoPickBar();
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        window.loadPenAnchoredPhoto = loadPhotoFile;
+        const zone = cv.parentElement;
+        const dz = $('photoDropZone');
+        const hasImage = e => Array.from((e.dataTransfer && e.dataTransfer.items) || []).some(i => i.kind === 'file' && /^image\//.test(i.type));
+        let dragDepth = 0;
+        zone.addEventListener('dragenter', e => { if (!hasImage(e)) return; e.preventDefault(); dragDepth++; dz.classList.remove('hidden'); });
+        zone.addEventListener('dragover', e => { if (!hasImage(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+        zone.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; dz.classList.add('hidden'); } });
+        zone.addEventListener('drop', e => {
+            dragDepth = 0;
+            dz.classList.add('hidden');
+            const f = Array.from((e.dataTransfer && e.dataTransfer.files) || []).find(f => /^image\//.test(f.type));
+            if (!f) return;
+            e.preventDefault();
+            loadPhotoFile(f);
+        });
+
+        // keep the bar's pen position current while jogging
+        setInterval(() => { if (!$('photoPickBar').classList.contains('hidden')) updateUI(); }, 500);
+        window.addEventListener('plotter-sync', e => { if (e.detail && e.detail.keys.includes('plotter_photo_calib')) { updateUI(); } });
+        setTimeout(updateUI, 0);
     })();
     </script>
 </body>
